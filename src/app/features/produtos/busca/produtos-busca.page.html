@@ -1,0 +1,81 @@
+<main class="cp-page">
+  <header class="cp-page-header">
+    <div>
+      <h1>Produtos</h1>
+      <p>Preços publicados pelas notas da comunidade, sem identificar ninguém.</p>
+    </div>
+  </header>
+
+  <section class="cp-block">
+    <label class="cp-field">
+      <span>Descrição ou código de barras</span>
+      <input
+        type="search"
+        enterkeyhint="search"
+        autocomplete="off"
+        placeholder="Ex.: café 500g"
+        [formField]="form.texto"
+      />
+    </label>
+    <button type="button" class="cp-btn-secondary" (click)="lendo.set(!lendo())">
+      <mat-icon aria-hidden="true">barcode_scanner</mat-icon>
+      {{ lendo() ? 'Fechar leitor' : 'Ler código de barras' }}
+    </button>
+    @if (lendo()) {
+      @defer (on immediate) {
+        <cp-scanner
+          [formatos]="['ean_13', 'ean_8']"
+          (lido)="codigoLido($event)"
+          (cancelado)="lendo.set(false)"
+        />
+      } @placeholder {
+        <div class="cp-skeleton" style="height: 240px" aria-hidden="true"></div>
+      }
+    }
+  </section>
+
+  @if (consulta()) {
+    <section class="cp-block" aria-live="polite" [attr.aria-busy]="resultados.isLoading()">
+      @if (resultados.isLoading()) {
+        <div class="cp-loading" role="status" aria-label="Buscando"><div></div></div>
+      } @else if (resultados.error()) {
+        <cp-empty-state icone="cloud_off" titulo="Não foi possível buscar agora" />
+      } @else if (resultados.hasValue() && resultados.value().length) {
+        <ul class="cp-list" aria-label="Produtos encontrados">
+          @for (p of resultados.value(); track p.id) {
+            <li>
+              <a class="cp-list-row" [routerLink]="['/produtos', p.id]">
+                <div class="item-principal">
+                  <span class="item-nome">{{ p.descricao }}</span>
+                  <span class="item-detalhe">
+                    @if (p.ean) {
+                      EAN {{ p.ean }} ·
+                    }
+                    {{ p.cnpjs?.length ?? 1 }}
+                    {{ (p.cnpjs?.length ?? 1) === 1 ? 'estabelecimento' : 'estabelecimentos' }}
+                  </span>
+                </div>
+                <div class="item-lado">
+                  @if (p.menorPreco) {
+                    <span class="cp-label">Menor preço</span>
+                    <span class="cp-price">{{ p.menorPreco.vlUnit | currency }}</span>
+                  }
+                </div>
+              </a>
+            </li>
+          }
+        </ul>
+      } @else {
+        <cp-empty-state
+          icone="search_off"
+          titulo="Ainda não há preços desse produto nas notas"
+          texto="Veja quanto ele custa nos mercados da região pelo Menor Preço."
+        >
+          <a class="cp-btn-primary" routerLink="/regiao" [queryParams]="linkRegiao()">
+            Ver preços perto de mim
+          </a>
+        </cp-empty-state>
+      }
+    </section>
+  }
+</main>

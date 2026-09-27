@@ -1,0 +1,109 @@
+<main class="cp-page">
+  <header class="cp-page-header">
+    <div>
+      <h1>{{ nome() ? 'Olá, ' + nome() : 'Painel' }}</h1>
+      <p>Seus gastos no mercado e onde está mais barato.</p>
+    </div>
+  </header>
+
+  <nav class="painel-atalhos" aria-label="Atalhos">
+    <a class="cp-btn-primary" routerLink="/importar">
+      <mat-icon aria-hidden="true">qr_code_scanner</mat-icon>
+      Importar nota
+    </a>
+    <a class="cp-btn-secondary" routerLink="/regiao">
+      <mat-icon aria-hidden="true">near_me</mat-icon>
+      Preços perto de mim
+    </a>
+  </nav>
+
+  <cp-pendentes-bloco />
+
+  @if (dados.isLoading()) {
+    <div class="painel-skeleton" role="status">
+      <span class="cp-sr-only">Carregando o painel…</span>
+      <div class="cp-skeleton" aria-hidden="true"></div>
+      <div class="cp-skeleton" aria-hidden="true"></div>
+    </div>
+  } @else if (dados.error()) {
+    <cp-empty-state
+      icone="cloud_off"
+      titulo="Não foi possível carregar o painel"
+      texto="Verifique a conexão."
+    >
+      <button type="button" class="cp-btn-primary" (click)="dados.reload()">Tentar de novo</button>
+    </cp-empty-state>
+  } @else if (semNotas()) {
+    <section class="cp-block" aria-labelledby="comeco-titulo">
+      <h2 id="comeco-titulo" class="cp-section-title">Como funciona</h2>
+      <ol class="painel-passos">
+        <li>
+          <mat-icon aria-hidden="true">qr_code_scanner</mat-icon>
+          <span><strong>Leia o QR Code</strong> do cupom do mercado.</span>
+        </li>
+        <li>
+          <mat-icon aria-hidden="true">receipt_long</mat-icon>
+          <span><strong>Confira a nota</strong>: itens e preços vêm da SEFAZ-PR.</span>
+        </li>
+        <li>
+          <mat-icon aria-hidden="true">savings</mat-icon>
+          <span><strong>Compare</strong> com outros mercados e veja onde economizar.</span>
+        </li>
+      </ol>
+      <a class="cp-btn-primary" routerLink="/importar">Importar primeira nota</a>
+    </section>
+  } @else if (valor(); as v) {
+    <section class="cp-summary painel-resumo" aria-label="Resumo do mês">
+      <div>
+        <span class="cp-summary-label">Gasto no mês</span>
+        <span class="cp-summary-value">{{ v.total | currency }}</span>
+        @if (v.variacao !== null) {
+          <span class="painel-variacao">
+            <mat-icon aria-hidden="true">{{
+              v.variacao > 0 ? 'arrow_upward' : 'arrow_downward'
+            }}</mat-icon>
+            {{ v.variacao > 0 ? '+' : '' }}{{ v.variacao | number: '1.0-1' }}% em relação ao mês
+            passado ({{ v.totalAnterior | currency }})
+          </span>
+        }
+      </div>
+      <div>
+        <span class="cp-summary-label">Notas no mês</span>
+        <span class="cp-summary-value">{{ v.qtdNotasMes }}</span>
+      </div>
+      <div>
+        <span class="cp-summary-label">Economia possível</span>
+        <span class="cp-summary-value">{{ v.economia | currency }}</span>
+        <span class="painel-variacao">
+          @if (v.economia > 0) {
+            você pagou a mais que o menor preço conhecido
+          } @else {
+            você pagou o menor preço conhecido
+          }
+        </span>
+      </div>
+    </section>
+
+    <section class="cp-block">
+      <div class="cp-section-top">
+        <h2 class="cp-section-title">Últimas notas</h2>
+        <a class="cp-btn-ghost" routerLink="/notas">Ver todas</a>
+      </div>
+      <ul class="cp-list" aria-label="Últimas notas">
+        @for (n of v.ultimas; track n.chave) {
+          <li>
+            <a class="cp-list-row" [routerLink]="['/notas', n.chave]">
+              <span class="item-principal">
+                <span class="item-nome">{{ n.estabelecimentoNome }}</span>
+                <span class="item-detalhe"
+                  >{{ n.emissao | date: 'dd/MM/yyyy' }} · {{ n.qtdItens }} itens</span
+                >
+              </span>
+              <span class="cp-price">{{ n.total | currency }}</span>
+            </a>
+          </li>
+        }
+      </ul>
+    </section>
+  }
+</main>

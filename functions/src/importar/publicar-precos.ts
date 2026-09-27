@@ -5,6 +5,7 @@ import { extrairConteudo, precoPorUnidadeBase } from '@shared/unidade';
 import type { Operacao, Repositorio } from '../dados/repositorio';
 
 export const VALIDADE_MENOR_PRECO_MS = 90 * 24 * 60 * 60 * 1000;
+export const LIMITE_CNPJS = 50;
 
 /** Nota do usuário (modelo 5.3), com `produtoId` e preço por unidade base por item. */
 export function montarNota(nota: NfceParsed, importadaEm: Date, veioDaFila: boolean): Nota {
@@ -64,6 +65,7 @@ export async function publicarPrecos(repo: Repositorio, nota: Nota): Promise<num
       vinculadoA: atual?.vinculadoA ?? null,
       menorPreco: atualizarMenor(atual?.menorPreco ?? null, obs),
       ultimaObservacao: atualizarUltima(atual?.ultimaObservacao ?? null, obs),
+      cnpjs: [...new Set([...(atual?.cnpjs ?? []), nota.cnpj])].slice(-LIMITE_CNPJS),
     };
     produtos.set(item.produtoId, produto);
     const preco: Preco = {

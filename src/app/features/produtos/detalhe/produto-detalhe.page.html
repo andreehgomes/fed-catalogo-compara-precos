@@ -1,0 +1,126 @@
+@if (dados.isLoading() && !valor()) {
+  <main class="cp-page cp-page--detalhe" role="status">
+    <span class="cp-sr-only">Carregando produto…</span>
+    <div class="cp-skeleton" style="height: 240px" aria-hidden="true"></div>
+  </main>
+} @else if (valor(); as v) {
+  <main class="cp-page cp-page--detalhe">
+    <header class="cp-detail-header">
+      <a class="cp-btn-icon" routerLink="/produtos" aria-label="Voltar para Produtos">
+        <mat-icon aria-hidden="true">arrow_back</mat-icon>
+      </a>
+      <div>
+        <h1>{{ v.produto.descricao }}</h1>
+        <p>
+          @if (v.produto.ean) {
+            EAN {{ v.produto.ean }}
+          } @else {
+            Sem código de barras (código interno do mercado)
+          }
+        </p>
+      </div>
+    </header>
+
+    @if (v.resumo; as r) {
+      <section class="cp-summary" aria-label="Resumo de preços">
+        <div>
+          <span class="cp-summary-label">Menor</span>
+          <span class="cp-summary-value">{{ r.menor | currency }}{{ unidade() }}</span>
+        </div>
+        <div>
+          <span class="cp-summary-label">Médio</span>
+          <span class="cp-summary-value">{{ r.medio | currency }}{{ unidade() }}</span>
+        </div>
+        <div>
+          <span class="cp-summary-label">Maior</span>
+          <span class="cp-summary-value">{{ r.maior | currency }}{{ unidade() }}</span>
+        </div>
+      </section>
+
+      <section class="cp-block">
+        <h2 class="cp-section-title">Por estabelecimento</h2>
+        <p class="cp-field-hint">
+          Último preço observado nos últimos 90 dias{{ r.unidade ? ', por ' + r.unidade : '' }}.
+        </p>
+        <ul class="cp-list">
+          @for (e of r.porEstabelecimento; track e.cnpj) {
+            <li class="cp-list-row">
+              <div class="item-principal">
+                <a class="item-nome" [routerLink]="['/estabelecimentos', e.cnpj]">{{ e.nome }}</a>
+                <cp-fonte-preco [fonte]="e.fonte" [data]="e.emissao" />
+              </div>
+              <div class="item-lado">
+                <span class="cp-price">{{ e.valor | currency }}{{ unidade() }}</span>
+                @if (e.diferenca > 0) {
+                  <cp-badge-preco tipo="mais-caro" [diferenca]="e.diferenca" />
+                } @else {
+                  <cp-badge-preco tipo="mais-barato" rotulo="Menor preço" />
+                }
+              </div>
+            </li>
+          }
+        </ul>
+      </section>
+
+      <section class="cp-block" aria-labelledby="historico-titulo">
+        <h2 id="historico-titulo" class="cp-section-title">Histórico</h2>
+        @defer (on viewport) {
+          <cp-grafico-historico [series]="series()" />
+        } @placeholder {
+          <div class="cp-skeleton" style="height: 200px" aria-hidden="true"></div>
+        }
+      </section>
+    } @else {
+      <cp-empty-state icone="query_stats" titulo="Sem preços nos últimos 90 dias" />
+    }
+
+    @if (ean(); as g) {
+      @defer (on viewport) {
+        <cp-precos-perto [gtin]="g" />
+      } @placeholder {
+        <div class="cp-skeleton" style="height: 120px" aria-hidden="true"></div>
+      }
+    }
+
+    <section class="cp-block">
+      <h2 class="cp-section-title">Produtos equivalentes</h2>
+      @if (outros().length) {
+        <ul class="cp-list">
+          @for (p of outros(); track p.id) {
+            <li>
+              <a class="cp-list-row" [routerLink]="['/produtos', p.id]">
+                <span class="item-principal">
+                  <span class="item-nome">{{ p.descricao }}</span>
+                  <span class="item-detalhe">{{
+                    p.ean ? 'EAN ' + p.ean : 'Sem código de barras'
+                  }}</span>
+                </span>
+              </a>
+            </li>
+          }
+        </ul>
+      } @else {
+        <p class="cp-field-hint">Nenhum produto ligado a este.</p>
+      }
+      <div class="cp-form-actions">
+        @if (v.produto.vinculadoA) {
+          <button type="button" class="cp-btn-ghost" (click)="desvincular()">
+            Desfazer vínculo
+          </button>
+        }
+        @if (!v.produto.ean) {
+          <button type="button" class="cp-btn-secondary" (click)="vincular()">
+            <mat-icon aria-hidden="true">link</mat-icon>
+            Este produto é o mesmo que…
+          </button>
+        }
+      </div>
+    </section>
+  </main>
+} @else {
+  <main class="cp-page cp-page--form">
+    <cp-empty-state icone="inventory_2" titulo="Produto não encontrado">
+      <a class="cp-btn-primary" routerLink="/produtos">Buscar produtos</a>
+    </cp-empty-state>
+  </main>
+}

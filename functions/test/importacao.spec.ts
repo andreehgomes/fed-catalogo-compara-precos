@@ -265,6 +265,7 @@ describe('confirmarNfce e publicação de preços', () => {
     const leite = (await ctx.repo.obter<Produto>('produtos/ean:7891000100103'))!;
     expect(leite.menorPreco).toMatchObject({ vlUnit: 3.99, cnpj: '11222333000181' });
     expect(leite.ultimaObservacao).toMatchObject({ vlUnit: 4.49, cnpj: '03644587000836' });
+    expect(leite.cnpjs).toEqual(['03644587000836', '11222333000181']);
   });
 
   it('falha na transação não publica preços', async () => {

@@ -248,6 +248,31 @@ Instale as dependências **de dentro da pasta** (`cd functions && npm install`):
   busca por texto (`equivalentesPorTexto`: Jaccard ≥ 0,3 + mesmo conteúdo) marcada como
   "aproximado". Menor Preço fora → para e mostra aviso único.
 
+## Produtos, estabelecimentos e painel
+
+- `ProdutosService` (`features/produtos/data-access/`): `buscar` (GTIN válido → `getDoc`
+  em `produtos/ean:<gtin>`; texto → `array-contains` no token mais específico +
+  filtro dos demais no cliente), `equivalentes` (canônico + quem aponta para ele),
+  `precos(ids)` (grupos de 30 no `in`, 90 dias, ≤ 300), `produtosPorIds`,
+  `estabelecimentosPorCnpj`, `vincular`/`desvincular` (callables).
+- Página do produto: resumo por `resumirPrecos` (`detalhe/resumo.ts`) — menor/médio/maior
+  sobre o **último preço de cada estabelecimento**, em R$/unidade base quando todas as
+  observações a têm; fonte `minhas-notas` quando o preço veio de uma nota do usuário
+  (o id do preço é `{chave}_{n}`). `<cp-grafico-historico>` (SVG próprio, até 5 séries
+  + "Outros", traço e marcador diferentes por série, tabela `cp-sr-only`) e
+  `<cp-precos-perto>` em `@defer (on viewport)`. Cores das séries: `$cp-serie-1..5`.
+- Vínculo (RF-18): callable `vincularProduto` (`functions/src/produtos/`) — o EAN vira o
+  canônico, `ean:` × `ean:` diferente é recusado, cadeia seguida até a raiz sem ciclo,
+  quem apontava para a origem é reapontado, rate limit da importação. Diálogo
+  `vincular-dialog.ts` sugere por Jaccard com o mesmo conteúdo.
+- `produtos/{id}.cnpjs` (até 50) é mantido pela publicação de preços, para contar
+  estabelecimentos sem consulta extra.
+- Estabelecimentos: lista por `atualizadoEm desc` (30 por página, busca por nome no
+  cliente) e detalhe com os produtos de preço mais recente (`precos where cnpj`).
+- Painel (`/`): total do mês e variação, notas do mês, economia potencial pela base
+  comunitária (`menorPreco` dos produtos; **não** chama o Menor Preço), últimas 5 notas,
+  pendentes, atalhos e estado inicial em 3 passos.
+
 ## Preços da região (Menor Preço)
 
 - `features/regiao/data-access/`: `FontePrecosRegiao` (classe abstrata, `providedIn:

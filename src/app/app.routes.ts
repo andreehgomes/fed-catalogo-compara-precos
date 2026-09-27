@@ -2,8 +2,6 @@ import { Routes } from '@angular/router';
 import { authGuard } from './core/auth/auth.guards';
 import { AUTH_ROUTES } from './features/auth/auth.routes';
 
-const emBreve = () => import('./features/em-breve/em-breve.page');
-
 export const routes: Routes = [
   ...AUTH_ROUTES,
   {
@@ -15,8 +13,7 @@ export const routes: Routes = [
         path: '',
         pathMatch: 'full',
         title: 'Painel · Compara Preços',
-        data: { secao: 'Painel' },
-        loadComponent: emBreve,
+        loadComponent: () => import('./features/painel/painel.page'),
       },
       {
         path: 'importar',
@@ -34,27 +31,15 @@ export const routes: Routes = [
       },
       {
         path: 'produtos',
-        title: 'Produtos · Compara Preços',
-        data: { secao: 'Produtos' },
-        loadComponent: emBreve,
-      },
-      {
-        path: 'produtos/:id',
-        title: 'Produto · Compara Preços',
-        data: { secao: 'Produto' },
-        loadComponent: emBreve,
+        loadChildren: () =>
+          import('./features/produtos/produtos.routes').then((m) => m.PRODUTOS_ROUTES),
       },
       {
         path: 'estabelecimentos',
-        title: 'Estabelecimentos · Compara Preços',
-        data: { secao: 'Estabelecimentos' },
-        loadComponent: emBreve,
-      },
-      {
-        path: 'estabelecimentos/:cnpj',
-        title: 'Estabelecimento · Compara Preços',
-        data: { secao: 'Estabelecimento' },
-        loadComponent: emBreve,
+        loadChildren: () =>
+          import('./features/estabelecimentos/estabelecimentos.routes').then(
+            (m) => m.ESTABELECIMENTOS_ROUTES,
+          ),
       },
     ],
   },

@@ -1,0 +1,54 @@
+@use '../../shared/style/tokens' as *;
+@use '../../shared/style/mixins' as *;
+
+.painel-atalhos {
+  @include cp-grid(200px, auto-fit, 12px);
+
+  a {
+    min-height: 56px;
+  }
+}
+
+.painel-skeleton {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+
+  .cp-skeleton {
+    height: 96px;
+  }
+}
+
+.painel-variacao {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 12px;
+  color: $cp-text-muted;
+
+  mat-icon {
+    font-size: 14px;
+    width: 14px;
+    height: 14px;
+  }
+}
+
+.painel-passos {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+
+  li {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    font-size: 14px;
+  }
+
+  mat-icon {
+    color: $cp-accent-ink;
+  }
+}

@@ -76,6 +76,31 @@ export class NotasService {
     await this.api.deleteDoc(this.api.doc(this.db, `${this.caminho()}/${chave}`));
   }
 
+  /** Todas as notas do filtro (até 10 páginas), para totais do painel. */
+  async todas(filtro: Omit<FiltroNotas, 'cursor'> = {}, maxPaginas = 10): Promise<Nota[]> {
+    const notas: Nota[] = [];
+    let cursor: DocumentSnapshot | null = null;
+    for (let i = 0; i < maxPaginas; i++) {
+      const pagina = await this.listar({ ...filtro, cursor });
+      notas.push(...pagina.notas);
+      if (!pagina.temMais) break;
+      cursor = pagina.cursor;
+    }
+    return notas;
+  }
+
+  /** Chaves das últimas 200 notas do usuário (para marcar preços como "minhas-notas"). */
+  async chaves(): Promise<Set<string>> {
+    const snap = await this.api.getDocs(
+      this.api.query(
+        this.api.collection(this.db, this.caminho()),
+        this.api.orderBy('emissao', 'desc'),
+        this.api.limit(200),
+      ),
+    );
+    return new Set(snap.docs.map((d) => d.id));
+  }
+
   /** Estabelecimentos das últimas 200 notas, para o filtro da lista. */
   async estabelecimentos(): Promise<EstabelecimentoDoUsuario[]> {
     const snap = await this.api.getDocs(

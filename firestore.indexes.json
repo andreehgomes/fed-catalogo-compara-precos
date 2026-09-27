@@ -15,6 +15,30 @@
         { "fieldPath": "cnpj", "order": "ASCENDING" },
         { "fieldPath": "emissao", "order": "DESCENDING" }
       ]
+    },
+    {
+      "collectionGroup": "precos",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "produtoId", "order": "ASCENDING" },
+        { "fieldPath": "emissao", "order": "DESCENDING" }
+      ]
+    },
+    {
+      "collectionGroup": "precos",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "cnpj", "order": "ASCENDING" },
+        { "fieldPath": "emissao", "order": "DESCENDING" }
+      ]
+    },
+    {
+      "collectionGroup": "produtos",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "tokens", "arrayConfig": "CONTAINS" },
+        { "fieldPath": "descricaoNorm", "order": "ASCENDING" }
+      ]
     }
   ],
   "fieldOverrides": [

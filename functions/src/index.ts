@@ -9,6 +9,7 @@ import { contextoPadrao, type Contexto } from './importar/contexto';
 import { executarPreview } from './importar/preview-nfce';
 import { executarEnfileirar, executarRetentar } from './pendentes/enfileirar';
 import { executarReprocessamento } from './pendentes/reprocessar-pendentes';
+import { executarDesvincular, executarVincular } from './produtos/vincular-produto';
 
 let ctx: Contexto | null = null;
 
@@ -40,6 +41,20 @@ export const enfileirarNfce = onCall(OPCOES_CALLABLE, (req: CallableRequest<Prev
 export const retentarPendente = onCall(
   OPCOES_CALLABLE,
   (req: CallableRequest<{ chave?: string }>) => executarRetentar(uidDe(req), req.data, contexto()),
+);
+
+export const vincularProduto = onCall(
+  OPCOES_CALLABLE,
+  (req: CallableRequest<{ origem?: string; destino?: string }>) =>
+    executarVincular(uidDe(req), req.data, contexto()),
+);
+
+export const desvincularProduto = onCall(
+  OPCOES_CALLABLE,
+  (req: CallableRequest<{ id?: string }>) => {
+    uidDe(req);
+    return executarDesvincular(req.data, contexto());
+  },
 );
 
 export const reprocessarPendentes = onSchedule(

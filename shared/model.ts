@@ -137,6 +137,8 @@ export interface Produto {
   vinculadoA: ProdutoId | null;
   menorPreco: Observacao | null;
   ultimaObservacao: Observacao | null;
+  /** CNPJs onde o produto já foi visto (até 50), para contar estabelecimentos sem consulta. */
+  cnpjs?: string[];
 }
 
 /** `precos/{chave}_{n}` — compartilhado e anônimo: nunca uid nem referência ao usuário. */

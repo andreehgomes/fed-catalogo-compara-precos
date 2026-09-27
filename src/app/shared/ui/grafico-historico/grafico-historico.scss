@@ -1,0 +1,59 @@
+@use 'sass:list';
+@use '../../style/tokens' as *;
+
+$series: $cp-serie-1, $cp-serie-2, $cp-serie-3, $cp-serie-4, $cp-serie-5;
+
+.grafico {
+  margin: 0;
+
+  > svg {
+    width: 100%;
+    height: auto;
+  }
+}
+
+.grade {
+  stroke: $cp-grafico-grade;
+  stroke-width: 1;
+}
+
+.rotulo {
+  font-size: 11px;
+  fill: $cp-text-muted;
+}
+
+.serie {
+  polyline {
+    stroke-width: 2.5;
+  }
+}
+
+@for $i from 1 through 5 {
+  .serie-#{$i} {
+    color: list.nth($series, $i);
+
+    polyline,
+    line {
+      stroke: currentcolor;
+      stroke-width: 2.5;
+    }
+
+    circle {
+      fill: currentcolor;
+    }
+  }
+}
+
+.legenda {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px 16px;
+  margin-top: 8px;
+  font-size: 12.5px;
+
+  .item {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+  }
+}

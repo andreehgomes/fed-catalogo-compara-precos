@@ -68,6 +68,8 @@ const pares = [
   ['cp-danger-action', 'cp-surface', TEXTO],
   ['cp-danger-action', 'cp-danger-soft', GRANDE],
   ['cp-accent', 'cp-surface', GRANDE],
+  ...[1, 2, 3, 4, 5].map((i) => [`cp-serie-${i}`, 'cp-surface', TEXTO]),
+  ['cp-grafico-grade', 'cp-surface', 1],
 ];
 
 let falhas = 0;
@@ -79,7 +81,7 @@ const linhas = pares.map(([frente, fundo, minimo]) => {
     frente: `$${frente}`,
     fundo: `$${fundo}`,
     razao: r.toFixed(2),
-    minimo: minimo === TEXTO ? '4.5 (texto)' : '3.0 (grande/ícone)',
+    minimo: minimo === TEXTO ? '4.5 (texto)' : minimo === GRANDE ? '3.0 (grande/ícone)' : '1.0 (decorativo)',
     resultado: ok ? 'ok' : 'FALHOU',
   };
 });
