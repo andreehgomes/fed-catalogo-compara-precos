@@ -45,8 +45,7 @@ export const routes: Routes = [
       {
         path: 'regiao',
         title: 'Preços perto de mim · Compara Preços',
-        data: { secao: 'Preços perto de mim' },
-        loadComponent: emBreve,
+        loadComponent: () => import('./features/regiao/busca-regiao.page'),
       },
       {
         path: 'produtos',

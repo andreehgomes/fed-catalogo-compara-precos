@@ -132,6 +132,13 @@ Cada item de `produtos[]` traz:
 - O estabelecimento não traz CNPJ. Para casar com `estabelecimentos/{cnpj}` das
   notas, é preciso comparar razão social + endereço normalizados.
 
+> **Spike de 27/09/2026** ([spike-menor-preco-2026-09-27.md](./spike-menor-preco-2026-09-27.md)):
+> `data` vai de `-1` (últimos 2 meses) a `6` (última hora); `ordem` padrão `0` = menor
+> preço; `local` com geohash de **7** caracteres funciona. A página **não** tem 29 itens
+> fixos: o `offset` anda de 29 em 29, mas a resposta inclui os empates de preço (39 e 47
+> itens, com ids repetidos entre páginas), então a paginação deduplica por `id`.
+> `valor`, `distkm` e `precos.min/max` chegam como string.
+
 ---
 
 ## 3. Requisitos Funcionais

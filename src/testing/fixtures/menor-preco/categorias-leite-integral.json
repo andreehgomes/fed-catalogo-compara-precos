@@ -1,0 +1,23 @@
+{
+  "local": "6gkzqfb",
+  "tempo": 26,
+  "termo": "leite integral",
+  "regiao": "",
+  "categorias": [
+    {
+      "id": 2,
+      "qtd": 291,
+      "desc": "Leite e derivados"
+    },
+    {
+      "id": 13,
+      "qtd": 24,
+      "desc": "Preparos alimentícios"
+    },
+    {
+      "id": 53,
+      "qtd": 3,
+      "desc": "Outros produtos não categorizados"
+    }
+  ]
+}

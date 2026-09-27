@@ -1,0 +1,58 @@
+@use '../../shared/style/tokens' as *;
+
+.regiao-local {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 14px;
+  font-weight: 600;
+  color: $cp-text-secondary;
+
+  mat-icon {
+    color: $cp-accent-ink;
+  }
+
+  span {
+    flex: 1;
+    min-width: 0;
+  }
+}
+
+.regiao-categorias {
+  display: flex;
+  gap: 8px;
+  overflow-x: auto;
+  padding-bottom: 4px;
+
+  .cp-chip {
+    min-height: 36px;
+    border: 1px solid $cp-accent-border;
+    cursor: pointer;
+    font-family: inherit;
+
+    &[aria-pressed='true'] {
+      background: $cp-accent;
+      color: $cp-on-shell;
+    }
+  }
+}
+
+.regiao-resumo {
+  margin: 0;
+  font-size: 14px;
+  color: $cp-text-muted;
+}
+
+.regiao-skeleton {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+
+  .cp-skeleton {
+    height: 64px;
+  }
+}
+
+.regiao-scanner-espera {
+  height: 240px;
+}

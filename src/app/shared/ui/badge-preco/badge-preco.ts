@@ -16,23 +16,27 @@ const ICONES: Record<TipoBadgePreco, string> = {
   template: `
     <span [class]="'cp-badge cp-badge--' + tipo()">
       <mat-icon aria-hidden="true">{{ icone() }}</mat-icon>
-      @switch (tipo()) {
-        @case ('mais-barato') {
-          @if (diferenca(); as d) {
-            {{ d | currency }} mais barato
-          } @else {
-            Mais barato
+      @if (rotulo(); as r) {
+        {{ r }}
+      } @else {
+        @switch (tipo()) {
+          @case ('mais-barato') {
+            @if (diferenca(); as d) {
+              {{ d | currency }} mais barato
+            } @else {
+              Mais barato
+            }
           }
-        }
-        @case ('mais-caro') {
-          @if (diferenca(); as d) {
-            {{ d | currency }} mais caro
-          } @else {
-            Mais caro
+          @case ('mais-caro') {
+            @if (diferenca(); as d) {
+              {{ d | currency }} mais caro
+            } @else {
+              Mais caro
+            }
           }
-        }
-        @default {
-          {{ textoIgual() }}
+          @default {
+            {{ textoIgual() }}
+          }
         }
       }
     </span>
@@ -43,6 +47,7 @@ export class BadgePreco {
   readonly tipo = input.required<TipoBadgePreco>();
   readonly diferenca = input<number | null>(null);
   readonly textoIgual = input('Mesmo preço');
+  readonly rotulo = input<string | null>(null);
 
   protected readonly icone = computed(() => ICONES[this.tipo()]);
 }

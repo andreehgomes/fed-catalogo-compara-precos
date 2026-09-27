@@ -66,7 +66,11 @@ describe('AuthStore', () => {
     await store.entrar(' a@b.com ', 'segredo123');
     expect(fake.api.signInWithEmailAndPassword).toHaveBeenCalledWith(auth, 'a@b.com', 'segredo123');
     await store.cadastrar('Ana', 'a@b.com', 'segredo123');
-    expect(fake.api.createUserWithEmailAndPassword).toHaveBeenCalledWith(auth, 'a@b.com', 'segredo123');
+    expect(fake.api.createUserWithEmailAndPassword).toHaveBeenCalledWith(
+      auth,
+      'a@b.com',
+      'segredo123',
+    );
     expect(fake.api.updateProfile).toHaveBeenCalledWith({ uid: 'novo' }, { displayName: 'Ana' });
     await store.cadastrar('', 'c@d.com', 'segredo123');
     expect(fake.api.updateProfile).toHaveBeenCalledTimes(1);
@@ -102,7 +106,9 @@ describe('AuthStore', () => {
 
 describe('mensagemErroAuth', () => {
   it('mapeia os códigos do Firebase para pt-BR', () => {
-    expect(mensagemErroAuth({ code: 'auth/invalid-credential' })).toBe('E-mail ou senha incorretos.');
+    expect(mensagemErroAuth({ code: 'auth/invalid-credential' })).toBe(
+      'E-mail ou senha incorretos.',
+    );
     expect(mensagemErroAuth({ code: 'auth/email-already-in-use' })).toBe(
       'Já existe uma conta com este e-mail.',
     );

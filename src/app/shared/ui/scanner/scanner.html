@@ -1,0 +1,45 @@
+<section class="scanner" aria-label="Leitor de código">
+  @if (estado() !== 'sem-camera') {
+    <div class="scanner-visor">
+      <video #video muted playsinline aria-hidden="true"></video>
+      <div class="scanner-moldura" aria-hidden="true"></div>
+      @if (estado() === 'iniciando') {
+        <p class="scanner-status" role="status">Abrindo a câmera…</p>
+      } @else {
+        <p class="scanner-status" role="status">Aponte a câmera para o código</p>
+      }
+    </div>
+  }
+
+  @if (mensagem(); as msg) {
+    <div class="cp-info-block cp-info-block--warn" role="alert">
+      <mat-icon aria-hidden="true">no_photography</mat-icon>{{ msg }}
+    </div>
+  }
+
+  <div class="scanner-acoes">
+    <label
+      class="scanner-imagem"
+      [class.cp-btn-primary]="estado() === 'sem-camera'"
+      [class.cp-btn-secondary]="estado() !== 'sem-camera'"
+    >
+      <mat-icon aria-hidden="true">photo_library</mat-icon>
+      Escolher imagem
+      <input class="cp-sr-only" type="file" accept="image/*" (change)="escolherImagem($event)" />
+    </label>
+    @if (lanternaDisponivel()) {
+      <button
+        type="button"
+        class="cp-btn-secondary"
+        [attr.aria-pressed]="lanternaLigada()"
+        (click)="alternarLanterna()"
+      >
+        <mat-icon aria-hidden="true">{{
+          lanternaLigada() ? 'flashlight_off' : 'flashlight_on'
+        }}</mat-icon>
+        Lanterna
+      </button>
+    }
+    <button type="button" class="cp-btn-ghost" (click)="cancelar()">Cancelar</button>
+  </div>
+</section>

@@ -163,6 +163,41 @@ erro (`**`) ficam fora dele.
 - Telas ainda não implementadas usam `features/em-breve` (título pela `data.secao`
   da rota).
 
+## Preços da região (Menor Preço)
+
+- `features/regiao/data-access/`: `FontePrecosRegiao` (classe abstrata, `providedIn:
+  'root'` com `useExisting: MenorPrecoClient` — não registrar no `app.config`, senão o
+  client e o valibot vão para o bundle inicial), `MenorPrecoClient` (HttpClient,
+  `timeout` de 10 s, **sem retry**, erros viram `FonteIndisponivelError` com
+  `motivo`), `menor-preco.schema.ts` (valibot **por item**: item inválido é descartado
+  e contado) e `MenorPrecoCache` (memória + `sessionStorage`, TTL 30 min, chave com
+  geohash de 5, deduplica requisição em voo). Tipos em `regiao.model.ts` (evita ciclo
+  de import com a classe abstrata).
+- API: `data=-1` (últimos 2 meses), `local` = geohash de **7**; a página **não** tem
+  29 itens fixos (vem com os empates de preço) — o `offset` anda de 29 em 29 e a lista
+  deduplica por `id` (`RegiaoStore`). Ver `docs/analise/spike-menor-preco-2026-09-27.md`.
+- `LocalizacaoStore`: GPS (`maximumAge` 5 min) ou município (`src/assets/data/municipios-pr.json`,
+  gerado por `scripts/gerar-municipios-pr.mjs` a partir do IBGE). Guarda no
+  `localStorage` só origem, município e raio — **nunca coordenadas** nem geohash.
+- Tela `/regiao` (`busca-regiao.page`): query params `gtin`/`termo`/`categoria` são a
+  fonte de verdade (`withComponentInputBinding`); campo com `debounce` de 400 ms do
+  Signal Forms (confirma no `blur`); termo só de dígitos com GTIN válido vira `gtin`.
+  Busca por GTIN usa `<cp-resultado-gtin>` (`separarDivergentes`, divergentes ocultos).
+- Fixtures reais em `src/testing/fixtures/menor-preco/`; o e2e as serve por
+  `page.route` (`e2e/support/mocks.ts`).
+
+## Scanner
+
+`<cp-scanner [formatos] (lido) (cancelado)>` (`shared/ui/scanner/`): câmera traseira,
+leitura a cada ~250 ms, lanterna quando suportada, "Escolher imagem" (galeria) e
+câmera liberada ao ler, cancelar ou destruir. O `scanner-engine.ts` usa o
+`BarcodeDetector` nativo quando suporta os formatos, senão `import()` de
+`barcode-detector/ponyfill` com o `.wasm` servido de `assets/zxing/` (copiado de
+`zxing-wasm/dist/reader` pelo `angular.json`, sem CDN). Use sempre dentro de `@defer`
+para ficar fora do bundle inicial. Câmera, `getUserMedia` e `createImageBitmap` chegam
+pelo token `SCANNER_ENGINE` (fake nos testes). Imagens de teste (QR da NFC-e e EAN)
+geradas por `scripts/gerar-imagens-codigo.mjs` em `e2e/fixtures/`.
+
 ## Theming
 
 Design system **"Compara Preços"**: a estrutura do DS do `fed-catalogo-confeccoes`

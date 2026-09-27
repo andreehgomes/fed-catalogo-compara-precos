@@ -1,0 +1,154 @@
+<main class="cp-page">
+  <header class="cp-page-header">
+    <div>
+      <h1>Preços perto de mim</h1>
+      <p>Preços das notas fiscais emitidas na região, direto do Menor Preço (Nota Paraná).</p>
+    </div>
+  </header>
+
+  @if (!loc.pronta() || alterandoLocal()) {
+    <cp-localizacao-seletor (escolhido)="alterandoLocal.set(false)" />
+  }
+
+  @if (loc.pronta()) {
+    <section class="cp-block">
+      <div class="regiao-local">
+        <mat-icon aria-hidden="true">location_on</mat-icon>
+        <span>{{ loc.descricao() }} · raio de {{ loc.raioKm() }} km</span>
+        <button type="button" class="cp-btn-ghost" (click)="alterandoLocal.set(!alterandoLocal())">
+          {{ alterandoLocal() ? 'Fechar' : 'Alterar' }}
+        </button>
+      </div>
+
+      <label class="cp-field">
+        <span>Produto ou código de barras</span>
+        <input
+          type="search"
+          enterkeyhint="search"
+          autocomplete="off"
+          placeholder="Ex.: leite integral 1l"
+          [formField]="form.texto"
+        />
+      </label>
+
+      <button type="button" class="cp-btn-secondary" (click)="lendoCodigo.set(!lendoCodigo())">
+        <mat-icon aria-hidden="true">barcode_scanner</mat-icon>
+        {{ lendoCodigo() ? 'Fechar leitor' : 'Ler código de barras' }}
+      </button>
+
+      @if (lendoCodigo()) {
+        @defer (on immediate) {
+          <cp-scanner
+            [formatos]="['ean_13', 'ean_8']"
+            (lido)="codigoLido($event)"
+            (cancelado)="lendoCodigo.set(false)"
+          />
+        } @placeholder {
+          <div class="cp-skeleton regiao-scanner-espera" aria-hidden="true"></div>
+        } @loading {
+          <p class="cp-field-hint" role="status">Carregando o leitor…</p>
+        }
+      }
+    </section>
+
+    @if (!porGtin() && store.categorias.hasValue() && store.categorias.value().length > 1) {
+      <nav class="regiao-categorias" aria-label="Filtrar por categoria">
+        <button
+          type="button"
+          class="cp-chip"
+          [attr.aria-pressed]="categoriaAtiva() === null"
+          (click)="filtrarCategoria(null)"
+        >
+          Todas
+        </button>
+        @for (c of store.categorias.value(); track c.id) {
+          <button
+            type="button"
+            class="cp-chip"
+            [attr.aria-pressed]="categoriaAtiva() === c.id"
+            (click)="filtrarCategoria(c.id)"
+          >
+            {{ c.desc }} ({{ c.qtd }})
+          </button>
+        }
+      </nav>
+    }
+
+    @if (store.busca()) {
+      <section class="cp-block" aria-live="polite" [attr.aria-busy]="store.carregando()">
+        @if (store.indisponivel() && !store.ofertas().length) {
+          <cp-empty-state
+            icone="cloud_off"
+            titulo="Menor Preço indisponível agora"
+            texto="O serviço do Governo do Paraná não respondeu. O resto do app continua funcionando."
+          >
+            <button type="button" class="cp-btn-primary" (click)="store.tentarDeNovo()">
+              Tentar de novo
+            </button>
+          </cp-empty-state>
+        } @else if (store.erroInesperado()) {
+          <cp-empty-state
+            icone="error"
+            titulo="Algo deu errado"
+            texto="Tente de novo em instantes."
+          >
+            <button type="button" class="cp-btn-primary" (click)="store.tentarDeNovo()">
+              Tentar de novo
+            </button>
+          </cp-empty-state>
+        } @else if (store.carregando()) {
+          <div class="regiao-skeleton" role="status">
+            <span class="cp-sr-only">Buscando preços…</span>
+            @for (i of [1, 2, 3, 4]; track i) {
+              <div class="cp-skeleton" aria-hidden="true"></div>
+            }
+          </div>
+        } @else if (store.resultado(); as r) {
+          @if (!store.ofertas().length) {
+            <cp-empty-state
+              icone="search_off"
+              titulo="Nenhuma oferta encontrada"
+              texto="Tente outro termo, aumente o raio ou mude a cidade."
+            />
+          } @else {
+            <p class="regiao-resumo">
+              {{ r.total }} {{ r.total === 1 ? 'oferta' : 'ofertas' }}
+              @if (r.min !== null && r.max !== null) {
+                · de <strong>{{ r.min | currency }}</strong> a
+                <strong>{{ r.max | currency }}</strong>
+              }
+            </p>
+
+            @if (porGtin()) {
+              <cp-resultado-gtin [ofertas]="store.ofertas()" />
+            } @else {
+              <ul class="cp-list" aria-label="Ofertas">
+                @for (o of store.ofertas(); track o.id) {
+                  <li><cp-oferta-row [oferta]="o" /></li>
+                }
+              </ul>
+            }
+
+            @if (store.temMais()) {
+              <div (cpVisivel)="store.carregarMais()"></div>
+              <button
+                type="button"
+                class="cp-btn-secondary"
+                [disabled]="store.carregandoMais()"
+                (click)="store.carregarMais()"
+              >
+                {{ store.carregandoMais() ? 'Carregando…' : 'Carregar mais' }}
+              </button>
+            }
+            @if (store.indisponivel()) {
+              <div class="cp-info-block cp-info-block--warn" role="alert">
+                <mat-icon aria-hidden="true">cloud_off</mat-icon>
+                Menor Preço indisponível agora. Mostrando o que já carregou.
+              </div>
+            }
+          }
+        }
+      </section>
+    }
+  }
+</main>
