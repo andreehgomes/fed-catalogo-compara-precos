@@ -1,7 +1,8 @@
 import { ChangeDetectionStrategy, Component, computed, input } from '@angular/core';
 import { MatIconModule } from '@angular/material/icon';
+import type { FontePreco } from '@shared/model';
 
-export type FonteDoPreco = 'minhas-notas' | 'comunidade' | 'menor-preco';
+export type FonteDoPreco = FontePreco;
 
 const ROTULOS: Record<FonteDoPreco, string> = {
   'minhas-notas': 'Suas notas',
