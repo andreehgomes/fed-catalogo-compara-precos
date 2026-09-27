@@ -56,6 +56,14 @@ jobs:
           service_account: ${{ env.PRODUCAO == 'true' && vars.WIF_SERVICE_ACCOUNT || vars.WIF_SERVICE_ACCOUNT_DV }}
           create_credentials_file: true
 
+      # O firebase-tools esconde o motivo ("have you run firebase login?"); aqui ele aparece.
+      - name: Conferir a credencial
+        run: >
+          node -e "const p = require.resolve('google-auth-library', { paths: [require.resolve('firebase-tools')] });
+          new (require(p).GoogleAuth)({ scopes: 'https://www.googleapis.com/auth/cloud-platform' })
+          .getAccessToken().then(() => console.log('credencial ok'),
+          (e) => { console.error(JSON.stringify(e.response?.data ?? e.message)); process.exit(1); });"
+
       - name: firebase deploy
         run: >
           npx firebase deploy
