@@ -2,7 +2,7 @@
 
 **Data:** 2026-09-27
 **Plano:** docs/plano/compara-precos-nfce-executar-tudo.md
-**Branch:** main (local; nada foi enviado ao GitHub)
+**Branch:** main (enviado ao GitHub em 27/09/2026)
 **Executor:** Claude Code
 
 ---
@@ -34,6 +34,29 @@ Lighthouse mobile no login: Performance 91, Accessibility 100.
 
 ---
 
+## Publicação (27/09/2026, depois da execução, a pedido do usuário)
+
+| Alvo | dv (`fed-catalogo-compara-precos-dv`) | Produção (`fed-catalogo-compara-precos`) |
+|---|---|---|
+| GitHub | `main` enviado para `origin` | — |
+| Regras + índices (incl. TTL de `previews`) | ✅ publicados | ✅ publicados |
+| Functions | ✅ as 7 (`previewNfce`, `confirmarNfce`, `enfileirarNfce`, `retentarPendente`, `vincularProduto`, `desvincularProduto`, `reprocessarPendentes`) | ⚠️ 6 publicadas; **`reprocessarPendentes` falhou** (409 na criação do bucket no primeiro deploy) e precisa ser publicada de novo |
+| Hosting | ✅ https://fed-catalogo-compara-precos-dv.web.app (build `dv`) | ⛔ não publicado |
+
+Verificado no dv: site responde (título "Compara Preços"), `ngsw-worker.js` com
+`no-cache`, `.wasm` servido do próprio Hosting, e callable sem sessão/App Check recusada
+com 401. Os primeiros deploys de Functions nos dois projetos tiveram falhas de corrida da
+primeira publicação (bucket/serviço criados em paralelo); repetir só as que falharam
+resolve.
+
+Para concluir a produção (rodar no terminal):
+
+```bash
+npx firebase deploy --only functions:reprocessarPendentes -P prod --force
+npm run build -- --configuration=production
+npx firebase deploy --only hosting -P prod
+```
+
 ## Pendências do usuário
 
 ### Instalar
@@ -42,11 +65,11 @@ Lighthouse mobile no login: Performance 91, Accessibility 100.
   `npm run …`. Depois de atualizar, dá para remover o pacote `node`.
 
 ### Console Firebase / Google Cloud
-- **Plano Blaze + alerta de orçamento** no dv (e em produção antes do primeiro deploy de `main`).
+- ~~Plano Blaze~~ (feito pelo usuário). Conferir o **alerta de orçamento** nos dois projetos.
 - Nos dois projetos: **Authentication** com e-mail/senha e **Google** habilitados (o Google
   já está, segundo o usuário), `localhost` em Domínios autorizados no dv; **Firestore em
   `southamerica-east1`**.
-- Publicar no dv: `npm run deploy:rules:dev` e `npm run deploy:functions:dev`.
+- ~~Publicar no dv~~ (feito). Concluir a produção com os comandos da seção acima.
 - Rodar o checklist do **Rules Playground**: `docs/qualidade/regras-firestore-checklist.md` (30 cenários).
 - **App Check:** abrir o app no `localhost`, copiar o debug token do console do navegador e
   registrar no dv; conferir que callable sem token é rejeitada
@@ -59,7 +82,7 @@ Lighthouse mobile no login: Performance 91, Accessibility 100.
   dois projetos.
 
 ### GitHub
-- `git push -u origin main` (o remoto `origin` está configurado; nada foi enviado).
+- ~~`git push -u origin main`~~ (feito). O CI roda no push; o `deploy.yml` vai falhar na autenticação até o WIF ser configurado.
 - Criar o branch `develop`, se for usar o deploy no dv pelo CI.
 - Variáveis `WIF_PROVIDER`, `WIF_SERVICE_ACCOUNT`, `WIF_SERVICE_ACCOUNT_DV`; secrets
   `E2E_EMAIL`, `E2E_SENHA` (opcionais) e ambientes `dv`/`producao`.
