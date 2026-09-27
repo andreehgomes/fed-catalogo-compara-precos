@@ -1,0 +1,71 @@
+<main class="cp-auth">
+  <div class="cp-auth-inner">
+    <div class="cp-auth-brand">
+      <span class="cp-auth-logo"><mat-icon aria-hidden="true">shopping_basket</mat-icon></span>
+      <div>
+        <strong>Compara Preços</strong>
+        <span>Suas notas e os preços do Paraná</span>
+      </div>
+    </div>
+
+    <form class="cp-auth-card" [formRoot]="form">
+      <div>
+        <h1>Criar conta</h1>
+        <p>Suas notas ficam só na sua conta. Os preços entram anônimos na comparação.</p>
+      </div>
+
+      <label class="cp-field">
+        <span>Nome (opcional)</span>
+        <input type="text" autocomplete="name" [formField]="form.nome" />
+      </label>
+
+      <label class="cp-field">
+        <span>E-mail</span>
+        <input
+          type="email"
+          autocomplete="email"
+          inputmode="email"
+          [formField]="form.email"
+          [attr.aria-invalid]="!!erroEmail()"
+          [attr.aria-describedby]="erroEmail() ? 'cadastro-email-erro' : null"
+        />
+      </label>
+      @if (erroEmail(); as msg) {
+        <span id="cadastro-email-erro" class="cp-field-error">{{ msg }}</span>
+      }
+
+      <label class="cp-field">
+        <span>Senha</span>
+        <input
+          type="password"
+          autocomplete="new-password"
+          [formField]="form.senha"
+          [attr.aria-invalid]="!!erroSenha()"
+          [attr.aria-describedby]="erroSenha() ? 'cadastro-senha-erro' : 'cadastro-senha-dica'"
+        />
+      </label>
+      @if (erroSenha(); as msg) {
+        <span id="cadastro-senha-erro" class="cp-field-error">{{ msg }}</span>
+      } @else {
+        <span id="cadastro-senha-dica" class="cp-field-hint">Mínimo de 8 caracteres.</span>
+      }
+
+      @if (erro(); as msg) {
+        <div class="cp-info-block cp-info-block--erro" role="alert">
+          <mat-icon aria-hidden="true">error</mat-icon>{{ msg }}
+        </div>
+      }
+
+      <button class="cp-btn-primary" type="submit" [disabled]="enviando()">
+        {{ enviando() ? 'Criando…' : 'Criar conta' }}
+      </button>
+
+      <div class="cp-auth-divisor"><span>ou</span></div>
+      <cp-botao-google />
+
+      <div class="cp-auth-links">
+        <a routerLink="/login">Já tenho conta</a>
+      </div>
+    </form>
+  </div>
+</main>

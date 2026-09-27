@@ -1,0 +1,55 @@
+<main class="cp-auth">
+  <div class="cp-auth-inner">
+    <div class="cp-auth-brand">
+      <span class="cp-auth-logo"><mat-icon aria-hidden="true">shopping_basket</mat-icon></span>
+      <div>
+        <strong>Compara Preços</strong>
+        <span>Suas notas e os preços do Paraná</span>
+      </div>
+    </div>
+
+    <form class="cp-auth-card" [formRoot]="form">
+      <div>
+        <h1>Redefinir senha</h1>
+        <p>Enviamos um link para você criar uma senha nova.</p>
+      </div>
+
+      @if (enviado()) {
+        <div class="cp-info-block" role="status">
+          <mat-icon aria-hidden="true">mark_email_read</mat-icon>
+          Se houver uma conta com este e-mail, o link chega em alguns minutos. Confira também o
+          spam.
+        </div>
+      } @else {
+        <label class="cp-field">
+          <span>E-mail</span>
+          <input
+            type="email"
+            autocomplete="email"
+            inputmode="email"
+            [formField]="form.email"
+            [attr.aria-invalid]="!!erroEmail()"
+            [attr.aria-describedby]="erroEmail() ? 'redefinir-email-erro' : null"
+          />
+        </label>
+        @if (erroEmail(); as msg) {
+          <span id="redefinir-email-erro" class="cp-field-error">{{ msg }}</span>
+        }
+
+        @if (erro(); as msg) {
+          <div class="cp-info-block cp-info-block--erro" role="alert">
+            <mat-icon aria-hidden="true">error</mat-icon>{{ msg }}
+          </div>
+        }
+
+        <button class="cp-btn-primary" type="submit" [disabled]="enviando()">
+          {{ enviando() ? 'Enviando…' : 'Enviar link' }}
+        </button>
+      }
+
+      <div class="cp-auth-links">
+        <a routerLink="/login">Voltar para o login</a>
+      </div>
+    </form>
+  </div>
+</main>

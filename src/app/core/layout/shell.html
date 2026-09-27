@@ -1,0 +1,98 @@
+<div class="cp-shell">
+  <aside
+    id="cp-nav"
+    class="cp-nav"
+    aria-label="Navegação principal"
+    [class.expandido]="navAberta()"
+    [class.rail]="rail()"
+    [attr.inert]="estreito() && !drawerAberto() ? '' : null"
+  >
+    <div class="cp-nav-header">
+      <span class="cp-nav-logo"><mat-icon aria-hidden="true">shopping_basket</mat-icon></span>
+      <div class="cp-nav-brand">
+        <span class="cp-nav-brand-name">Compara Preços</span>
+        <span class="cp-nav-brand-tag">Notas do Paraná</span>
+      </div>
+    </div>
+
+    <nav class="cp-nav-list">
+      @for (item of itens; track item.rota) {
+        <a
+          class="cp-nav-item"
+          [routerLink]="item.rota"
+          routerLinkActive="ativo"
+          ariaCurrentWhenActive="page"
+          [routerLinkActiveOptions]="{ exact: !!item.exato }"
+          [matTooltip]="rail() ? item.rotulo : ''"
+          matTooltipPosition="right"
+          [attr.aria-label]="rail() ? item.rotulo : null"
+        >
+          <mat-icon aria-hidden="true">{{ item.icone }}</mat-icon>
+          <span class="cp-nav-label">{{ item.rotulo }}</span>
+        </a>
+      }
+
+      <button
+        type="button"
+        class="cp-nav-item cp-nav-item--sair"
+        [matTooltip]="rail() ? 'Sair' : ''"
+        matTooltipPosition="right"
+        [attr.aria-label]="rail() ? 'Sair' : null"
+        (click)="sair()"
+      >
+        <mat-icon aria-hidden="true">logout</mat-icon>
+        <span class="cp-nav-label">Sair</span>
+      </button>
+    </nav>
+
+    <div class="cp-nav-footer">
+      <span class="cp-nav-footer-label">Preços de</span>
+      <span class="cp-nav-footer-name">Suas notas · Menor Preço</span>
+    </div>
+  </aside>
+
+  <button
+    type="button"
+    class="cp-scrim"
+    tabindex="-1"
+    aria-label="Fechar navegação"
+    [class.ativo]="estreito() && drawerAberto()"
+    [attr.aria-hidden]="!(estreito() && drawerAberto())"
+    (click)="fecharDrawer()"
+  ></button>
+
+  <div class="cp-main">
+    <header class="cp-header">
+      <button
+        #botaoMenu
+        type="button"
+        class="cp-btn-icon"
+        aria-controls="cp-nav"
+        [attr.aria-expanded]="navAberta()"
+        [attr.aria-label]="navAberta() ? 'Fechar menu' : 'Abrir menu'"
+        (click)="alternarNav()"
+      >
+        <mat-icon aria-hidden="true">menu</mat-icon>
+      </button>
+      <span class="cp-header-title">Compara Preços</span>
+      <span class="cp-header-spacer"></span>
+      @if (nomeUsuario()) {
+        <span class="cp-header-user" [title]="nomeUsuario()">
+          <span class="cp-header-avatar" aria-hidden="true">{{ inicial() }}</span>
+          <span class="cp-sr-only">Conectado como {{ nomeUsuario() }}</span>
+        </span>
+      }
+    </header>
+
+    <div class="cp-content">
+      <router-outlet />
+    </div>
+  </div>
+
+  @if (estreito()) {
+    <a class="cp-fab" routerLink="/importar" aria-label="Importar nota">
+      <mat-icon aria-hidden="true">qr_code_scanner</mat-icon>
+      <span>Importar</span>
+    </a>
+  }
+</div>

@@ -495,7 +495,12 @@ summary:focus-visible {
 
 .cp-skeleton {
   border-radius: $cp-radius-sm;
-  background: linear-gradient(90deg, $cp-surface-track 25%, $cp-surface-subtle 50%, $cp-surface-track 75%);
+  background: linear-gradient(
+    90deg,
+    $cp-surface-track 25%,
+    $cp-surface-subtle 50%,
+    $cp-surface-track 75%
+  );
   background-size: 200% 100%;
   animation: cp-skeleton-brilho 1.2s linear infinite;
 }
@@ -757,6 +762,109 @@ button.cp-list-row {
 
 .cp-segmented {
   @include cp-segmented;
+}
+
+// ─── Telas de conta (fora do shell) ──────────────────────────────────────────
+.cp-auth {
+  min-height: 100%;
+  box-sizing: border-box;
+  display: grid;
+  place-items: center;
+  padding: max(24px, env(safe-area-inset-top)) 16px 32px;
+  background: $cp-gradient-shell;
+}
+
+.cp-auth-inner {
+  width: min(420px, 100%);
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.cp-auth-brand {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  color: $cp-on-shell;
+
+  strong {
+    display: block;
+    font-size: 19px;
+    font-weight: $cp-display-weight;
+    letter-spacing: -0.01em;
+  }
+
+  span {
+    font-size: 13px;
+    color: $cp-on-shell-muted;
+  }
+}
+
+.cp-auth-logo {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 44px;
+  height: 44px;
+  border-radius: $cp-radius-input;
+  background: $cp-accent;
+  color: $cp-on-shell;
+}
+
+.cp-auth-card {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  padding: clamp(20px, 5vw, 30px);
+  border-radius: $cp-radius-panel;
+  background: $cp-surface;
+  box-shadow: $cp-shadow-modal;
+
+  h1 {
+    margin: 0;
+    font-size: 26px;
+    font-weight: $cp-display-weight;
+    letter-spacing: $cp-display-tracking;
+  }
+
+  p {
+    margin: 0;
+    font-size: 14px;
+    color: $cp-text-muted;
+  }
+}
+
+.cp-auth-divisor {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  font-size: 12.5px;
+  color: $cp-text-muted;
+
+  &::before,
+  &::after {
+    content: '';
+    flex: 1;
+    height: 1px;
+    background: $cp-border-divider;
+  }
+}
+
+.cp-btn-google {
+  color: $cp-text;
+}
+
+.cp-auth-links {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  gap: 8px;
+  font-size: 14px;
+
+  a {
+    font-weight: 600;
+    padding: 6px 0;
+  }
 }
 
 // ─── Scrollbar ───────────────────────────────────────────────────────────────

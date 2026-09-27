@@ -20,7 +20,18 @@ $cp-shell-700: #15502f; // fim do gradiente; ícone de ação secundária
 $cp-on-shell: #fff; // texto e ícone sobre a casca e sobre o acento
 $cp-on-shell-muted: #b9d3c3; // rótulo secundário sobre a casca
 
-$cp-gradient-shell: linear-gradient(168deg, $cp-shell-900 0%, $cp-shell-800 55%, $cp-shell-700 100%);
+$cp-shell-item: #cfe3d6; // texto dos itens de navegação
+$cp-shell-group: #a3c2ae; // rótulo de grupo e rodapé do sidebar
+$cp-shell-item-hover: rgb(255 255 255 / 9%);
+$cp-shell-item-active: rgb(255 255 255 / 16%);
+$cp-shell-divider: rgb(255 255 255 / 10%);
+$cp-header-bg: rgb(255 255 255 / 88%);
+$cp-gradient-shell: linear-gradient(
+  168deg,
+  $cp-shell-900 0%,
+  $cp-shell-800 55%,
+  $cp-shell-700 100%
+);
 
 // ── Superfícies e bordas ─────────────────────────────────────────────────────
 $cp-bg: #f3f6f3; // tela do app
@@ -82,9 +93,13 @@ $cp-radius-pill: 999px;
 
 // ── Sombra ───────────────────────────────────────────────────────────────────
 $cp-shadow-hairline: 0 1px 2px rgb(24 33 28 / 4%);
-$cp-shadow-card: 0 1px 2px rgb(24 33 28 / 4%), 0 14px 34px -26px rgb(24 33 28 / 30%);
+$cp-shadow-card:
+  0 1px 2px rgb(24 33 28 / 4%),
+  0 14px 34px -26px rgb(24 33 28 / 30%);
 $cp-shadow-hover: 0 18px 38px -22px rgb(24 33 28 / 40%);
-$cp-shadow-panel: 0 1px 2px rgb(24 33 28 / 4%), 0 20px 50px -34px rgb(24 33 28 / 35%);
+$cp-shadow-panel:
+  0 1px 2px rgb(24 33 28 / 4%),
+  0 20px 50px -34px rgb(24 33 28 / 35%);
 $cp-shadow-accent: 0 12px 26px -12px rgb(31 122 77 / 85%);
 $cp-shadow-accent-fab: 0 14px 28px -12px rgb(31 122 77 / 90%);
 $cp-shadow-drawer: 18px 0 60px -20px rgb(0 0 0 / 60%);

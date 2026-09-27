@@ -18,7 +18,9 @@ describe('FontePrecoInfo', () => {
 
   it('acrescenta há quanto tempo', () => {
     const tresDias = new Date(Date.now() - 3 * 86_400_000);
-    expect(texto('menor-preco', tresDias)).toBe('account_balance Menor Preço – Nota Paraná · há 3 dias');
+    expect(texto('menor-preco', tresDias)).toBe(
+      'account_balance Menor Preço – Nota Paraná · há 3 dias',
+    );
   });
 
   it('ignora data inválida', () => {

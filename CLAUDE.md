@@ -115,11 +115,53 @@ Detalhes: [docs/analise/compara-precos-nfce-analise.md](docs/analise/compara-pre
 
 ## Firebase & data access
 
-_A completar na Fase 4._
+- **Ambientes:** `npm start` → `src/environments/environment.ts` → projeto
+  **`fed-catalogo-compara-precos-dv`**; `ng build -c production` troca pelo
+  `environment.prod.ts` (`fileReplacements`) → **`fed-catalogo-compara-precos`**.
+  `.firebaserc`: `default`/`dev` = dv, `prod` = produção (deploy sem `-P` vai para o dv).
+  Sem `measurementId`/Analytics. Sem bloco `emulators` no `firebase.json`.
+- **SDK modular por `InjectionToken`**, sem `@angular/fire`:
+  - `provideFirebase()` (`core/firebase/firebase.providers.ts`) registra `FIREBASE_APP`
+    e `FIREBASE_AUTH` — os únicos no bundle inicial (os guards precisam da sessão).
+  - `FIRESTORE` (`firestore.token.ts`, cache persistente multi-aba) e `FUNCTIONS`
+    (`functions.token.ts`, `southamerica-east1`) são tokens `providedIn: 'root'` em
+    arquivos próprios. **Importe-os direto desses arquivos** (não reexporte em
+    `firebase.providers.ts`), senão o SDK do Firestore volta para o `main` e estoura
+    o budget de 500 kB.
+- **Auth:** `AuthStore` (`core/auth/auth.store.ts`) com `usuario` (`undefined` =
+  resolvendo), `pronto`, `logado`, `uid` e os métodos `entrar`, `entrarComGoogle`
+  (popup; cai para redirect se o popup for bloqueado), `cadastrar`, `sair`,
+  `redefinirSenha`. As funções do SDK chegam pelo token `AUTH_API` (`auth-api.ts`),
+  que os testes trocam por fakes. **Não use `vi.mock` de módulos do Firebase:** o
+  builder empacota o SDK num chunk compartilhado e o mock vaza/falha quando todos os
+  specs rodam juntos.
+- **Guards** `authGuard`/`guestGuard` esperam `pronto()` antes de decidir (refresh
+  não pisca o login). O `authGuard` manda para `/login?voltar=<url>`.
+- **Regras:** `firestore.rules` (dono lê/exclui as próprias notas e pendentes;
+  base compartilhada só leitura; nada escrito pelo cliente). Sem teste automatizado:
+  checklist do Rules Playground em `docs/qualidade/regras-firestore-checklist.md`,
+  rodado pelo usuário após `npm run deploy:rules:dev`.
+- **e2e:** usuário de teste em `.env.e2e` (`E2E_EMAIL`, `E2E_SENHA`; ver
+  `.env.e2e.example`). Sem o arquivo, os testes com login são pulados.
 
 ## Shell
 
-_A completar na Fase 4._
+`core/layout/shell.ts` é o layout das rotas autenticadas (rota `''` com `authGuard`,
+carregada por `loadComponent`). Login, cadastro, redefinição de senha e a página de
+erro (`**`) ficam fora dele.
+
+- `<aside>` irmão do conteúdo: **rail de 76px** ↔ **264px** no desktop (`expandido`)
+  e **drawer de 272px sobreposto abaixo de 900px** (`drawerAberto`), com scrim. O
+  drawer fecha ao navegar (`NavigationEnd` + `takeUntilDestroyed`), com `Esc` (o
+  foco volta ao botão de menu) e no scrim. Fechado em tela estreita, o `<aside>` fica
+  `inert`.
+- Header sticky (fora da área de rolagem) e **scroll interno em `.cp-content`**.
+- `BreakpointService.estreito` (`matchMedia('(max-width: 900px)')`) decide o modo.
+- No celular, **FAB "Importar nota"** fixo.
+- Itens: Painel, Importar nota, Minhas notas, Preços perto de mim, Produtos,
+  Estabelecimentos (`ITENS_NAV`) e Sair.
+- Telas ainda não implementadas usam `features/em-breve` (título pela `data.secao`
+  da rota).
 
 ## Theming
 

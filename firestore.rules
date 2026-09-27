@@ -1,0 +1,18 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{db}/documents {
+    function logado() { return request.auth != null; }
+    function dono(uid) { return logado() && request.auth.uid == uid; }
+
+    match /usuarios/{uid} {
+      allow read: if dono(uid);
+      allow write: if false;
+      match /notas/{chave}     { allow read, delete: if dono(uid); allow create, update: if false; }
+      match /pendentes/{chave} { allow read, delete: if dono(uid); allow create, update: if false; }
+    }
+    match /produtos/{id}         { allow read: if logado(); allow write: if false; }
+    match /estabelecimentos/{id} { allow read: if logado(); allow write: if false; }
+    match /precos/{id}           { allow read: if logado(); allow write: if false; }
+    match /{document=**}         { allow read, write: if false; }
+  }
+}

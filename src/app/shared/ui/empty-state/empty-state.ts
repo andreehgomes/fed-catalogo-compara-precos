@@ -6,7 +6,9 @@ import { MatIconModule } from '@angular/material/icon';
   imports: [MatIconModule],
   template: `
     <div class="cp-empty-state">
-      <span class="cp-empty-icon"><mat-icon aria-hidden="true">{{ icone() }}</mat-icon></span>
+      <span class="cp-empty-icon"
+        ><mat-icon aria-hidden="true">{{ icone() }}</mat-icon></span
+      >
       <h2 class="cp-empty-title">{{ titulo() }}</h2>
       @if (texto()) {
         <p>{{ texto() }}</p>

@@ -1,0 +1,7 @@
+{
+  "projects": {
+    "default": "fed-catalogo-compara-precos-dv",
+    "dev": "fed-catalogo-compara-precos-dv",
+    "prod": "fed-catalogo-compara-precos"
+  }
+}

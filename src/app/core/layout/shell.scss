@@ -1,0 +1,286 @@
+@use '../../shared/style/tokens' as *;
+@use '../../shared/style/breakpoints' as *;
+
+// Três larguras do <aside>: rail de 76px (desktop recolhido), 264px (desktop
+// expandido) e drawer de 272px sobreposto abaixo de 900px. O scroll é interno a
+// .cp-content: é o que mantém o header no topo sem position: fixed.
+
+:host {
+  display: block;
+  height: 100%;
+}
+
+.cp-shell {
+  position: relative;
+  display: flex;
+  height: 100dvh;
+  overflow: hidden;
+}
+
+.cp-nav {
+  z-index: 40;
+  display: flex;
+  flex-direction: column;
+  flex-shrink: 0;
+  width: $cp-rail-width;
+  background: $cp-gradient-shell;
+  overflow-x: hidden;
+  transition:
+    width 0.24s $cp-ease,
+    transform 0.26s $cp-ease;
+
+  &.expandido {
+    width: $cp-nav-width;
+  }
+}
+
+.cp-nav-header {
+  display: flex;
+  align-items: center;
+  gap: 11px;
+  flex-shrink: 0;
+  padding: 16px 16px 14px 18px;
+  border-bottom: 1px solid $cp-shell-divider;
+}
+
+.cp-nav-logo {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  width: 40px;
+  height: 40px;
+  border-radius: 12px;
+  background: $cp-accent;
+  color: $cp-on-shell;
+}
+
+.cp-nav-brand {
+  display: flex;
+  flex-direction: column;
+  white-space: nowrap;
+}
+
+.cp-nav-brand-name {
+  font-size: 15.5px;
+  font-weight: 650;
+  color: $cp-on-shell;
+}
+
+.cp-nav-brand-tag {
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: $cp-shell-group;
+}
+
+.cp-nav-list {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  overflow-y: auto;
+  padding: 10px 0;
+  scrollbar-width: none;
+}
+
+.cp-nav-item {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  min-height: $cp-touch-target;
+  margin: 0 10px;
+  padding: 10px 12px 10px 16px;
+  border: none;
+  border-radius: 12px;
+  background: transparent;
+  color: $cp-shell-item;
+  font-family: inherit;
+  font-size: 14px;
+  font-weight: 500;
+  text-align: left;
+  text-decoration: none;
+  white-space: nowrap;
+  cursor: pointer;
+  box-sizing: border-box;
+
+  mat-icon {
+    flex-shrink: 0;
+  }
+
+  &:hover {
+    background: $cp-shell-item-hover;
+  }
+
+  &.ativo {
+    background: $cp-shell-item-active;
+    color: $cp-on-shell;
+    font-weight: 650;
+  }
+
+  &:focus-visible {
+    outline: 2px solid $cp-on-shell;
+    outline-offset: -2px;
+  }
+
+  &--sair {
+    margin-top: auto;
+  }
+}
+
+.cp-nav-footer {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  flex-shrink: 0;
+  padding: 14px 22px 18px;
+  border-top: 1px solid $cp-shell-divider;
+  white-space: nowrap;
+}
+
+.cp-nav-footer-label {
+  font-size: 10px;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: $cp-shell-group;
+}
+
+.cp-nav-footer-name {
+  font-size: 12.5px;
+  font-weight: 600;
+  color: $cp-shell-item;
+}
+
+.cp-nav.rail {
+  .cp-nav-label,
+  .cp-nav-brand,
+  .cp-nav-footer {
+    display: none;
+  }
+
+  .cp-nav-header {
+    justify-content: center;
+    padding: 16px 0 14px;
+  }
+
+  .cp-nav-item {
+    justify-content: center;
+    padding: 10px 0;
+  }
+}
+
+.cp-scrim {
+  position: absolute;
+  padding: 0;
+  border: none;
+  cursor: default;
+  inset: 0;
+  z-index: 30;
+  background: $cp-overlay;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.22s ease;
+
+  &.ativo {
+    opacity: 1;
+    pointer-events: auto;
+  }
+}
+
+.cp-main {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.cp-content {
+  flex: 1;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+}
+
+.cp-header {
+  z-index: 5;
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-height: $cp-header-height;
+  padding: 8px 16px;
+  padding-top: max(8px, env(safe-area-inset-top));
+  box-sizing: border-box;
+  background: $cp-header-bg;
+  backdrop-filter: blur(14px);
+  border-bottom: 1px solid $cp-border;
+}
+
+.cp-header-title {
+  font-size: 16px;
+  font-weight: 650;
+  letter-spacing: -0.01em;
+  color: $cp-text;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.cp-header-spacer {
+  flex: 1;
+}
+
+.cp-header-avatar {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 34px;
+  height: 34px;
+  border-radius: $cp-radius-pill;
+  background: $cp-accent;
+  color: $cp-on-shell;
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.cp-fab {
+  position: fixed;
+  right: 16px;
+  bottom: max(20px, env(safe-area-inset-bottom));
+  z-index: 20;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 56px;
+  padding: 0 20px 0 16px;
+  border-radius: $cp-radius-pill;
+  background: $cp-accent;
+  color: $cp-on-shell;
+  font-size: 15px;
+  font-weight: 650;
+  text-decoration: none;
+  box-shadow: $cp-shadow-accent-fab;
+}
+
+@include narrow {
+  .cp-nav {
+    position: absolute;
+    inset: 0 auto 0 0;
+    width: $cp-drawer-width;
+    transform: translateX(-100%);
+    box-shadow: $cp-shadow-drawer;
+
+    &.expandido {
+      width: $cp-drawer-width;
+      transform: translateX(0);
+    }
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .cp-nav,
+  .cp-scrim {
+    transition: none;
+  }
+}
