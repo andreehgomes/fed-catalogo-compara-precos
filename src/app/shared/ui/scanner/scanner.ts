@@ -102,6 +102,9 @@ export class Scanner {
       this.stream = stream;
       const el = this.video()?.nativeElement;
       if (el) {
+        // O atributo `muted` criado pelo Angular não liga a propriedade; sem ela o
+        // autoplay é recusado e o vídeo fica parado no primeiro quadro.
+        el.muted = true;
         el.srcObject = stream;
         await el.play().catch(() => undefined);
       }

@@ -56,8 +56,14 @@ export const SCANNER_ENGINE = new InjectionToken<ScannerEngine>('SCANNER_ENGINE'
       if (!navigator.mediaDevices?.getUserMedia) {
         return Promise.reject(new DOMException('Sem câmera', 'NotFoundError'));
       }
+      // Sem width/height o celular abre em 640×480, pouco para o QR denso da NFC-e.
       return navigator.mediaDevices.getUserMedia({
-        video: { facingMode: { ideal: 'environment' } },
+        video: {
+          facingMode: { ideal: 'environment' },
+          width: { ideal: 1920 },
+          height: { ideal: 1080 },
+          advanced: [{ focusMode: 'continuous' } as MediaTrackConstraintSet],
+        },
         audio: false,
       });
     },
