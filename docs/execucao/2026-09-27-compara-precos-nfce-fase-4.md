@@ -69,7 +69,7 @@ npm run contraste → 46 pares aprovados em WCAG AA.
 ## Verificações
 
 ```
-npm run test:ci → 16 arquivos, 150 testes verdes
+npm run test:ci → 15 arquivos, 146 testes verdes
 npm run e2e     → 10 passed, 2 skipped (login real sem .env.e2e), chromium + mobile
 ng build -c production → initial 440.85 kB (main 419.62 kB), sem aviso de budget;
   shell, login, cadastro, redefinir-senha e em-breve em chunks lazy;
