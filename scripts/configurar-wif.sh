@@ -49,9 +49,12 @@ for alvo in "${ALVOS[@]}"; do
   ambiente="${alvo##*:}"
   sa="$SA_NOME@$projeto.iam.gserviceaccount.com"
 
-  gcloud iam service-accounts describe "$sa" --project "$projeto" >/dev/null 2>&1 ||
+  if ! gcloud iam service-accounts describe "$sa" --project "$projeto" >/dev/null 2>&1; then
     gcloud iam service-accounts create "$SA_NOME" --project "$projeto" \
       --display-name "Deploy pelo GitHub Actions"
+    # A conta recém-criada demora a aparecer para o IAM do projeto.
+    sleep 30
+  fi
 
   for papel in "${PAPEIS[@]}"; do
     gcloud projects add-iam-policy-binding "$projeto" --member "serviceAccount:$sa" \
