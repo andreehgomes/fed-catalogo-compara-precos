@@ -105,6 +105,8 @@ export interface Pendente {
   proximaTentativa: DataIso;
   ultimoErro: CodigoErroImportacao | null;
   criadaEm: DataIso;
+  /** Última retentativa manual: reabre a janela de 7 dias. */
+  retentadaEm?: DataIso;
 }
 
 /** `estabelecimentos/{cnpj}` — compartilhado. */

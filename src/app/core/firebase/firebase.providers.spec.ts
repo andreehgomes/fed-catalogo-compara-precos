@@ -1,12 +1,19 @@
 import { TestBed } from '@angular/core/testing';
 import { deleteApp } from 'firebase/app';
+import { vi } from 'vitest';
+import { ATIVAR_APP_CHECK } from './app-check';
 import { FIREBASE_APP, FIREBASE_AUTH, provideFirebase } from './firebase.providers';
 import { FIRESTORE } from './firestore.token';
 import { FUNCTIONS } from './functions.token';
 
 describe('provideFirebase', () => {
+  const ativarAppCheck = vi.fn();
+
   beforeEach(() => {
-    TestBed.configureTestingModule({ providers: [provideFirebase()] });
+    ativarAppCheck.mockClear();
+    TestBed.configureTestingModule({
+      providers: [provideFirebase(), { provide: ATIVAR_APP_CHECK, useValue: ativarAppCheck }],
+    });
   });
 
   afterEach(async () => {
@@ -25,5 +32,12 @@ describe('provideFirebase', () => {
     const fns = TestBed.inject(FUNCTIONS) as unknown as { app: unknown; region: string };
     expect(fns.app).toBe(app);
     expect(fns.region).toBe('southamerica-east1');
+  });
+
+  it('ativa o App Check antes da primeira callable, e só aí', () => {
+    TestBed.inject(FIRESTORE);
+    expect(ativarAppCheck).not.toHaveBeenCalled();
+    TestBed.inject(FUNCTIONS);
+    expect(ativarAppCheck).toHaveBeenCalledTimes(1);
   });
 });

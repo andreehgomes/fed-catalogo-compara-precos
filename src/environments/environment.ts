@@ -9,4 +9,5 @@ export const environment = {
     appId: '1:655682139362:web:5d3de9eaf2910d18881abb',
   },
   functionsRegion: 'southamerica-east1',
+  appCheckSiteKey: '6Ldt-NEtAAAAAExrwyqrZy1HiNJK7lYq2hrE3z5y',
 };

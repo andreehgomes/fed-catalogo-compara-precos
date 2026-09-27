@@ -7,3 +7,7 @@ playwright-report
 test-results
 package-lock.json
 
+functions/test/fixtures
+src/testing/fixtures
+docs/analise/spike-*
+

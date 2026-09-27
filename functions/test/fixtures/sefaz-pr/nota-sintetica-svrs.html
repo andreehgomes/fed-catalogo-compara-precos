@@ -1,0 +1,93 @@
+<!-- FIXTURE SINTÉTICA, escrita à mão no layout padrão SVRS da consulta de NFC-e.
+     NÃO é um cupom real: o portal da SEFAZ-PR estava fora do ar em 27/09/2026 (Tarefa 6.3 ⛔).
+     Substituir por fixtures reais anonimizadas (scripts/anonimizar-fixture.mjs) quando o portal voltar. -->
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <title>NFC-e</title>
+  </head>
+  <body>
+    <div id="conteudo">
+      <div class="txtCenter">
+        <div id="u20" class="txtTopo">SUPERMERCADO EXEMPLO LTDA</div>
+        <div class="text">CNPJ: 03.644.587/0008-36</div>
+        <div class="text">RUA DAS FLORES, 123, , CENTRO, CURITIBA, PR</div>
+      </div>
+      <table id="tabResult">
+        <tr id="Item + 1">
+          <td valign="top">
+            <span class="txtTit">LEITE UHT INT 1L</span><span class="RCod">(Código: 1001 )</span
+            ><br />
+            <span class="Rqtd"><strong>Qtde.:</strong>2</span
+            ><span class="RUN"><strong>UN: </strong>UN</span>
+            <span class="RvlUnit"><strong>Vl. Unit.:</strong>&nbsp;4,49</span>
+          </td>
+          <td align="right" valign="top" class="txtTit noWrap">
+            Vl. Total<br /><span class="valor">8,98</span>
+          </td>
+        </tr>
+        <tr id="Item + 2">
+          <td valign="top">
+            <span class="txtTit">BANANA NANICA KG</span><span class="RCod">(Código: 2002 )</span
+            ><br />
+            <span class="Rqtd"><strong>Qtde.:</strong>1,235</span
+            ><span class="RUN"><strong>UN: </strong>KG</span>
+            <span class="RvlUnit"><strong>Vl. Unit.:</strong>&nbsp;5,99</span>
+          </td>
+          <td align="right" valign="top" class="txtTit noWrap">
+            Vl. Total<br /><span class="valor">7,40</span>
+          </td>
+        </tr>
+        <tr id="Item + 3">
+          <td valign="top">
+            <span class="txtTit">CAFÉ PILÃO 500G</span><span class="RCod">(Código: 3003 )</span
+            ><br />
+            <span class="Rqtd"><strong>Qtde.:</strong>1</span
+            ><span class="RUN"><strong>UN: </strong>PCT</span>
+            <span class="RvlUnit"><strong>Vl. Unit.:</strong>&nbsp;21,90</span>
+          </td>
+          <td align="right" valign="top" class="txtTit noWrap">
+            Vl. Total<br /><span class="valor">21,90</span>
+          </td>
+        </tr>
+      </table>
+      <div id="totalNota" class="txtRight">
+        <div id="linhaTotal">
+          <label>Qtd. total de itens:</label><span class="totalNumb">3</span>
+        </div>
+        <div id="linhaTotal">
+          <label>Valor total R$:</label><span class="totalNumb">38,28</span>
+        </div>
+        <div id="linhaTotal"><label>Descontos R$:</label><span class="totalNumb">1,28</span></div>
+        <div id="linhaTotal" class="linhaShade">
+          <label>Valor a pagar R$:</label><span class="totalNumb txtMax">37,00</span>
+        </div>
+      </div>
+      <div id="infos" class="txtCenter">
+        <div data-role="collapsible">
+          <h4>Informações gerais da Nota</h4>
+          <ul>
+            <li>
+              <strong>Modelo: </strong>65<strong> Série: </strong>210<strong> Número: </strong
+              >16870<strong> Emissão: </strong>27/09/2026 10:05:12 - Via Consumidor
+            </li>
+          </ul>
+        </div>
+        <div data-role="collapsible">
+          <h4>Chave de acesso</h4>
+          <ul>
+            <li>
+              <span class="chave">4126 0903 6445 8700 0836 6521 0000 0168 7016 2043 8547</span>
+            </li>
+          </ul>
+        </div>
+        <div data-role="collapsible">
+          <h4>Consumidor</h4>
+          <ul>
+            <li><strong>CPF: </strong>***</li>
+          </ul>
+        </div>
+      </div>
+    </div>
+  </body>
+</html>

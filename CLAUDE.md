@@ -163,6 +163,51 @@ erro (`**`) ficam fora dele.
 - Telas ainda não implementadas usam `features/em-breve` (título pela `data.secao`
   da rota).
 
+## Functions
+
+```bash
+npm --prefix functions run build      # esbuild em bundle → functions/lib/index.js (resolve @shared)
+npm --prefix functions run typecheck  # tsc --noEmit (roda no predeploy)
+npm --prefix functions test           # Vitest (Node), repositório em memória
+npm --prefix functions run test:cov
+```
+
+Instale as dependências **de dentro da pasta** (`cd functions && npm install`): o
+`npm install --prefix functions` sem pacote adiciona o projeto raiz como dependência.
+
+- Node 22, `firebase-functions` 7, `firebase-admin` 14, `cheerio`. Região
+  `southamerica-east1`, `maxInstances: 5` (`src/config.ts`). Callables com
+  `enforceAppCheck: true`.
+- **Callables:** `previewNfce({url}|{chave})`, `confirmarNfce({chave})`,
+  `enfileirarNfce({url}|{chave})`, `retentarPendente({chave})`. **Agendada:**
+  `reprocessarPendentes` (a cada 15 min, até 20 por execução, 1 s entre fetches).
+  Respondem `{ ok: true, … }` ou `{ ok: false, erro: ErroImportacao }`; só erro inesperado
+  vira exceção.
+- **Regras de negócio** recebem um `Contexto` (`importar/contexto.ts`): repositório,
+  relógio (`agora`), `buscar`, adaptador por UF, `log`, `esperar`. Todo acesso ao
+  Firestore passa por `dados/repositorio.ts`; `repositorio-firestore.ts` é o real e
+  `test/fakes/repositorio-memoria.ts` o fake (transação com commit no fim). **Sem
+  emulador.**
+- **Segurança:** `allowlist.ts` reconstrói a URL a partir das partes validadas (HTTPS);
+  `fetch-sefaz.ts` usa `redirect: 'manual'` (até 3, só para hosts SEFA-PR), timeout
+  15 s, 1 retry, 2 MB e decodificação UTF-8/Latin-1.
+- **Classificação** (`classificar-resposta.ts`): o portal responde erro com HTTP 200, então
+  é pelo conteúdo — "mal formatado" com DV válido, "206", JDBC e 5xx →
+  `sefaz-indisponivel` (vai para a fila); "não consta" até 48 h após o mês da chave →
+  indisponível, depois `nao-encontrada`.
+- **Parser do PR (`parsers/pr.ts`) é PROVISÓRIO** (layout SVRS, fixture sintética): a
+  Tarefa 6.3 depende do portal voltar. Fixtures reais passam antes por
+  `node scripts/anonimizar-fixture.mjs`.
+- **Gravação** (`gravar-nota.ts`, comum à confirmação e à fila): transação com nota,
+  perfil, estabelecimento e `nfceImportadas/{chave}`; preços publicados só na 1ª
+  importação da chave, em lotes ≤ 500 (`publicar-precos.ts`), **sem uid**.
+- **Fila:** backoff 15 min → 1 h → 6 h → 24 h; `falhou` após 7 dias (ou erro definitivo);
+  `retentarPendente` reabre a janela (`retentadaEm`).
+- Log (`importar/log.ts`): só `chavePrefixo` (UF + AAMM).
+- **App Check no front:** ativado pela factory do token `FUNCTIONS`
+  (`core/firebase/app-check.ts`), com debug token no `localhost`. Checklist do dv em
+  `docs/qualidade/functions-dv-checklist.md`.
+
 ## Preços da região (Menor Preço)
 
 - `features/regiao/data-access/`: `FontePrecosRegiao` (classe abstrata, `providedIn:
