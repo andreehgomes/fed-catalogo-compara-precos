@@ -1,0 +1,160 @@
+<main class="cp-page cp-page--form">
+  <header class="cp-page-header">
+    <div>
+      <h1>Importar nota</h1>
+      <p>Leia o QR Code do cupom. Os itens e preços vêm do site da SEFAZ-PR.</p>
+    </div>
+  </header>
+
+  @if (!conexao.online()) {
+    <div class="cp-info-block cp-info-block--warn" role="alert">
+      <mat-icon aria-hidden="true">wifi_off</mat-icon>
+      Sem conexão. Importar precisa de internet para consultar a SEFAZ-PR.
+    </div>
+  }
+
+  <section class="cp-block importar-principal" aria-label="Ler o QR Code">
+    @if (lendo()) {
+      @defer (on immediate) {
+        <cp-scanner
+          [formatos]="['qr_code']"
+          (lido)="qrLido($event)"
+          (cancelado)="lendo.set(false)"
+        />
+      } @placeholder {
+        <div class="cp-skeleton importar-scanner-espera" aria-hidden="true"></div>
+      } @loading {
+        <p class="cp-field-hint" role="status">Carregando o leitor…</p>
+      }
+    } @else {
+      <button
+        type="button"
+        class="cp-btn-primary importar-botao"
+        [disabled]="store.ocupado() || !conexao.online()"
+        (click)="abrirScanner()"
+      >
+        <mat-icon aria-hidden="true">qr_code_scanner</mat-icon>
+        Ler QR Code do cupom
+      </button>
+      <p class="cp-field-hint">Sem câmera? No leitor dá para escolher uma foto do QR na galeria.</p>
+    }
+
+    @switch (store.estado().tipo) {
+      @case ('buscando') {
+        <div class="importar-status" role="status">
+          <div class="cp-loading" aria-hidden="true"><div></div></div>
+          Consultando a SEFAZ-PR…
+        </div>
+      }
+      @case ('guardando') {
+        <div class="importar-status" role="status">
+          <div class="cp-loading" aria-hidden="true"><div></div></div>
+          Guardando a nota…
+        </div>
+      }
+      @case ('guardada') {
+        <div class="cp-info-block" role="status">
+          <mat-icon aria-hidden="true">schedule</mat-icon>
+          Nota guardada. Vamos importar sozinhos quando a SEFAZ-PR voltar.
+        </div>
+      }
+    }
+
+    @if (mensagem(); as m) {
+      @if (origem() === 'scanner' || !erroLocal()) {
+        <div class="cp-info-block cp-info-block--erro" role="alert">
+          <mat-icon aria-hidden="true">error</mat-icon>
+          <div class="importar-erro">
+            <span>{{ m.texto }}</span>
+            @if (m.acao) {
+              <button type="button" class="cp-btn-secondary" (click)="executarAcao(m.acao)">
+                {{ rotuloAcao(m.acao) }}
+              </button>
+            }
+          </div>
+        </div>
+      }
+    }
+  </section>
+
+  <cp-pendentes-bloco />
+
+  <section class="cp-block" aria-labelledby="alternativas-titulo">
+    <h2 id="alternativas-titulo" class="cp-section-title">Outras formas</h2>
+
+    <div class="importar-alternativa">
+      <label class="cp-field">
+        <span>Colar link do QR</span>
+        <input
+          type="url"
+          inputmode="url"
+          autocomplete="off"
+          placeholder="https://www.fazenda.pr.gov.br/nfce/qrcode?p=…"
+          [formField]="formUrl.url"
+          [attr.aria-invalid]="origem() === 'url' && !!erroLocal()"
+          [attr.aria-describedby]="origem() === 'url' && erroLocal() ? 'url-erro' : null"
+        />
+      </label>
+      @if (origem() === 'url' && erroLocal(); as msg) {
+        <span id="url-erro" class="cp-field-error">{{ msg }}</span>
+      }
+      @if (colarIndisponivel()) {
+        <span class="cp-field-hint"
+          >O navegador não liberou a área de transferência. Cole no campo.</span
+        >
+      }
+      <div class="importar-acoes">
+        <button
+          type="button"
+          class="cp-btn-secondary"
+          [disabled]="store.ocupado()"
+          (click)="colar()"
+        >
+          <mat-icon aria-hidden="true">content_paste</mat-icon>
+          Colar
+        </button>
+        <button
+          type="button"
+          class="cp-btn-primary-compact"
+          [disabled]="store.ocupado() || !formUrl.url().value().trim()"
+          (click)="importarUrl()"
+        >
+          Importar link
+        </button>
+      </div>
+    </div>
+
+    <div class="importar-alternativa">
+      <label class="cp-field">
+        <span>Digitar a chave de 44 dígitos</span>
+        <input
+          type="text"
+          inputmode="numeric"
+          autocomplete="off"
+          placeholder="4126 0903 6445 …"
+          [value]="chave()"
+          [attr.aria-invalid]="origem() === 'chave' && !!erroLocal()"
+          [attr.aria-describedby]="
+            origem() === 'chave' && erroLocal() ? 'chave-erro' : 'chave-contador'
+          "
+          (input)="digitarChave($event)"
+        />
+      </label>
+      @if (origem() === 'chave' && erroLocal(); as msg) {
+        <span id="chave-erro" class="cp-field-error">{{ msg }}</span>
+      } @else {
+        <span id="chave-contador" class="cp-field-hint">{{ qtdDigitos() }} de 44 dígitos</span>
+      }
+      <div class="importar-acoes">
+        <button
+          type="button"
+          class="cp-btn-primary-compact"
+          [disabled]="store.ocupado() || qtdDigitos() !== 44"
+          (click)="importarChave()"
+        >
+          Importar chave
+        </button>
+      </div>
+    </div>
+  </section>
+</main>

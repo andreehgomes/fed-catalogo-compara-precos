@@ -208,6 +208,28 @@ Instale as dependências **de dentro da pasta** (`cd functions && npm install`):
   (`core/firebase/app-check.ts`), com debug token no `localhost`. Checklist do dv em
   `docs/qualidade/functions-dv-checklist.md`.
 
+## Importação (front)
+
+- `features/importar/`: `ImportarService` (único que conhece as callables, via token
+  `CHAMAR_FUNCTION` de `core/firebase/callable.ts`; converte `FunctionsError` em
+  `ErroImportacao`), `ImportarStore` (root; estado em união `ocioso | buscando |
+  preview | confirmando | guardando | guardada | erro`, a prévia sobrevive à navegação),
+  `mensagens.ts` (texto e ação por código — RF-10 — e `interpretarEntrada`, a validação
+  local: **DV inválido nunca chama a function**).
+- `/importar`: ação principal "Ler QR Code do cupom" (`<cp-scanner>` em `@defer`),
+  alternativas "Colar link do QR" e "Digitar a chave" (máscara 4 em 4), aviso sem
+  conexão (`ConexaoService`) e o bloco de pendentes. `/importar/preview` tem
+  `previewGuard` (sem prévia volta para Importar); `preview-expirado` refaz a prévia uma
+  vez sozinho.
+- Pendentes: `features/notas/data-access/pendentes.service.ts` (`onSnapshot` →
+  `toSignal`, snackbar quando um pendente some e a nota `veioDaFila` aparece),
+  `<cp-pendentes-bloco>` e `<cp-pendente-row>` (usados em Importar, Minhas notas e
+  painel).
+- Firestore pelo token `FIRESTORE_API` (`core/firebase/firestore-api.ts`): as funções do
+  SDK chegam injetadas e os testes usam fakes.
+- e2e: `mockCallables(page, respostas)` em `e2e/support/mocks.ts` intercepta
+  `**/*.cloudfunctions.net/**` no protocolo das callables e o App Check.
+
 ## Preços da região (Menor Preço)
 
 - `features/regiao/data-access/`: `FontePrecosRegiao` (classe abstrata, `providedIn:

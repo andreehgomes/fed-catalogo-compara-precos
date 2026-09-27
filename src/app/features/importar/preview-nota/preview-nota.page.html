@@ -1,0 +1,75 @@
+@if (nota(); as n) {
+  <main class="cp-page cp-page--detalhe">
+    <header class="cp-detail-header">
+      <div>
+        <p class="cp-label">Prévia da nota</p>
+        <h1>{{ n.emitente.fantasia || n.emitente.nome }}</h1>
+        <p>CNPJ {{ cnpj() }} · {{ n.emitente.endereco }}</p>
+      </div>
+    </header>
+
+    <section class="cp-summary" aria-label="Resumo">
+      <div>
+        <span class="cp-summary-label">Emissão</span>
+        <span class="cp-summary-value">{{ n.emissao | date: 'dd/MM/yyyy HH:mm' }}</span>
+      </div>
+      <div>
+        <span class="cp-summary-label">Itens</span>
+        <span class="cp-summary-value">{{ n.itens.length }}</span>
+      </div>
+      <div>
+        <span class="cp-summary-label">Total</span>
+        <span class="cp-summary-value">{{ n.total | currency }}</span>
+      </div>
+      @if (n.desconto > 0) {
+        <div>
+          <span class="cp-summary-label">Desconto</span>
+          <span class="cp-summary-value">{{ n.desconto | currency }}</span>
+        </div>
+      }
+    </section>
+
+    <section class="cp-block">
+      <h2 class="cp-section-title">Itens</h2>
+      <ul class="cp-list">
+        @for (item of itens(); track item.n) {
+          <li class="cp-list-row">
+            <div class="item-principal">
+              <span class="item-nome">{{ item.descricao }}</span>
+              <span class="item-detalhe">
+                {{ item.qtd | number: '1.0-3' }} {{ item.unidade }} × {{ item.vlUnit | currency }}
+              </span>
+            </div>
+            <div class="item-lado">
+              <cp-preco
+                [valor]="item.vlTotal"
+                [unidade]="item.porUnidade?.unidade ?? null"
+                [precoPorUnidade]="item.porUnidade?.valor ?? null"
+              />
+            </div>
+          </li>
+        }
+      </ul>
+    </section>
+
+    @if (erro(); as msg) {
+      <div class="cp-info-block cp-info-block--erro" role="alert">
+        <mat-icon aria-hidden="true">error</mat-icon>{{ msg }}
+      </div>
+    }
+
+    <div class="cp-form-actions preview-acoes">
+      <button
+        type="button"
+        class="cp-btn-secondary"
+        [disabled]="confirmando()"
+        (click)="cancelar()"
+      >
+        Cancelar
+      </button>
+      <button type="button" class="cp-btn-primary" [disabled]="confirmando()" (click)="confirmar()">
+        {{ confirmando() ? 'Importando…' : 'Confirmar importação' }}
+      </button>
+    </div>
+  </main>
+}

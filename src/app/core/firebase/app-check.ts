@@ -14,7 +14,8 @@ const ativados = new WeakSet<FirebaseApp>();
 export function ativarAppCheck(app: FirebaseApp, siteKey: string, janela: Window | null): void {
   if (ativados.has(app)) return;
   if (janela?.location.hostname === 'localhost') {
-    (janela as Window & { FIREBASE_APPCHECK_DEBUG_TOKEN?: boolean }).FIREBASE_APPCHECK_DEBUG_TOKEN = true;
+    (janela as Window & { FIREBASE_APPCHECK_DEBUG_TOKEN?: boolean }).FIREBASE_APPCHECK_DEBUG_TOKEN =
+      true;
   }
   initializeAppCheck(app, {
     provider: new ReCaptchaEnterpriseProvider(siteKey),

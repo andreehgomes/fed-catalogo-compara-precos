@@ -1,0 +1,11 @@
+@use '../../../shared/style/tokens' as *;
+@use '../../../shared/style/breakpoints' as *;
+
+@include mobile {
+  .preview-acoes {
+    position: sticky;
+    bottom: 0;
+    padding: 12px 0 max(12px, env(safe-area-inset-bottom));
+    background: $cp-bg;
+  }
+}

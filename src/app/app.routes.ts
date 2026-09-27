@@ -20,15 +20,8 @@ export const routes: Routes = [
       },
       {
         path: 'importar',
-        title: 'Importar nota · Compara Preços',
-        data: { secao: 'Importar nota' },
-        loadComponent: emBreve,
-      },
-      {
-        path: 'importar/preview',
-        title: 'Prévia da nota · Compara Preços',
-        data: { secao: 'Prévia da nota' },
-        loadComponent: emBreve,
+        loadChildren: () =>
+          import('./features/importar/importar.routes').then((m) => m.IMPORTAR_ROUTES),
       },
       {
         path: 'notas',

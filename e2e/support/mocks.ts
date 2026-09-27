@@ -34,6 +34,39 @@ export async function mockMenorPreco(
   return contador;
 }
 
+export type RespostasCallables = Record<string, unknown | ((dados: unknown) => unknown)>;
+
+/**
+ * Intercepta as callables (`https://southamerica-east1-<projeto>.cloudfunctions.net/<nome>`)
+ * com respostas fixas no protocolo das callables (`{ data }` → `{ result }`) e registra as
+ * chamadas. O App Check (debug token no localhost) também é interceptado.
+ */
+export async function mockCallables(
+  page: Page,
+  respostas: RespostasCallables,
+): Promise<{ nome: string; dados: unknown }[]> {
+  const chamadas: { nome: string; dados: unknown }[] = [];
+  await page.route('**/firebaseappcheck.googleapis.com/**', (r) =>
+    r.fulfill({
+      contentType: 'application/json',
+      body: JSON.stringify({ token: 'e2e', ttl: '3600s' }),
+    }),
+  );
+  await page.route('**/*.cloudfunctions.net/**', async (route) => {
+    const nome = new URL(route.request().url()).pathname.split('/').pop() ?? '';
+    const dados = (route.request().postDataJSON() as { data?: unknown } | null)?.data;
+    chamadas.push({ nome, dados });
+    const r = respostas[nome];
+    const result = typeof r === 'function' ? (r as (d: unknown) => unknown)(dados) : r;
+    await route.fulfill({
+      contentType: 'application/json',
+      headers: { 'access-control-allow-origin': '*' },
+      body: JSON.stringify({ result: result ?? { ok: false, erro: { codigo: 'desconhecido' } } }),
+    });
+  });
+  return chamadas;
+}
+
 /** Garante que nenhum teste fala com SEFAZ ou Functions reais. */
 export async function bloquearServicosReais(page: Page): Promise<void> {
   await page.route('**/*.cloudfunctions.net/**', (r) => r.abort());
