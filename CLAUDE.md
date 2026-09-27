@@ -230,6 +230,24 @@ Instale as dependências **de dentro da pasta** (`cd functions && npm install`):
 - e2e: `mockCallables(page, respostas)` em `e2e/support/mocks.ts` intercepta
   `**/*.cloudfunctions.net/**` no protocolo das callables e o App Check.
 
+## Minhas notas
+
+- `NotasService` (`features/notas/data-access/`): `listar({cnpj, de, ate, cursor})` com
+  `where`/`orderBy('emissao','desc')`/`limit(20)`/`startAfter` (índice composto `cnpj +
+  emissao desc` em `firestore.indexes.json`), `obter(chave)` em tempo real, `excluir`
+  (os preços publicados continuam) e `estabelecimentos()` para o filtro.
+- Lista (`/notas`): filtros de estabelecimento e período (`mes`, `mes-passado`,
+  `3-meses`, `personalizado` com `<input type="date">`) em query params; "Carregar mais"
+  por cursor; marca "Nova" para nota da fila ainda não aberta — guardada no
+  `localStorage` (`NotasAbertasService`), porque o cliente não grava nas notas.
+- Detalhe (`/notas/:chave`): link para estabelecimento e produto, copiar chave,
+  exclusão com `<cp-confirm-dialog>` (`shared/ui/confirm-dialog`).
+- "Tem mais barato perto?" (`detalhe/mais-barato-perto.ts`): sob demanda, item a item
+  com `concatMap` (1 requisição em voo, cache do client), menor oferta **coerente**
+  (`separarDivergentes`) e economia potencial = Σ diferença × qtd. Item sem EAN usa a
+  busca por texto (`equivalentesPorTexto`: Jaccard ≥ 0,3 + mesmo conteúdo) marcada como
+  "aproximado". Menor Preço fora → para e mostra aviso único.
+
 ## Preços da região (Menor Preço)
 
 - `features/regiao/data-access/`: `FontePrecosRegiao` (classe abstrata, `providedIn:

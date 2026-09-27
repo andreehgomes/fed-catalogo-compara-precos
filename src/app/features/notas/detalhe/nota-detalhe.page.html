@@ -1,0 +1,167 @@
+@if (nota.isLoading() && !dados()) {
+  <main class="cp-page cp-page--detalhe" role="status">
+    <span class="cp-sr-only">Carregando nota…</span>
+    <div class="cp-skeleton detalhe-skeleton" aria-hidden="true"></div>
+  </main>
+} @else if (dados(); as n) {
+  <main class="cp-page cp-page--detalhe">
+    <header class="cp-detail-header">
+      <a class="cp-btn-icon" routerLink="/notas" aria-label="Voltar para Minhas notas">
+        <mat-icon aria-hidden="true">arrow_back</mat-icon>
+      </a>
+      <div>
+        <h1>
+          <a [routerLink]="['/estabelecimentos', n.cnpj]">{{ n.estabelecimentoNome }}</a>
+        </h1>
+        <p>{{ n.emissao | date: "dd/MM/yyyy 'às' HH:mm" }} · CNPJ {{ cnpj() }}</p>
+      </div>
+    </header>
+
+    <section class="cp-summary" aria-label="Resumo">
+      <div>
+        <span class="cp-summary-label">Total</span>
+        <span class="cp-summary-value">{{ n.total | currency }}</span>
+      </div>
+      <div>
+        <span class="cp-summary-label">Itens</span>
+        <span class="cp-summary-value">{{ n.qtdItens }}</span>
+      </div>
+      @if (n.desconto > 0) {
+        <div>
+          <span class="cp-summary-label">Desconto</span>
+          <span class="cp-summary-value">{{ n.desconto | currency }}</span>
+        </div>
+      }
+      @if (comparacao.estado() === 'concluido' || comparacao.economia() > 0) {
+        <div>
+          <span class="cp-summary-label">Economia possível</span>
+          <span class="cp-summary-value">{{ comparacao.economia() | currency }}</span>
+        </div>
+      }
+    </section>
+
+    <section class="cp-block" aria-labelledby="comparar-titulo">
+      <div class="cp-section-top">
+        <h2 id="comparar-titulo" class="cp-section-title">Tem mais barato perto?</h2>
+        <button
+          type="button"
+          class="cp-btn-primary-compact"
+          [disabled]="comparacao.estado() === 'comparando'"
+          (click)="compararComMercados()"
+        >
+          <mat-icon aria-hidden="true">near_me</mat-icon>
+          {{ comparacao.estado() === 'comparando' ? 'Comparando…' : 'Comparar com mercados perto' }}
+        </button>
+      </div>
+      <p class="cp-field-hint">
+        Consulta o Menor Preço (Nota Paraná) item a item, na região de {{ loc.descricao() }}.
+        @if (comEan() < n.itens.length) {
+          Itens sem código de barras são comparados pela descrição (aproximado).
+        }
+      </p>
+      @if (escolhendoLocal() && !loc.pronta()) {
+        <cp-localizacao-seletor (escolhido)="compararComMercados()" />
+      }
+      @if (comparacao.estado() === 'indisponivel') {
+        <div class="cp-info-block cp-info-block--warn" role="alert">
+          <mat-icon aria-hidden="true">cloud_off</mat-icon>
+          Menor Preço indisponível agora. Tente de novo mais tarde.
+        </div>
+      }
+      @if (comparacao.estado() === 'concluido') {
+        <p class="detalhe-economia" role="status">
+          @if (comparacao.economia() > 0) {
+            Você poderia ter economizado
+            <strong>{{ comparacao.economia() | currency }}</strong> nesta nota.
+          } @else {
+            Você pagou o menor preço da região nos itens comparados.
+          }
+        </p>
+      }
+    </section>
+
+    <section class="cp-block">
+      <h2 class="cp-section-title">Itens</h2>
+      <ul class="cp-list">
+        @for (item of n.itens; track item.n) {
+          <li class="cp-list-row detalhe-item">
+            <div class="item-principal">
+              <a class="item-nome" [routerLink]="['/produtos', item.produtoId]">{{
+                item.descricao
+              }}</a>
+              <span class="item-detalhe">
+                {{ item.qtd | number: '1.0-3' }} {{ item.unidade }} × {{ item.vlUnit | currency }}
+              </span>
+              @if (comparacao.resultados().get(item.n); as r) {
+                @switch (r.tipo) {
+                  @case ('mais-barato') {
+                    @if (r.tipo === 'mais-barato') {
+                      <span class="detalhe-comparacao">
+                        <cp-badge-preco tipo="mais-barato" [diferenca]="r.diferenca" />
+                        <span class="item-detalhe">
+                          no {{ r.oferta.estabelecimento.nome }} ({{
+                            distancia(r.oferta.distanciaKm)
+                          }})
+                          @if (r.aproximado) {
+                            · aproximado
+                          }
+                        </span>
+                        <cp-fonte-preco fonte="menor-preco" [data]="r.oferta.dataHora" />
+                      </span>
+                    }
+                  }
+                  @case ('menor-preco') {
+                    <cp-badge-preco tipo="igual" textoIgual="Você pagou o menor preço" />
+                  }
+                  @case ('sem-oferta') {
+                    <span class="item-detalhe">Sem ofertas na região</span>
+                  }
+                  @case ('sem-codigo') {
+                    <span class="item-detalhe">Sem código de barras na nota</span>
+                  }
+                }
+              }
+            </div>
+            <div class="item-lado">
+              <cp-preco
+                [valor]="item.vlTotal"
+                [unidade]="item.precoPorUnidadeBase?.unidade ?? null"
+                [precoPorUnidade]="item.precoPorUnidadeBase?.valor ?? null"
+              />
+            </div>
+          </li>
+        }
+      </ul>
+    </section>
+
+    <section class="cp-block">
+      <span class="cp-label">Chave de acesso</span>
+      <div class="detalhe-chave">
+        <code>{{ chaveFormatada() }}</code>
+        <button
+          type="button"
+          class="cp-btn-icon"
+          aria-label="Copiar chave de acesso"
+          (click)="copiarChave()"
+        >
+          <mat-icon aria-hidden="true">content_copy</mat-icon>
+        </button>
+      </div>
+    </section>
+
+    <button type="button" class="cp-btn-danger" [disabled]="excluindo()" (click)="excluir()">
+      <mat-icon aria-hidden="true">delete</mat-icon>
+      Excluir nota
+    </button>
+  </main>
+} @else {
+  <main class="cp-page cp-page--form">
+    <cp-empty-state
+      icone="receipt_long"
+      titulo="Nota não encontrada"
+      texto="Ela pode ter sido excluída."
+    >
+      <a class="cp-btn-primary" routerLink="/notas">Ver minhas notas</a>
+    </cp-empty-state>
+  </main>
+}

@@ -7,6 +7,14 @@
         { "fieldPath": "status", "order": "ASCENDING" },
         { "fieldPath": "proximaTentativa", "order": "ASCENDING" }
       ]
+    },
+    {
+      "collectionGroup": "notas",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "cnpj", "order": "ASCENDING" },
+        { "fieldPath": "emissao", "order": "DESCENDING" }
+      ]
     }
   ],
   "fieldOverrides": [

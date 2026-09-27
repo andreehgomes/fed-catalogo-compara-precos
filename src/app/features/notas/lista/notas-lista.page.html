@@ -1,0 +1,124 @@
+<main class="cp-page">
+  <header class="cp-page-header">
+    <div>
+      <h1>Minhas notas</h1>
+      <p>Só você vê suas notas. Os preços entram anônimos na comparação.</p>
+    </div>
+    <a class="cp-btn-primary-compact" routerLink="/importar">
+      <mat-icon aria-hidden="true">qr_code_scanner</mat-icon>
+      Importar
+    </a>
+  </header>
+
+  <cp-pendentes-bloco />
+
+  <section class="cp-block notas-filtros" aria-label="Filtros">
+    <label class="cp-field cp-field-compact">
+      <span>Estabelecimento</span>
+      <select [value]="cnpj() ?? ''" (change)="filtrarEstabelecimento($event)">
+        <option value="">Todos</option>
+        @for (e of estabelecimentos.hasValue() ? estabelecimentos.value() : []; track e.cnpj) {
+          <option [value]="e.cnpj" [selected]="e.cnpj === cnpj()">{{ e.nome }}</option>
+        }
+      </select>
+    </label>
+
+    <div>
+      <span class="cp-label" id="periodo-rotulo">Período</span>
+      <div class="cp-segmented" role="group" aria-labelledby="periodo-rotulo">
+        @for (p of periodos; track p.valor) {
+          <button
+            type="button"
+            [attr.aria-pressed]="periodo() === p.valor"
+            (click)="filtrarPeriodo(p.valor)"
+          >
+            {{ p.rotulo }}
+          </button>
+        }
+      </div>
+    </div>
+
+    @if (periodo() === 'personalizado') {
+      <div class="notas-datas">
+        <label class="cp-field cp-field-compact">
+          <span>De</span>
+          <input type="date" [value]="de() ?? ''" (change)="definirData('de', $event)" />
+        </label>
+        <label class="cp-field cp-field-compact">
+          <span>Até</span>
+          <input type="date" [value]="ate() ?? ''" (change)="definirData('ate', $event)" />
+        </label>
+      </div>
+    }
+
+    @if (filtrando()) {
+      <button type="button" class="cp-btn-ghost" (click)="limpar()">Limpar filtros</button>
+    }
+  </section>
+
+  <section class="cp-block" aria-live="polite" [attr.aria-busy]="carregando()">
+    @if (erro()) {
+      <cp-empty-state
+        icone="cloud_off"
+        titulo="Não foi possível carregar as notas"
+        texto="Verifique a conexão."
+      >
+        <button type="button" class="cp-btn-primary" (click)="recarregar()">Tentar de novo</button>
+      </cp-empty-state>
+    } @else if (carregando()) {
+      <div class="notas-skeleton" role="status">
+        <span class="cp-sr-only">Carregando notas…</span>
+        @for (i of [1, 2, 3]; track i) {
+          <div class="cp-skeleton" aria-hidden="true"></div>
+        }
+      </div>
+    } @else if (!notas().length) {
+      @if (filtrando()) {
+        <cp-empty-state icone="filter_alt_off" titulo="Nenhuma nota com esses filtros">
+          <button type="button" class="cp-btn-secondary" (click)="limpar()">Limpar filtros</button>
+        </cp-empty-state>
+      } @else {
+        <cp-empty-state
+          icone="receipt_long"
+          titulo="Você ainda não importou notas"
+          texto="Leia o QR Code do cupom do mercado para começar."
+        >
+          <a class="cp-btn-primary" routerLink="/importar">Importar primeira nota</a>
+        </cp-empty-state>
+      }
+    } @else {
+      <ul class="cp-list" aria-label="Notas">
+        @for (n of notas(); track n.chave) {
+          <li>
+            <a class="cp-list-row" [routerLink]="['/notas', n.chave]">
+              <div class="item-principal">
+                <span class="item-nome">{{ n.estabelecimentoNome }}</span>
+                <span class="item-detalhe">
+                  {{ n.emissao | date: 'dd/MM/yyyy' }} · {{ n.qtdItens }}
+                  {{ n.qtdItens === 1 ? 'item' : 'itens' }}
+                </span>
+                @if (n.veioDaFila && !abertas.abertas().has(n.chave)) {
+                  <span class="cp-status--novo">Nova</span>
+                }
+              </div>
+              <div class="item-lado">
+                <span class="cp-price">{{ n.total | currency }}</span>
+              </div>
+              <mat-icon aria-hidden="true">chevron_right</mat-icon>
+            </a>
+          </li>
+        }
+      </ul>
+      @if (temMais()) {
+        <button
+          type="button"
+          class="cp-btn-secondary"
+          [disabled]="carregandoMais()"
+          (click)="carregarMais()"
+        >
+          {{ carregandoMais() ? 'Carregando…' : 'Carregar mais' }}
+        </button>
+      }
+    }
+  </section>
+</main>

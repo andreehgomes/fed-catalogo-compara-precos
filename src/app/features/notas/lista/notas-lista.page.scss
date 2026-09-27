@@ -1,0 +1,19 @@
+@use '../../../shared/style/mixins' as *;
+
+.notas-datas {
+  @include cp-grid(140px, auto-fit, 10px);
+}
+
+.notas-skeleton {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+
+  .cp-skeleton {
+    height: 56px;
+  }
+}
+
+.cp-status--novo {
+  align-self: flex-start;
+}

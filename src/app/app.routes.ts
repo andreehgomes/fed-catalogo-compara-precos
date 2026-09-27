@@ -25,15 +25,7 @@ export const routes: Routes = [
       },
       {
         path: 'notas',
-        title: 'Minhas notas · Compara Preços',
-        data: { secao: 'Minhas notas' },
-        loadComponent: emBreve,
-      },
-      {
-        path: 'notas/:chave',
-        title: 'Nota · Compara Preços',
-        data: { secao: 'Nota' },
-        loadComponent: emBreve,
+        loadChildren: () => import('./features/notas/notas.routes').then((m) => m.NOTAS_ROUTES),
       },
       {
         path: 'regiao',

@@ -1,0 +1,55 @@
+@use '../../../shared/style/tokens' as *;
+
+.cp-detail-header h1 a {
+  color: inherit;
+  text-decoration: none;
+
+  &:hover {
+    text-decoration: underline;
+  }
+}
+
+.detalhe-skeleton {
+  height: 240px;
+}
+
+.detalhe-item {
+  align-items: flex-start;
+
+  a.item-nome {
+    color: $cp-text;
+    text-decoration: none;
+
+    &:hover {
+      color: $cp-accent-ink;
+      text-decoration: underline;
+    }
+  }
+}
+
+.detalhe-comparacao {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+  margin-top: 4px;
+}
+
+.detalhe-economia {
+  margin: 0;
+  font-size: 14px;
+}
+
+.detalhe-chave {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+
+  code {
+    flex: 1;
+    font-family: $cp-font-mono;
+    font-size: 13px;
+    overflow-wrap: anywhere;
+    color: $cp-text-secondary;
+  }
+}
