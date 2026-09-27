@@ -1,0 +1,27 @@
+{
+  "extends": [
+    "stylelint-config-standard-scss"
+  ],
+  "rules": {
+    "color-no-hex": true,
+    "color-named": "never",
+    "selector-class-pattern": null,
+    "scss/dollar-variable-pattern": null,
+    "scss/at-mixin-pattern": null,
+    "keyframes-name-pattern": null,
+    "no-descending-specificity": null,
+    "no-empty-source": null
+  },
+  "overrides": [
+    {
+      "files": [
+        "src/app/shared/style/_tokens.scss",
+        "src/app/shared/style/_m3-palette.scss"
+      ],
+      "rules": {
+        "color-no-hex": null,
+        "color-named": null
+      }
+    }
+  ]
+}
