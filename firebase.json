@@ -28,8 +28,8 @@
       "codebase": "default",
       "ignore": ["node_modules", ".git", "*.log", "src", "test", "coverage"],
       "predeploy": [
-        "npm --prefix \"$RESOURCE_DIR\" run typecheck",
-        "npm --prefix \"$RESOURCE_DIR\" run build"
+        "npm --prefix functions run typecheck",
+        "npm --prefix functions run build"
       ]
     }
   ]
