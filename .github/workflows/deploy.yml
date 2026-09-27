@@ -2,10 +2,11 @@ name: Deploy
 
 # Roda depois do CI verde num push em develop (→ projeto dv) ou main (→ produção).
 # Autenticação por Workload Identity Federation: sem chave JSON em secret.
-# Variáveis do repositório (Settings → Secrets and variables → Actions → Variables):
-#   WIF_PROVIDER            projects/<nº>/locations/global/workloadIdentityPools/<pool>/providers/<provider>
-#   WIF_SERVICE_ACCOUNT_DV  deploy@fed-catalogo-compara-precos-dv.iam.gserviceaccount.com
-#   WIF_SERVICE_ACCOUNT     deploy@fed-catalogo-compara-precos.iam.gserviceaccount.com
+# Pool, provider e contas criados por scripts/configurar-wif.sh (Cloud Shell), que imprime
+# as variáveis do repositório (Settings → Secrets and variables → Actions → Variables):
+#   WIF_PROVIDER            projects/<nº>/locations/global/workloadIdentityPools/github/providers/github-actions
+#   WIF_SERVICE_ACCOUNT_DV  deploy-github@fed-catalogo-compara-precos-dv.iam.gserviceaccount.com
+#   WIF_SERVICE_ACCOUNT     deploy-github@fed-catalogo-compara-precos.iam.gserviceaccount.com
 
 on:
   workflow_run:
