@@ -1,0 +1,42 @@
+@use 'tokens' as *;
+
+// Breakpoints compartilhados: o valor mora aqui, uma vez. Em TypeScript, usar o
+// BreakpointService (matchMedia), nunca window.innerWidth.
+
+$bp-mobile: 599px;
+$bp-tablet: 1023px;
+
+// Até 599px: telefone.
+@mixin mobile {
+  @media screen and (width <= $bp-mobile) {
+    @content;
+  }
+}
+
+// A partir de 600px: tablet e acima. Complemento exato de `mobile`.
+@mixin tablet-up {
+  @media screen and (width >= ($bp-mobile + 1px)) {
+    @content;
+  }
+}
+
+// A partir de 1024px: desktop.
+@mixin desktop {
+  @media screen and (width >= ($bp-tablet + 1px)) {
+    @content;
+  }
+}
+
+// Até 900px: o shell vira drawer.
+@mixin narrow {
+  @media screen and (width <= $cp-breakpoint-narrow) {
+    @content;
+  }
+}
+
+// Acima de 900px: rail/sidebar fixo.
+@mixin wide {
+  @media screen and (width >= ($cp-breakpoint-narrow + 1px)) {
+    @content;
+  }
+}

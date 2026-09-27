@@ -91,7 +91,8 @@
             ],
             "setupFiles": [
               "src/testing/setup.ts"
-            ]
+            ],
+            "providersFile": "src/testing/providers.ts"
           }
         },
         "lint": {

@@ -1,0 +1,101 @@
+@use 'tokens' as *;
+
+// Só o que é parametrizado. O que aparece em todas as telas é classe global em
+// `src/styles.scss`: um mixin é expandido inline em cada componente que o inclui
+// e conta contra o budget `anyComponentStyle` de cada um.
+
+// Grade fluida: o ponto de quebra vem do espaço disponível, não da viewport.
+@mixin cp-grid($min, $mode: auto-fit, $gap: $cp-gap) {
+  display: grid;
+  grid-template-columns: repeat($mode, minmax(min($min, 100%), 1fr));
+  gap: $gap;
+}
+
+// Chip de status: pílula uppercase.
+@mixin cp-chip($ink, $bg) {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  flex-shrink: 0;
+  padding: 4px 10px;
+  border-radius: $cp-radius-pill;
+  background: $bg;
+  color: $ink;
+  font-size: 10.5px;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+
+// Botão de ícone sem borda, colorido (ações de linha: copiar, excluir…).
+@mixin cp-btn-icon-ghost($ink, $hover-bg, $size: $cp-touch-target, $bg: transparent) {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: $size;
+  height: $size;
+  padding: 0;
+  flex-shrink: 0;
+  border: none;
+  border-radius: $cp-radius-icon;
+  background: $bg;
+  color: $ink;
+  font-family: inherit;
+  cursor: pointer;
+
+  &:hover:not(:disabled) {
+    background: $hover-bg;
+  }
+
+  &:disabled {
+    opacity: 0.5;
+    cursor: default;
+  }
+}
+
+// Controle segmentado (raio da busca, período). Substitui mat-button-toggle.
+@mixin cp-segmented($pad: 8px 14px) {
+  display: inline-flex;
+  flex-wrap: wrap;
+  padding: 3px;
+  background: $cp-surface-track;
+  border-radius: $cp-radius-pill;
+
+  button {
+    min-height: 36px;
+    padding: $pad;
+    border: none;
+    border-radius: $cp-radius-pill;
+    background: transparent;
+    color: $cp-text-muted;
+    font-family: inherit;
+    font-size: 12.5px;
+    font-weight: 600;
+    white-space: nowrap;
+    cursor: pointer;
+
+    &.ativo,
+    &[aria-pressed='true'] {
+      background: $cp-surface;
+      color: $cp-text;
+      box-shadow: $cp-shadow-segmented-active;
+    }
+  }
+}
+
+// Card clicável com elevação no hover.
+@mixin cp-card-clickable($lift: -2px) {
+  background: $cp-surface;
+  border: 1px solid $cp-border;
+  border-radius: $cp-radius-card;
+  box-shadow: $cp-shadow-card;
+  transition:
+    transform $cp-transition-card,
+    box-shadow $cp-transition-card;
+
+  &:hover {
+    transform: translateY($lift);
+    box-shadow: $cp-shadow-hover;
+  }
+}

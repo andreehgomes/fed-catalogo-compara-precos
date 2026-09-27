@@ -8,11 +8,7 @@ describe('App', () => {
   beforeEach(async () => {
     await TestBed.configureTestingModule({
       imports: [App],
-      providers: [
-        provideRouter([]),
-        { provide: LOCALE_ID, useValue: 'pt-BR' },
-        { provide: DEFAULT_CURRENCY_CODE, useValue: 'BRL' },
-      ],
+      providers: [provideRouter([])],
     }).compileComponents();
   });
 

@@ -1,0 +1,111 @@
+// ─────────────────────────────────────────────────────────────────────────────
+// Design tokens — Compara Preços
+// Estrutura e nomes de papel portados do design system do fed-catalogo-confeccoes;
+// os valores são próprios (paleta verde). É a ÚNICA fonte de cor do app: o
+// stylelint bloqueia hex e cor nomeada fora deste arquivo. Os pares texto ×
+// superfície são conferidos por `npm run contraste` (scripts/contraste.mjs).
+// ─────────────────────────────────────────────────────────────────────────────
+
+// ── Acento (verde da marca) ──────────────────────────────────────────────────
+$cp-accent: #1f7a4d; // preenchimento: CTA, FAB, foco de input
+$cp-accent-ink: #16603b; // acento sobre branco: preço, link, valor
+$cp-accent-soft: #effaf3; // fundo de chip, opção ativa
+$cp-accent-border: #c6e8d3; // borda de chip, borda de opção ativa
+$cp-accent-hover: #dff3e7; // hover de botão ghost
+
+// ── Casca (floresta) ─────────────────────────────────────────────────────────
+$cp-shell-900: #0a2418; // início do gradiente; theme-color
+$cp-shell-800: #0f3a26; // stop 55% do gradiente do sidebar
+$cp-shell-700: #15502f; // fim do gradiente; ícone de ação secundária
+$cp-on-shell: #fff; // texto e ícone sobre a casca e sobre o acento
+$cp-on-shell-muted: #b9d3c3; // rótulo secundário sobre a casca
+
+$cp-gradient-shell: linear-gradient(168deg, $cp-shell-900 0%, $cp-shell-800 55%, $cp-shell-700 100%);
+
+// ── Superfícies e bordas ─────────────────────────────────────────────────────
+$cp-bg: #f3f6f3; // tela do app
+$cp-surface: #fff; // cards, header
+$cp-surface-input: #fafcfa; // input em repouso (vira surface no foco)
+$cp-surface-subtle: #f6f9f6; // blocos internos, hover de linha
+$cp-surface-track: #e6ede7; // trilho de progresso e fundo de segmented
+
+$cp-border: #dfe7e1; // borda padrão de card e header
+$cp-border-input: #d2ddd5; // borda de input, select, botão ghost
+$cp-border-divider: #e9efeb; // divisória interna de card
+$cp-border-hover: #c3d0c7; // hover de borda
+$cp-scrollbar: #cdd8d0;
+
+// ── Rampa de texto (grafite esverdeado) ──────────────────────────────────────
+$cp-text: #18211c; // base, títulos, valores
+$cp-text-body: #3a4640; // bloco informativo
+$cp-text-secondary: #4f5c55; // apoio, "Cancelar"
+$cp-text-muted: #5d6a63; // subtítulos, metadados
+$cp-text-label: #5f6c65; // rótulos uppercase (10px: precisa de AA)
+$cp-text-placeholder: #76837c; // placeholder
+$cp-text-disabled: #8f9b94; // ícone desabilitado (não é texto)
+
+// ── Preço (nunca comunicado só por cor: ícone + texto sempre) ────────────────
+$cp-cheaper: $cp-accent-ink; // "mais barato" + trending_down
+$cp-cheaper-soft: $cp-accent-soft;
+$cp-pricier: #a51d13; // "mais caro" + trending_up
+$cp-pricier-soft: #f8d7da;
+
+// ── Semânticas ───────────────────────────────────────────────────────────────
+$cp-success: #0f6e6a; // teal, para não se confundir com o acento
+$cp-success-soft: #e0f4f2;
+$cp-info: #2a65c2; // informativo
+$cp-info-soft: #e3f2fd;
+$cp-warn: #a54600; // "Aguardando SEFAZ", avisos
+$cp-warn-soft: #ffecb3;
+$cp-warn-border: #f5d27a;
+$cp-danger-action: #d0281b; // excluir
+$cp-danger-soft: #f8d7da;
+$cp-danger-border: #f1b9bf;
+
+// ── Tipografia ───────────────────────────────────────────────────────────────
+$cp-font: 'Instrument Sans', ui-sans-serif, system-ui, sans-serif;
+$cp-font-mono: ui-monospace, sfmono-regular, menlo, monospace;
+$cp-label-size: 10px;
+$cp-label-weight: 700;
+$cp-label-tracking: 0.11em;
+$cp-display-weight: 650;
+$cp-display-tracking: -0.03em;
+
+// ── Raio ─────────────────────────────────────────────────────────────────────
+$cp-radius-card: 18px;
+$cp-radius-panel: 22px;
+$cp-radius-inner: 14px;
+$cp-radius-input: 12px;
+$cp-radius-sm: 10px;
+$cp-radius-icon: 9px;
+$cp-radius-pill: 999px;
+
+// ── Sombra ───────────────────────────────────────────────────────────────────
+$cp-shadow-hairline: 0 1px 2px rgb(24 33 28 / 4%);
+$cp-shadow-card: 0 1px 2px rgb(24 33 28 / 4%), 0 14px 34px -26px rgb(24 33 28 / 30%);
+$cp-shadow-hover: 0 18px 38px -22px rgb(24 33 28 / 40%);
+$cp-shadow-panel: 0 1px 2px rgb(24 33 28 / 4%), 0 20px 50px -34px rgb(24 33 28 / 35%);
+$cp-shadow-accent: 0 12px 26px -12px rgb(31 122 77 / 85%);
+$cp-shadow-accent-fab: 0 14px 28px -12px rgb(31 122 77 / 90%);
+$cp-shadow-drawer: 18px 0 60px -20px rgb(0 0 0 / 60%);
+$cp-shadow-modal: 0 40px 90px -30px rgb(0 0 0 / 60%);
+$cp-shadow-segmented-active: 0 2px 8px -2px rgb(24 33 28 / 25%);
+$cp-overlay: rgb(10 36 24 / 55%); // fundo do drawer aberto
+
+// ── Layout ───────────────────────────────────────────────────────────────────
+$cp-rail-width: 76px;
+$cp-nav-width: 264px;
+$cp-drawer-width: 272px;
+$cp-header-height: 60px;
+$cp-breakpoint-narrow: 900px;
+$cp-content-max: 1180px;
+$cp-detail-max: 1080px;
+$cp-form-max: 940px;
+$cp-page-padding: clamp(16px, 3.4vw, 34px);
+$cp-gap: 14px;
+$cp-section-gap: 20px;
+$cp-touch-target: 44px;
+
+// ── Transições ───────────────────────────────────────────────────────────────
+$cp-ease: cubic-bezier(0.4, 0, 0.2, 1);
+$cp-transition-card: 0.18s ease;

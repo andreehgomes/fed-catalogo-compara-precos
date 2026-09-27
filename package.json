@@ -11,15 +11,18 @@
     "lint:styles": "stylelint \"src/**/*.scss\" --allow-empty-input",
     "format": "prettier --write .",
     "test:ci": "ng test --watch=false --coverage",
-    "e2e": "playwright test"
+    "e2e": "playwright test",
+    "contraste": "node scripts/contraste.mjs"
   },
   "private": true,
   "packageManager": "npm@10.9.3",
   "dependencies": {
+    "@angular/cdk": "^22.2.0",
     "@angular/common": "^22.2.0",
     "@angular/compiler": "^22.2.0",
     "@angular/core": "^22.2.0",
     "@angular/forms": "^22.2.0",
+    "@angular/material": "^22.2.0",
     "@angular/platform-browser": "^22.2.0",
     "@angular/router": "^22.2.0",
     "rxjs": "~7.8.0",

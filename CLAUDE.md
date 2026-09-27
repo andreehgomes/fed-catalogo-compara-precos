@@ -123,4 +123,44 @@ _A completar na Fase 4._
 
 ## Theming
 
-_A completar na Fase 2._
+Design system **"Compara Preços"**: a estrutura do DS do `fed-catalogo-confeccoes`
+com prefixo `cp` e paleta verde.
+
+- **Tokens** em `src/app/shared/style/_tokens.scss` — acento (`$cp-accent` `#1f7a4d`,
+  `$cp-accent-ink` `#16603b`), casca floresta (`$cp-shell-900/800/700`,
+  `$cp-gradient-shell`), superfícies, rampa de texto grafite esverdeado, preço
+  (`$cp-cheaper` = acento, `$cp-pricier` vermelho), semânticas (`$cp-success` é
+  **teal** para não se confundir com o acento), raios, sombras e layout. **Única
+  fonte de cor**: o stylelint (`color-no-hex`, `color-named`) só libera este arquivo
+  e o `_m3-palette.scss`.
+- **Contraste:** `npm run contraste` lê os hex dos tokens e confere a lista de pares
+  texto × superfície (WCAG AA, 4.5:1; 3:1 para texto grande/ícone). Ao criar um
+  token de texto ou um par novo, acrescente o par em `scripts/contraste.mjs`.
+- **Classes globais** em `src/styles.scss` — `.cp-page` (`--detalhe`, `--form`),
+  `.cp-page-header`, `.cp-detail-header`, `.cp-card`, `.cp-block`, `.cp-panel`,
+  `.cp-section-top/-title`, `.cp-label`, `.cp-field` (`-compact`, `-prefix`, `-hint`,
+  `-error`), `.cp-btn-primary` (`-compact`), `.cp-btn-secondary/-ghost/-danger/-icon`,
+  `.cp-empty-state`, `.cp-empty-inline`, `.cp-list` + `.cp-list-row`, `.cp-summary`,
+  `.cp-info-block` (`--warn`, `--erro`), `.cp-form-grid/-actions`, `.cp-loading`,
+  `.cp-skeleton`, `.cp-sr-only`, e as do domínio: `.cp-price`, `.cp-price-unit`,
+  `.cp-price-old`, `.cp-source`, `.cp-badge--mais-barato/--mais-caro/--igual`,
+  `.cp-status--aguardando/--falhou/--novo`, `.cp-chip`, `.cp-segmented`.
+- **Mixins** (`_mixins.scss`) só para o parametrizado: `cp-grid($min)`,
+  `cp-chip($ink, $bg)`, `cp-btn-icon-ghost(…)`, `cp-segmented`, `cp-card-clickable`.
+- **Breakpoints** (`_breakpoints.scss`): `mobile` (≤599), `tablet-up`, `desktop`
+  (≥1024), `narrow` (≤900, shell em drawer) e `wide`.
+
+**Classe global primeiro, mixin só para o parametrizado.** Mixin é expandido inline
+em cada componente e conta contra o budget `anyComponentStyle` (6kB aviso, 10kB erro).
+No SCSS do componente fica só o que é daquela tela.
+
+Tema Material **M3** (`mat.theme` em `src/styles.scss`) com a paleta gerada de
+`#1f7a4d` (`_m3-palette.scss`, via `ng generate @angular/material:theme-color`). Usado
+só em dialog, menu, autocomplete, datepicker e snackbar. Os campos são `<label>` +
+`<input class>` do DS (mantém `getByLabel()`).
+
+Tipografia **Instrument Sans**; ícones **Material Symbols Rounded** (a classe
+`.material-icons` é remapeada, então `mat-icon` funciona). Componentes base em
+`src/app/shared/ui/`: `<cp-preco>`, `<cp-badge-preco>` (ícone + texto + cor, nunca só
+cor), `<cp-fonte-preco>` e `<cp-empty-state>`. O `currency` padrão (pt-BR/BRL) basta;
+não há pipe `brl`.
