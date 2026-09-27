@@ -1,0 +1,84 @@
+name: CI
+
+on:
+  pull_request:
+  push:
+    branches: [main, develop]
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  verificar:
+    name: Lint, testes e build
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+          cache-dependency-path: |
+            package-lock.json
+            functions/package-lock.json
+
+      - name: Dependências do app
+        run: npm ci
+
+      - name: Dependências das Functions
+        working-directory: functions
+        run: npm ci
+
+      - name: Lint (ESLint + Stylelint)
+        run: npm run lint
+
+      - name: Contraste AA dos tokens
+        run: npm run contraste
+
+      - name: Testes do app (Vitest, com cobertura)
+        run: npm run test:ci
+
+      - name: Typecheck e testes das Functions
+        working-directory: functions
+        run: |
+          npm run typecheck
+          npm test
+          npm run build
+
+      - name: Build de produção
+        run: npm run build -- --configuration=production
+
+  e2e:
+    name: e2e (Playwright contra o dv, serviços interceptados)
+    needs: verificar
+    runs-on: ubuntu-latest
+    env:
+      E2E_EMAIL: ${{ secrets.E2E_EMAIL }}
+      E2E_SENHA: ${{ secrets.E2E_SENHA }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+
+      - run: npm ci
+
+      - name: Navegador do Playwright
+        run: npx playwright install --with-deps chromium
+
+      - name: e2e
+        run: npm run e2e
+
+      - uses: actions/upload-artifact@v4
+        if: failure()
+        with:
+          name: playwright-report
+          path: playwright-report
+          retention-days: 7

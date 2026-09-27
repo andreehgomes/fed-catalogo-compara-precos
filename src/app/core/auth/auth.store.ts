@@ -17,6 +17,10 @@ export class AuthStore {
   constructor() {
     const cancelar = this.api.onAuthStateChanged(this.auth, (u) => this._usuario.set(u));
     inject(DestroyRef).onDestroy(cancelar);
+    if (lerMarca()) {
+      limparMarca();
+      void this.api.getRedirectResult(this.auth).catch(() => undefined);
+    }
   }
 
   async entrar(email: string, senha: string): Promise<void> {
@@ -31,6 +35,7 @@ export class AuthStore {
       return 'ok';
     } catch (erro) {
       if ((erro as { code?: string }).code !== 'auth/popup-blocked') throw erro;
+      marcarRedirect();
       await this.api.signInWithRedirect(this.auth, provedor);
       return 'redirecionando';
     }
@@ -47,6 +52,33 @@ export class AuthStore {
 
   async redefinirSenha(email: string): Promise<void> {
     await this.api.sendPasswordResetEmail(this.auth, email.trim());
+  }
+}
+
+const MARCA_REDIRECT = 'cp-login-google-redirect';
+
+/** Só completa o redirect do Google quando foi este app que o iniciou (evita o iframe no boot). */
+function marcarRedirect(): void {
+  try {
+    sessionStorage.setItem(MARCA_REDIRECT, '1');
+  } catch {
+    /* sem storage: o redirect ainda autentica pela persistência */
+  }
+}
+
+function lerMarca(): boolean {
+  try {
+    return sessionStorage.getItem(MARCA_REDIRECT) === '1';
+  } catch {
+    return false;
+  }
+}
+
+function limparMarca(): void {
+  try {
+    sessionStorage.removeItem(MARCA_REDIRECT);
+  } catch {
+    /* nada a limpar */
   }
 }
 

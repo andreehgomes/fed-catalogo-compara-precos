@@ -643,3 +643,38 @@ estão corretas. Consequências para o projeto:
 - [ ] Lighthouse mobile: Performance ≥ 85 e Accessibility ≥ 95 no painel e na lista de notas.
 - [ ] Leitor de QR e gráfico ficam fora do chunk inicial (conferido na saída do build).
 - [ ] Nenhuma cor literal fora de `_tokens.scss` (stylelint).
+
+---
+
+## 8. Decisões e discrepâncias da execução (27/09/2026)
+
+Registro do que a execução das 10 fases decidiu ou mudou em relação a esta análise.
+Detalhes em `docs/execucao/2026-09-27-compara-precos-nfce-*.md`.
+
+**Spikes**
+- **Menor Preço** ([spike](./spike-menor-preco-2026-09-27.md)): `local` com geohash de **7**
+  funciona (adotado); `data=-1` (últimos 2 meses); `ordem` padrão = menor preço. A página
+  **não** tem 29 itens fixos (traz os empates de preço); a paginação deduplica por `id`.
+- **SEFAZ-PR** continuava fora do ar no início da Fase 6 ("Url do QRCode mal formatado").
+  **Em aberto:** seletores reais, presença do EAN e se a URL v3 só com a chave abre a nota.
+  O parser do PR é provisório (layout SVRS) e `ACEITA_V3_SO_COM_CHAVE = true` até o spike.
+
+**Mudanças de desenho**
+- **Login com Google** entrou (pedido do usuário durante a execução), além de e-mail/senha.
+- `FIRESTORE`, `FUNCTIONS` e o App Check ficam fora do bundle inicial (tokens
+  `providedIn: 'root'`; App Check ativado na primeira callable). O Auth é inicializado sem
+  `popupRedirectResolver` (o resolvedor só entra no login com Google).
+- O SDK do Firebase chega por tokens (`AUTH_API`, `FIRESTORE_API`, `CHAMAR_FUNCTION`) para
+  os testes usarem fakes; `vi.mock` de módulos do Firebase não é confiável com o builder.
+- Localização por **cidade** (não bairro), com centróides do IBGE.
+- "Tem mais barato perto?" compara itens **sem EAN** por texto (marcado "aproximado"),
+  porque o parser provisório não traz EAN.
+- Menor/médio/maior do produto usam o **último preço de cada estabelecimento**.
+- O EAN vira o canônico no vínculo de produtos, mesmo quando é a origem.
+- `produtos/{id}.cnpjs` (até 50) para contar estabelecimentos na busca.
+- Marca "Nova" das notas da fila fica no `localStorage` (o cliente não grava nas notas).
+- Fila: a retentativa manual reabre a janela de 7 dias (`retentadaEm`).
+
+**Ambiente**
+- O Node do sistema (22.18) é anterior ao mínimo do Angular 22 (22.22.3); o projeto usa o
+  pacote `node` como runtime local até o Node do sistema ser atualizado.

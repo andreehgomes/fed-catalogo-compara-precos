@@ -1,6 +1,10 @@
 import { InjectionToken } from '@angular/core';
 import {
+  Auth,
+  AuthProvider,
   GoogleAuthProvider,
+  browserPopupRedirectResolver,
+  getRedirectResult,
   createUserWithEmailAndPassword,
   onAuthStateChanged,
   sendPasswordResetEmail,
@@ -19,8 +23,11 @@ function criarAuthApi() {
     updateProfile,
     signOut,
     sendPasswordResetEmail,
-    signInWithPopup,
-    signInWithRedirect,
+    signInWithPopup: (auth: Auth, p: AuthProvider) =>
+      signInWithPopup(auth, p, browserPopupRedirectResolver),
+    signInWithRedirect: (auth: Auth, p: AuthProvider) =>
+      signInWithRedirect(auth, p, browserPopupRedirectResolver),
+    getRedirectResult: (auth: Auth) => getRedirectResult(auth, browserPopupRedirectResolver),
     novoProvedorGoogle: () => new GoogleAuthProvider(),
   };
 }

@@ -21,6 +21,7 @@ function criarApi() {
     sendPasswordResetEmail: vi.fn(async () => undefined),
     signInWithPopup: vi.fn(async (): Promise<unknown> => ({})),
     signInWithRedirect: vi.fn(async () => undefined),
+    getRedirectResult: vi.fn(async () => null),
     novoProvedorGoogle: vi.fn(() => provedor),
   };
   return { api, cancelar, provedor, emitir: (u: unknown) => ouvinte?.(u) };
@@ -32,6 +33,7 @@ describe('AuthStore', () => {
   let store: AuthStore;
 
   beforeEach(() => {
+    sessionStorage.clear();
     fake = criarApi();
     TestBed.configureTestingModule({
       providers: [
@@ -91,6 +93,23 @@ describe('AuthStore', () => {
     fake.api.signInWithPopup.mockRejectedValueOnce({ code: 'auth/popup-blocked' });
     expect(await store.entrarComGoogle()).toBe('redirecionando');
     expect(fake.api.signInWithRedirect).toHaveBeenCalledWith(auth, fake.provedor);
+  });
+
+  it('depois do redirect, completa o login uma vez ao voltar', async () => {
+    fake.api.signInWithPopup.mockRejectedValueOnce({ code: 'auth/popup-blocked' });
+    await store.entrarComGoogle();
+    TestBed.resetTestingModule();
+    const outro = criarApi();
+    TestBed.configureTestingModule({
+      providers: [
+        { provide: FIREBASE_AUTH, useValue: auth },
+        { provide: AUTH_API, useValue: outro.api as unknown as AuthApi },
+      ],
+    });
+    TestBed.inject(AuthStore);
+    expect(outro.api.getRedirectResult).toHaveBeenCalledWith(auth);
+    expect(sessionStorage.length).toBe(0);
+    expect(fake.api.getRedirectResult).not.toHaveBeenCalled();
   });
 
   it('propaga outros erros do popup', async () => {

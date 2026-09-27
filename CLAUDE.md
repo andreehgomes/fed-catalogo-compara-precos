@@ -23,7 +23,23 @@ npm run e2e
 
 # Build de produção (environment.prod.ts → projeto fed-catalogo-compara-precos)
 ng build --configuration=production
+# Build otimizado apontando para o dv (usado pelo deploy de develop)
+ng build --configuration=dv
+
+# Contraste AA dos tokens
+npm run contraste
+
+# Functions (ver seção Functions)
+npm --prefix functions test
+
+# Lighthouse mobile sobre o build servido com gzip (como no Hosting)
+npx http-server dist/fed-catalogo-compara-precos/browser -p 8090 -s -g --proxy "http://localhost:8090?"
+npx lighthouse http://localhost:8090/login --form-factor=mobile --chrome-flags="--headless=new"
 ```
+
+Scripts auxiliares (rodar uma vez, resultado versionado): `scripts/gerar-municipios-pr.mjs`
+(IBGE), `scripts/gerar-imagens-codigo.mjs` (QR/EAN de teste), `scripts/gerar-icones.mjs`
+(ícones da PWA), `scripts/anonimizar-fixture.mjs` (HTML de NFC-e antes de virar fixture).
 
 **Node:** o Angular 22.2 exige Node ≥ 22.22.3. O pacote `node` está em
 `devDependencies` como runtime local: os scripts `npm run …` usam esse Node
@@ -31,7 +47,7 @@ ng build --configuration=production
 do sistema. Quando o Node do sistema for atualizado, o pacote `node` pode sair.
 
 **Deploy (rodado pelo usuário, nunca pelo agente):** `npm run deploy:rules:dev` e
-`npm run deploy:functions:dev` (a partir da Fase 4/6). **Não há Firebase Emulator
+`npm run deploy:functions:dev`; o CI publica pelo `deploy.yml`. **Não há Firebase Emulator
 Suite**: o `npm start` usa o projeto `fed-catalogo-compara-precos-dv`.
 
 ## Architecture Overview
@@ -45,7 +61,32 @@ supermercado do Paraná pelo QR Code do cupom e compara preços entre mercados.
 - `shared/` (raiz) — **TypeScript puro** de domínio (chave de acesso, GTIN,
   normalização, similaridade, geohash, modelos), sem Angular, Firebase ou npm.
   Alias `@shared/*`. Usado pelo front e pelas Functions (bundle com esbuild).
-- `functions/` — Cloud Functions v2 (Fase 6).
+- `functions/` — Cloud Functions v2 (importação, fila, vínculo de produtos).
+- `e2e/` — Playwright (`chromium` e `mobile`), com SEFAZ, Menor Preço e Functions
+  interceptados (`e2e/support/mocks.ts`) e axe (`e2e/a11y.spec.ts`).
+- `docs/qualidade/` — checklists manuais do dv (regras, Functions/App Check, roteiro).
+
+**Rotas:** `/login`, `/cadastro`, `/redefinir-senha` (fora do shell); dentro do shell
+com `authGuard`: `/` (painel), `/importar`, `/importar/preview`, `/notas`,
+`/notas/:chave`, `/regiao`, `/produtos`, `/produtos/:id`, `/estabelecimentos`,
+`/estabelecimentos/:cnpj`; `**` → página de erro.
+
+## PWA e CI
+
+- `@angular/pwa`: `ngsw-config.json` faz prefetch só do app shell; ícones, JSON e o
+  `.wasm` do scanner são `lazy`; fontes do Google em cache lazy. **Menor Preço e
+  Functions nunca são cacheados** (não há `dataGroups`). Manifest pt-BR com
+  `theme_color` = `$cp-shell-900` e `background_color` = `$cp-bg`. O Hosting manda
+  `no-cache` para `index.html`, `ngsw-worker.js` e `ngsw.json`.
+- A lista de ícones do Material Symbols é um **subset** (`icon_names=` no `index.html`,
+  em ordem alfabética): ao usar um ícone novo, acrescente o nome lá, senão aparece o
+  texto da ligadura.
+- `.github/workflows/ci.yml`: lint, contraste, `test:ci`, Functions (typecheck, testes,
+  build) e build de produção; e2e com os secrets `E2E_EMAIL`/`E2E_SENHA` (sem eles os
+  testes logados são pulados). `deploy.yml`: depois do CI verde, push em `develop` →
+  `-P dev` (build `dv`), em `main` → `-P prod` (build `production`), autenticado por
+  Workload Identity Federation (variáveis `WIF_PROVIDER`, `WIF_SERVICE_ACCOUNT`,
+  `WIF_SERVICE_ACCOUNT_DV`).
 
 Os specs de `shared/` rodam junto com o `npm test` (`include: ../shared/**/*.spec.ts`
 no target `test`, relativo a `src/`).

@@ -1,0 +1,63 @@
+name: Deploy
+
+# Roda depois do CI verde num push em develop (→ projeto dv) ou main (→ produção).
+# Autenticação por Workload Identity Federation: sem chave JSON em secret.
+# Variáveis do repositório (Settings → Secrets and variables → Actions → Variables):
+#   WIF_PROVIDER            projects/<nº>/locations/global/workloadIdentityPools/<pool>/providers/<provider>
+#   WIF_SERVICE_ACCOUNT_DV  deploy@fed-catalogo-compara-precos-dv.iam.gserviceaccount.com
+#   WIF_SERVICE_ACCOUNT     deploy@fed-catalogo-compara-precos.iam.gserviceaccount.com
+
+on:
+  workflow_run:
+    workflows: [CI]
+    types: [completed]
+    branches: [main, develop]
+
+concurrency:
+  group: deploy-${{ github.event.workflow_run.head_branch }}
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    if: github.event.workflow_run.conclusion == 'success' && github.event.workflow_run.event == 'push'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      id-token: write
+    environment: ${{ github.event.workflow_run.head_branch == 'main' && 'producao' || 'dv' }}
+    env:
+      PRODUCAO: ${{ github.event.workflow_run.head_branch == 'main' }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.workflow_run.head_sha }}
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+          cache-dependency-path: |
+            package-lock.json
+            functions/package-lock.json
+
+      - run: npm ci
+
+      - working-directory: functions
+        run: npm ci
+
+      - name: Build (produção em main, dv em develop)
+        run: npm run build -- --configuration=${{ env.PRODUCAO == 'true' && 'production' || 'dv' }}
+
+      - name: Autenticar no Google Cloud (Workload Identity Federation)
+        uses: google-github-actions/auth@v2
+        with:
+          workload_identity_provider: ${{ vars.WIF_PROVIDER }}
+          service_account: ${{ env.PRODUCAO == 'true' && vars.WIF_SERVICE_ACCOUNT || vars.WIF_SERVICE_ACCOUNT_DV }}
+          create_credentials_file: true
+
+      - name: firebase deploy
+        run: >
+          npx firebase deploy
+          --only hosting,functions,firestore:rules,firestore:indexes
+          -P ${{ env.PRODUCAO == 'true' && 'prod' || 'dev' }}
+          --non-interactive --force

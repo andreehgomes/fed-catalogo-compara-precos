@@ -81,7 +81,12 @@ const linhas = pares.map(([frente, fundo, minimo]) => {
     frente: `$${frente}`,
     fundo: `$${fundo}`,
     razao: r.toFixed(2),
-    minimo: minimo === TEXTO ? '4.5 (texto)' : minimo === GRANDE ? '3.0 (grande/ícone)' : '1.0 (decorativo)',
+    minimo:
+      minimo === TEXTO
+        ? '4.5 (texto)'
+        : minimo === GRANDE
+          ? '3.0 (grande/ícone)'
+          : '1.0 (decorativo)',
     resultado: ok ? 'ok' : 'FALHOU',
   };
 });
