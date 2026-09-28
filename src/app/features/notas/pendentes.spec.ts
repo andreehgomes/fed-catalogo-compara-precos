@@ -128,6 +128,18 @@ describe('PendenteRow', () => {
     expect(texto(el)).not.toContain('Tentar de novo');
   });
 
+  it('detalhes: chave formatada, número, série, modelo, tentativas e link da SEFAZ', () => {
+    const el = render({ ...pendente(CHAVE), ultimoErro: 'sefaz-indisponivel' })
+      .nativeElement as HTMLElement;
+    const detalhes = texto(el.querySelector('details'));
+    expect(detalhes).toContain(CHAVE.replace(/(\d{4})(?=\d)/g, '$1 '));
+    expect(detalhes).toContain(`Número${Number(CHAVE.slice(25, 34))}`);
+    expect(detalhes).toContain(`Série${CHAVE.slice(22, 25)}`);
+    expect(detalhes).toContain('ModeloNFC-e (65)');
+    expect(detalhes).toContain('O site da SEFAZ-PR está fora do ar agora.');
+    expect(el.querySelector('details a')?.getAttribute('href')).toBe(pendente(CHAVE).url);
+  });
+
   it('falhou: chip próprio e "Tentar de novo" emite a chave', () => {
     const fixture = render(pendente(CHAVE_AGO, 'falhou'));
     const el = fixture.nativeElement as HTMLElement;
