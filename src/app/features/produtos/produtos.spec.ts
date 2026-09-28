@@ -3,7 +3,7 @@ import { TestBed } from '@angular/core/testing';
 import { Router, provideRouter } from '@angular/router';
 import type { Estabelecimento, Nota, Preco, Produto, ProdutoId } from '@shared/model';
 import { vi } from 'vitest';
-import { texto } from '../../../testing/dom';
+import { botao, texto } from '../../../testing/dom';
 import { AuthStore } from '../../core/auth/auth.store';
 import { CHAMAR_FUNCTION } from '../../core/firebase/callable';
 import { FIRESTORE_API, FirestoreApi } from '../../core/firebase/firestore-api';
@@ -11,15 +11,17 @@ import { FIRESTORE } from '../../core/firebase/firestore.token';
 import { GraficoHistorico } from '../../shared/ui/grafico-historico/grafico-historico';
 import { EstabelecimentosService } from '../estabelecimentos/data-access/estabelecimentos.service';
 import { economiaPotencial, totalDe, variacao } from '../painel/painel.calculos';
-import ProdutosBuscaPage from './busca/produtos-busca.page';
+import ProdutosBuscaPage, { CatalogoProdutosEstado } from './busca/produtos-busca.page';
 import {
   PrecoComId,
   ProdutosService,
+  TAMANHO_PAGINA_PRODUTOS,
   emGrupos,
   tokenMaisRaro,
 } from './data-access/produtos.service';
 import { limitarSeries, resumirPrecos } from './detalhe/resumo';
-import { mesmoConteudo, sugerir } from './vincular/vincular-dialog';
+import { MAT_DIALOG_DATA, MatDialogRef } from '@angular/material/dialog';
+import { VincularDialog, mesmoConteudo, sugerir } from './vincular/vincular-dialog';
 
 function produto(id: string, extra: Partial<Produto> = {}): Produto {
   return {
@@ -43,22 +45,36 @@ function firestoreFalso(colecoes: Record<string, Record<string, unknown>>) {
     op: string;
     valor: unknown;
   }
+  interface Restricao {
+    limite?: number;
+    ordem?: string;
+    direcao?: string;
+    depois?: { id: string };
+  }
   const api = {
     collection: vi.fn((_: unknown, c: string) => ({ c })),
     doc: vi.fn((_: unknown, c: string) => ({ c })),
     documentId: vi.fn(() => '__id__'),
     where: vi.fn((campo: string, op: string, valor: unknown) => ({ campo, op, valor })),
-    orderBy: vi.fn(() => ({})),
+    orderBy: vi.fn((ordem: string, direcao = 'asc') => ({ ordem, direcao })),
     limit: vi.fn((n: number) => ({ limite: n })),
-    startAfter: vi.fn(() => ({})),
+    startAfter: vi.fn((depois: { id: string }) => ({ depois })),
     query: vi.fn((col: { c: string }, ...r: (Filtro | { limite?: number })[]) => ({ col, r })),
     getDoc: vi.fn(async (ref: { c: string }) => {
       const [col, id] = ref.c.split('/');
       const d = colecoes[col]?.[id];
       return { exists: () => !!d, data: () => d, id };
     }),
-    getDocs: vi.fn(async (q: { col: { c: string }; r: (Filtro & { limite?: number })[] }) => {
+    getDocs: vi.fn(async (q: { col: { c: string }; r: (Filtro & Restricao)[] }) => {
       let docs = Object.entries(colecoes[q.col.c] ?? {});
+      const ordem = q.r.find((x) => x.ordem);
+      if (ordem) {
+        const campo = (d: unknown) => String((d as Record<string, unknown>)[ordem.ordem!]);
+        const sinal = ordem.direcao === 'desc' ? -1 : 1;
+        docs.sort(([, a], [, b]) => sinal * campo(a).localeCompare(campo(b)));
+      }
+      const depois = q.r.find((x) => x.depois)?.depois;
+      if (depois) docs = docs.slice(docs.findIndex(([id]) => id === depois.id) + 1);
       for (const f of q.r.filter((x) => x.op)) {
         docs = docs.filter(([id, d]) => {
           const v = f.campo === '__id__' ? id : (d as Record<string, unknown>)[f.campo];
@@ -206,31 +222,47 @@ describe('resumirPrecos (seed 3 estabelecimentos × 6 datas)', () => {
         cnpj,
         vlUnit: v,
         unidade: 'UN',
-        precoPorUnidadeBase: { valor: v, unidade: 'L' },
+        precoPorUnidadeBase: { valor: v / 5, unidade: 'kg' },
         emissao,
       });
     });
   }
 
-  it('menor, médio e maior sobre o último preço de cada estabelecimento', () => {
+  it('menor, médio e maior sobre todas as observações; estabelecimentos pelo último preço', () => {
     const r = resumirPrecos(precos, estab, new Set(['B5']))!;
-    expect(r.unidade).toBe('L');
-    expect(r.menor).toBe(4.49);
+    const todos = Object.values(valores).flat();
+    expect(r.unidade).toBe('kg');
+    expect(r.menor).toBe(4);
     expect(r.maior).toBe(6.99);
-    expect(r.medio).toBe(Math.round(((5.5 + 4.49 + 6.99) / 3) * 100) / 100);
-    expect(r.porEstabelecimento.map((e) => [e.nome, e.valor, e.diferenca, e.fonte])).toEqual([
-      ['Bom Preço', 4.49, 0, 'minhas-notas'],
-      ['Mercado A', 5.5, 1.01, 'comunidade'],
-      ['C', 6.99, 2.5, 'comunidade'],
+    expect(r.medio).toBe(Math.round((todos.reduce((s, v) => s + v, 0) / todos.length) * 100) / 100);
+    expect(
+      r.porEstabelecimento.map((e) => [e.nome, e.valor, e.valorUnidadeBase, e.diferenca, e.fonte]),
+    ).toEqual([
+      ['Bom Preço', 4.49, 0.9, 0, 'minhas-notas'],
+      ['Mercado A', 5.5, 1.1, 1.01, 'comunidade'],
+      ['C', 6.99, 1.4, 2.5, 'comunidade'],
     ]);
+    expect(r.series[0].pontos.at(-1)!.valor).toBe(5.5);
+    expect(r.observacoes).toHaveLength(18);
+    expect(r.observacoes.map((o) => o.emissao)).toEqual(
+      [...r.observacoes.map((o) => o.emissao)].sort().reverse(),
+    );
+    expect(r.observacoes.find((o) => o.id === 'B5_1')).toMatchObject({
+      nome: 'Bom Preço',
+      valor: 4.49,
+      fonte: 'minhas-notas',
+    });
     expect(r.series).toHaveLength(3);
     expect(r.series[0].pontos).toHaveLength(6);
     expect(resumirPrecos([], estab)).toBeNull();
   });
 
-  it('sem unidade base comum, compara pelo preço do item', () => {
+  it('sem unidade base comum, não mostra o preço por unidade', () => {
     const mistos = precos.map((p, i) => (i % 2 ? { ...p, precoPorUnidadeBase: null } : p));
-    expect(resumirPrecos(mistos, estab)!.unidade).toBeNull();
+    const r = resumirPrecos(mistos, estab)!;
+    expect(r.unidade).toBeNull();
+    expect(r.porEstabelecimento.every((e) => e.valorUnidadeBase === null)).toBe(true);
+    expect(r.menor).toBe(4);
   });
 
   it('o gráfico desenha 3 séries com tabela equivalente', () => {
@@ -244,6 +276,38 @@ describe('resumirPrecos (seed 3 estabelecimentos × 6 datas)', () => {
     expect(el.querySelectorAll('table tbody tr')).toHaveLength(18);
     expect(el.querySelector('circle title')?.textContent).toContain('R$');
     expect(el.querySelectorAll('polyline')[1].getAttribute('stroke-dasharray')).toBe('6 4');
+    expect(el.querySelectorAll('text.valor')).toHaveLength(0);
+    expect(el.querySelector('svg')!.getAttribute('viewBox')).toBe('0 0 640 240');
+  });
+
+  it('um só estabelecimento com duas notas: resumo mostra os dois preços', () => {
+    const duas = precos.filter((p) => p.id === 'A0_1' || p.id === 'A5_1');
+    const r = resumirPrecos(duas, estab)!;
+    expect([r.menor, r.medio, r.maior]).toEqual([5, 5.25, 5.5]);
+    expect(r.porEstabelecimento).toEqual([
+      expect.objectContaining({ nome: 'Mercado A', valor: 5.5, diferenca: 0 }),
+    ]);
+  });
+
+  it('com poucos pontos, escreve o valor de cada um; compacto usa viewBox estreito', () => {
+    const fixture = TestBed.createComponent(GraficoHistorico);
+    fixture.componentRef.setInput('series', [
+      {
+        nome: 'Mercado A',
+        pontos: [
+          { data: '2026-09-01T10:00:00Z', valor: 22.99 },
+          { data: '2026-09-26T10:00:00Z', valor: 17.99 },
+        ],
+      },
+    ]);
+    fixture.componentRef.setInput('compacto', true);
+    fixture.detectChanges();
+    const el = fixture.nativeElement as HTMLElement;
+    expect([...el.querySelectorAll('text.valor')].map((t) => texto(t))).toEqual([
+      'R$ 22,99',
+      'R$ 17,99',
+    ]);
+    expect(el.querySelector('svg')!.getAttribute('viewBox')).toBe('0 0 340 240');
   });
 
   it('mais de 5 séries: o resto vira "Outros"', () => {
@@ -281,6 +345,53 @@ describe('vínculo: sugestões', () => {
   });
 });
 
+describe('VincularDialog: códigos de barras do Menor Preço', () => {
+  it('mostra as sugestões de EAN e vincula ao escolhido', async () => {
+    firestoreFalso({});
+    const cafe = produto('loc:1:cafe', {
+      descricao: 'Cafe Itamaraty 500g',
+      descricaoNorm: 'CAFE ITAMARATY 500G',
+      sugestoesEan: [
+        { gtin: '7896045102495', descricao: 'CAFE ITAMARATY EXTRAFORTE VACUO 500G', lojas: 12 },
+        { gtin: '7896045102501', descricao: 'CAFE ITAMARATY VACUO 500G TRADICIONAL', lojas: 11 },
+      ],
+    });
+    const fechar = vi.fn();
+    TestBed.overrideProvider(MAT_DIALOG_DATA, { useValue: { produto: cafe, excluir: [] } });
+    TestBed.overrideProvider(MatDialogRef, { useValue: { close: fechar } });
+    const fixture = TestBed.createComponent(VincularDialog);
+    fixture.detectChanges();
+    await fixture.whenStable();
+    fixture.detectChanges();
+    const el = fixture.nativeElement as HTMLElement;
+    const lista = el.querySelector('[aria-label="Códigos de barras encontrados no Menor Preço"]')!;
+    expect(texto(lista)).toContain('EAN 7896045102501 · visto em 11 mercados no Menor Preço');
+
+    botao(el, /TRADICIONAL/).click();
+    fixture.detectChanges();
+    botao(el, 'É o mesmo produto').click();
+    await fixture.whenStable();
+    expect(TestBed.inject(CHAMAR_FUNCTION)).toHaveBeenCalledWith('vincularProduto', {
+      origem: 'loc:1:cafe',
+      destino: 'ean:7896045102501',
+    });
+    expect(fechar).toHaveBeenCalledWith(true);
+  });
+
+  it('produto já vinculado não mostra sugestões', () => {
+    firestoreFalso({});
+    const p = produto('loc:1:x', {
+      vinculadoA: 'ean:7891000100103' as ProdutoId,
+      sugestoesEan: [{ gtin: '7896045102495', descricao: 'X', lojas: 1 }],
+    });
+    TestBed.overrideProvider(MAT_DIALOG_DATA, { useValue: { produto: p, excluir: [] } });
+    TestBed.overrideProvider(MatDialogRef, { useValue: { close: vi.fn() } });
+    const fixture = TestBed.createComponent(VincularDialog);
+    fixture.detectChanges();
+    expect((fixture.nativeElement as HTMLElement).textContent).not.toContain('7896045102495');
+  });
+});
+
 describe('ProdutosBuscaPage', () => {
   it('EAN existente abre o resultado; inexistente oferece o atalho para o Menor Preço', async () => {
     firestoreFalso({
@@ -312,6 +423,65 @@ describe('ProdutosBuscaPage', () => {
       (a) => texto(a) === 'Ver preços perto de mim',
     )!;
     expect(atalho.getAttribute('href')).toBe('/regiao?gtin=7891000100103');
+  });
+
+  it('sem busca, lista o catálogo em ordem alfabética, paginado', async () => {
+    const produtos: Record<string, Produto> = {};
+    for (let i = 0; i < TAMANHO_PAGINA_PRODUTOS + 5; i++) {
+      const nome = `PRODUTO ${String(TAMANHO_PAGINA_PRODUTOS + 5 - i).padStart(2, '0')}`;
+      produtos[`loc:${i}`] = produto(`loc:${i}`, { descricao: nome, descricaoNorm: nome });
+    }
+    firestoreFalso({ produtos });
+    TestBed.inject(CatalogoProdutosEstado).pagina.set(0);
+    const fixture = TestBed.createComponent(ProdutosBuscaPage);
+    const el = fixture.nativeElement as HTMLElement;
+    const atualizar = async () => {
+      fixture.detectChanges();
+      await fixture.whenStable();
+      fixture.detectChanges();
+    };
+    const nomes = () => [...el.querySelectorAll('.item-nome')].map((x) => texto(x));
+    await atualizar();
+
+    expect(nomes()).toHaveLength(TAMANHO_PAGINA_PRODUTOS);
+    expect(nomes()[0]).toBe('PRODUTO 01');
+    expect(texto(el.querySelector('[aria-current="page"]'))).toBe('Página 1');
+    expect(botao(el, /Anterior/).disabled).toBe(true);
+
+    botao(el, /Próxima/).click();
+    await atualizar();
+    expect(nomes()).toEqual(['PRODUTO 21', 'PRODUTO 22', 'PRODUTO 23', 'PRODUTO 24', 'PRODUTO 25']);
+    expect(texto(el.querySelector('[aria-current="page"]'))).toBe('Página 2');
+    expect(botao(el, /Próxima/).disabled).toBe(true);
+
+    fixture.destroy();
+    const volta = TestBed.createComponent(ProdutosBuscaPage);
+    volta.detectChanges();
+    await volta.whenStable();
+    volta.detectChanges();
+    expect(texto((volta.nativeElement as HTMLElement).querySelector('.item-nome'))).toBe(
+      'PRODUTO 21',
+    );
+
+    botao(volta.nativeElement as HTMLElement, /Anterior/).click();
+    volta.detectChanges();
+    await volta.whenStable();
+    volta.detectChanges();
+    expect(texto((volta.nativeElement as HTMLElement).querySelector('.item-nome'))).toBe(
+      'PRODUTO 01',
+    );
+  });
+
+  it('catálogo vazio convida a importar uma nota', async () => {
+    firestoreFalso({});
+    TestBed.inject(CatalogoProdutosEstado).pagina.set(0);
+    const fixture = TestBed.createComponent(ProdutosBuscaPage);
+    fixture.detectChanges();
+    await fixture.whenStable();
+    fixture.detectChanges();
+    const el = fixture.nativeElement as HTMLElement;
+    expect(texto(el)).toContain('Nenhum produto ainda');
+    expect(el.querySelector('nav.paginacao')).toBeNull();
   });
 
   it('texto digitado vai para a query string', async () => {

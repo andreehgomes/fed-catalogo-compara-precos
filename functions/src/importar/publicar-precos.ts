@@ -1,11 +1,21 @@
 import { produtoIdDe, normalizarGtin } from '@shared/gtin';
-import type { NfceParsed, Nota, Observacao, Preco, Produto, ProdutoId } from '@shared/model';
+import type {
+  NfceParsed,
+  Nota,
+  Observacao,
+  Preco,
+  Produto,
+  ProdutoId,
+  VinculoAuto,
+} from '@shared/model';
 import { normalizarDescricao, tokens } from '@shared/normalizar';
 import { extrairConteudo, precoPorUnidadeBase } from '@shared/unidade';
 import type { Operacao, Repositorio } from '../dados/repositorio';
 
 export const VALIDADE_MENOR_PRECO_MS = 90 * 24 * 60 * 60 * 1000;
 export const LIMITE_CNPJS = 50;
+/** O Menor Preço leva um tempo para mostrar a venda. */
+export const ESPERA_VINCULO_AUTO_MS = 2 * 60 * 60 * 1000;
 
 /** Nota do usuário (modelo 5.3), com `produtoId` e preço por unidade base por item. */
 export function montarNota(nota: NfceParsed, importadaEm: Date, veioDaFila: boolean): Nota {
@@ -40,15 +50,29 @@ function atualizarUltima(atual: Observacao | null, nova: Observacao): Observacao
   return !atual || nova.emissao >= atual.emissao ? nova : atual;
 }
 
+function filaVinculo(nota: Nota, p: Produto): VinculoAuto {
+  const aPartirDe = new Date(nota.emissao).getTime() + ESPERA_VINCULO_AUTO_MS;
+  return {
+    produtoId: p.id,
+    cnpj: nota.cnpj,
+    vlUnit: p.ultimaObservacao?.vlUnit ?? 0,
+    status: 'aguardando',
+    tentativas: 0,
+    proximaTentativa: new Date(Math.max(aPartirDe, Date.parse(nota.importadaEm))).toISOString(),
+    criadoEm: nota.importadaEm,
+  };
+}
+
 /**
  * Publica os preços anônimos da nota: upsert de `produtos/{id}` e `precos/{chave}_{n}`.
  * Nenhum documento leva uid ou referência ao usuário (RNF-24). Ids determinísticos: rodar
- * de novo não duplica.
+ * de novo não duplica. Produto `loc:` novo entra na fila do vínculo automático.
  */
 export async function publicarPrecos(repo: Repositorio, nota: Nota): Promise<number> {
   const ids = [...new Set(nota.itens.map((i) => i.produtoId))];
   const existentes = await repo.obterVarios<Produto>(ids.map((id) => `produtos/${id}`));
-  const produtos = new Map<ProdutoId, Produto | null>(ids.map((id, k) => [id, existentes[k]]));
+  const existentesPorId = new Map(ids.map((id, k) => [id, existentes[k]]));
+  const produtos = new Map<ProdutoId, Produto | null>(existentesPorId);
   const operacoes: Operacao[] = [];
 
   for (const item of nota.itens) {
@@ -83,7 +107,15 @@ export async function publicarPrecos(repo: Repositorio, nota: Nota): Promise<num
     });
   }
   for (const [id, p] of produtos) {
-    if (p) operacoes.push({ tipo: 'gravar', caminho: `produtos/${id}`, dados: { ...p } });
+    if (!p) continue;
+    operacoes.push({ tipo: 'gravar', caminho: `produtos/${id}`, dados: { ...p } });
+    if (id.startsWith('loc:') && !existentesPorId.get(id)) {
+      operacoes.push({
+        tipo: 'gravar',
+        caminho: `vinculosAuto/${id}`,
+        dados: { ...filaVinculo(nota, p) },
+      });
+    }
   }
   await repo.lote(operacoes);
   return nota.itens.length;

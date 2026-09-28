@@ -34,48 +34,88 @@
     }
   </section>
 
-  @if (consulta()) {
-    <section class="cp-block" aria-live="polite" [attr.aria-busy]="resultados.isLoading()">
-      @if (resultados.isLoading()) {
-        <div class="cp-loading" role="status" aria-label="Buscando"><div></div></div>
-      } @else if (resultados.error()) {
-        <cp-empty-state icone="cloud_off" titulo="Não foi possível buscar agora" />
-      } @else if (resultados.hasValue() && resultados.value().length) {
-        <ul class="cp-list" aria-label="Produtos encontrados">
-          @for (p of resultados.value(); track p.id) {
-            <li>
-              <a class="cp-list-row" [routerLink]="['/produtos', p.id]">
-                <div class="item-principal">
-                  <span class="item-nome">{{ p.descricao }}</span>
-                  <span class="item-detalhe">
-                    @if (p.ean) {
-                      EAN {{ p.ean }} ·
-                    }
-                    {{ p.cnpjs?.length ?? 1 }}
-                    {{ (p.cnpjs?.length ?? 1) === 1 ? 'estabelecimento' : 'estabelecimentos' }}
-                  </span>
-                </div>
-                <div class="item-lado">
-                  @if (p.menorPreco) {
-                    <span class="cp-label">Menor preço</span>
-                    <span class="cp-price">{{ p.menorPreco.vlUnit | currency }}</span>
+  <section
+    #topoLista
+    class="cp-block"
+    aria-live="polite"
+    [attr.aria-busy]="lista().isLoading()"
+  >
+    <h2 class="cp-section-title">{{ consulta() ? 'Resultados' : 'Todos os produtos' }}</h2>
+
+    @if (lista().isLoading()) {
+      <div class="cp-loading" role="status" aria-label="Carregando produtos"><div></div></div>
+    } @else if (lista().error()) {
+      <cp-empty-state
+        icone="cloud_off"
+        [titulo]="consulta() ? 'Não foi possível buscar agora' : 'Não foi possível carregar os produtos'"
+      />
+    } @else if (itens().length) {
+      <ul class="cp-list" [attr.aria-label]="consulta() ? 'Produtos encontrados' : 'Produtos'">
+        @for (p of itens(); track p.id) {
+          <li>
+            <a class="cp-list-row" [routerLink]="['/produtos', p.id]">
+              <div class="item-principal">
+                <span class="item-nome">{{ p.descricao }}</span>
+                <span class="item-detalhe">
+                  @if (p.ean) {
+                    EAN {{ p.ean }} ·
                   }
-                </div>
-              </a>
-            </li>
-          }
-        </ul>
-      } @else {
-        <cp-empty-state
-          icone="search_off"
-          titulo="Ainda não há preços desse produto nas notas"
-          texto="Veja quanto ele custa nos mercados da região pelo Menor Preço."
-        >
-          <a class="cp-btn-primary" routerLink="/regiao" [queryParams]="linkRegiao()">
-            Ver preços perto de mim
-          </a>
-        </cp-empty-state>
+                  {{ p.cnpjs?.length ?? 1 }}
+                  {{ (p.cnpjs?.length ?? 1) === 1 ? 'estabelecimento' : 'estabelecimentos' }}
+                </span>
+              </div>
+              <div class="item-lado">
+                @if (p.menorPreco) {
+                  <span class="cp-label">Menor preço</span>
+                  <span class="cp-price">{{ p.menorPreco.vlUnit | currency }}</span>
+                }
+              </div>
+            </a>
+          </li>
+        }
+      </ul>
+
+      @if (!consulta() && (pagina() > 0 || temProxima())) {
+        <nav class="paginacao" aria-label="Páginas de produtos">
+          <button
+            type="button"
+            class="cp-btn-secondary"
+            [disabled]="pagina() === 0"
+            (click)="irPara(pagina() - 1)"
+          >
+            <mat-icon aria-hidden="true">chevron_left</mat-icon>
+            Anterior
+          </button>
+          <span aria-current="page">Página {{ pagina() + 1 }}</span>
+          <button
+            type="button"
+            class="cp-btn-secondary"
+            [disabled]="!temProxima()"
+            (click)="irPara(pagina() + 1)"
+          >
+            Próxima
+            <mat-icon aria-hidden="true">chevron_right</mat-icon>
+          </button>
+        </nav>
       }
-    </section>
-  }
+    } @else if (consulta()) {
+      <cp-empty-state
+        icone="search_off"
+        titulo="Ainda não há preços desse produto nas notas"
+        texto="Veja quanto ele custa nos mercados da região pelo Menor Preço."
+      >
+        <a class="cp-btn-primary" routerLink="/regiao" [queryParams]="linkRegiao()">
+          Ver preços perto de mim
+        </a>
+      </cp-empty-state>
+    } @else {
+      <cp-empty-state
+        icone="inventory_2"
+        titulo="Nenhum produto ainda"
+        texto="Os produtos aparecem aqui quando alguém importa uma nota."
+      >
+        <a class="cp-btn-primary" routerLink="/importar">Importar nota</a>
+      </cp-empty-state>
+    }
+  </section>
 </main>

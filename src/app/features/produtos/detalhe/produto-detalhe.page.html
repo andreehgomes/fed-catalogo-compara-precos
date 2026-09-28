@@ -25,23 +25,21 @@
       <section class="cp-summary" aria-label="Resumo de preços">
         <div>
           <span class="cp-summary-label">Menor</span>
-          <span class="cp-summary-value">{{ r.menor | currency }}{{ unidade() }}</span>
+          <span class="cp-summary-value">{{ r.menor | currency }}</span>
         </div>
         <div>
           <span class="cp-summary-label">Médio</span>
-          <span class="cp-summary-value">{{ r.medio | currency }}{{ unidade() }}</span>
+          <span class="cp-summary-value">{{ r.medio | currency }}</span>
         </div>
         <div>
           <span class="cp-summary-label">Maior</span>
-          <span class="cp-summary-value">{{ r.maior | currency }}{{ unidade() }}</span>
+          <span class="cp-summary-value">{{ r.maior | currency }}</span>
         </div>
       </section>
 
       <section class="cp-block">
         <h2 class="cp-section-title">Por estabelecimento</h2>
-        <p class="cp-field-hint">
-          Último preço observado nos últimos 90 dias{{ r.unidade ? ', por ' + r.unidade : '' }}.
-        </p>
+        <p class="cp-field-hint">Último preço do item observado nos últimos 90 dias.</p>
         <ul class="cp-list">
           @for (e of r.porEstabelecimento; track e.cnpj) {
             <li class="cp-list-row">
@@ -50,7 +48,12 @@
                 <cp-fonte-preco [fonte]="e.fonte" [data]="e.emissao" />
               </div>
               <div class="item-lado">
-                <span class="cp-price">{{ e.valor | currency }}{{ unidade() }}</span>
+                <span class="cp-price">{{ e.valor | currency }}</span>
+                @if (e.valorUnidadeBase !== null) {
+                  <span class="cp-price-unit"
+                    >{{ e.valorUnidadeBase | currency }}/{{ r.unidade }}</span
+                  >
+                }
                 @if (e.diferenca > 0) {
                   <cp-badge-preco tipo="mais-caro" [diferenca]="e.diferenca" />
                 } @else {
@@ -65,9 +68,30 @@
       <section class="cp-block" aria-labelledby="historico-titulo">
         <h2 id="historico-titulo" class="cp-section-title">Histórico</h2>
         @defer (on viewport) {
-          <cp-grafico-historico [series]="series()" />
+          <cp-grafico-historico [series]="series()" [compacto]="estreito()" />
         } @placeholder {
           <div class="cp-skeleton" style="height: 200px" aria-hidden="true"></div>
+        }
+        <h3 class="cp-label">Preços observados</h3>
+        <ul class="cp-list" aria-label="Preços observados">
+          @for (o of observacoes(); track o.id) {
+            <li class="cp-list-row">
+              <div class="item-principal">
+                <span class="item-nome">{{ o.emissao | date: 'dd/MM/yyyy' }}</span>
+                <span class="item-detalhe">
+                  {{ o.nome }}{{ o.fonte === 'minhas-notas' ? ' · Suas notas' : '' }}
+                </span>
+              </div>
+              <div class="item-lado">
+                <span class="cp-price">{{ o.valor | currency }}</span>
+              </div>
+            </li>
+          }
+        </ul>
+        @if (observacoes().length < r.observacoes.length) {
+          <button type="button" class="cp-btn-ghost" (click)="todasObservacoes.set(true)">
+            Mostrar todos ({{ r.observacoes.length }})
+          </button>
         }
       </section>
     } @else {
@@ -101,6 +125,17 @@
         </ul>
       } @else {
         <p class="cp-field-hint">Nenhum produto ligado a este.</p>
+      }
+      @if (v.produto.vinculadoA && v.produto.vinculoOrigem === 'auto') {
+        <p class="cp-source">
+          Código de barras identificado automaticamente pelo Menor Preço. Se estiver errado, desfaça
+          o vínculo.
+        </p>
+      } @else if (!v.produto.vinculadoA && v.produto.sugestoesEan?.length) {
+        <p class="cp-source">
+          Encontramos códigos de barras possíveis no Menor Preço. Confirme qual é em "Este produto é
+          o mesmo que…".
+        </p>
       }
       <div class="cp-form-actions">
         @if (v.produto.vinculadoA) {

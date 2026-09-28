@@ -7,8 +7,11 @@ export interface SerieGrafico {
 }
 
 const L = 640;
+const L_COMPACTO = 340;
 const A = 240;
-const M = { esq: 56, dir: 12, topo: 12, base: 28 };
+const M = { esq: 56, dir: 16, topo: 22, base: 28 };
+/** Acima disso os rótulos de valor em cada ponto se sobrepõem; fica o tooltip e a tabela. */
+const MAX_ROTULOS = 12;
 const TRACOS = ['', '6 4', '2 4', '10 4 2 4', '1 3'];
 
 /** Histórico de preço em SVG próprio (sem lib), com tabela equivalente para leitor de tela. */
@@ -18,7 +21,7 @@ const TRACOS = ['', '6 4', '2 4', '10 4 2 4', '1 3'];
   template: `
     <figure class="grafico">
       <svg
-        [attr.viewBox]="'0 0 ' + largura + ' ' + altura"
+        [attr.viewBox]="'0 0 ' + largura() + ' ' + altura"
         role="img"
         [attr.aria-label]="'Histórico de preço de ' + series().length + ' estabelecimentos'"
       >
@@ -26,7 +29,7 @@ const TRACOS = ['', '6 4', '2 4', '10 4 2 4', '1 3'];
           <line
             class="grade"
             [attr.x1]="margem.esq"
-            [attr.x2]="largura - margem.dir"
+            [attr.x2]="largura() - margem.dir"
             [attr.y1]="y.y"
             [attr.y2]="y.y"
           />
@@ -42,12 +45,23 @@ const TRACOS = ['', '6 4', '2 4', '10 4 2 4', '1 3'];
         @for (s of desenho(); track s.nome; let i = $index) {
           <g [attr.class]="'serie serie-' + (i + 1)">
             <polyline [attr.points]="s.caminho" [attr.stroke-dasharray]="tracos[i]" fill="none" />
-            @for (p of s.pontos; track p.data) {
-              <circle [attr.cx]="p.x" [attr.cy]="p.y" r="3.5">
+            @for (p of s.pontos; track $index) {
+              <circle [attr.cx]="p.x" [attr.cy]="p.y" r="4">
                 <title>
                   {{ s.nome }}: {{ p.valor | currency }} em {{ p.data | date: 'dd/MM/yyyy' }}
                 </title>
               </circle>
+              @if (rotularPontos()) {
+                <text
+                  class="valor"
+                  [attr.x]="p.x"
+                  [attr.y]="p.y - 9"
+                  [attr.text-anchor]="p.ancora"
+                  aria-hidden="true"
+                >
+                  {{ p.valor | currency }}
+                </text>
+              }
             }
           </g>
         }
@@ -75,7 +89,7 @@ const TRACOS = ['', '6 4', '2 4', '10 4 2 4', '1 3'];
         </thead>
         <tbody>
           @for (s of desenho(); track s.nome) {
-            @for (p of s.pontos; track p.data) {
+            @for (p of s.pontos; track $index) {
               <tr>
                 <td>{{ s.nome }}</td>
                 <td>{{ p.data | date: 'dd/MM/yyyy' }}</td>
@@ -92,13 +106,20 @@ const TRACOS = ['', '6 4', '2 4', '10 4 2 4', '1 3'];
 })
 export class GraficoHistorico {
   readonly series = input.required<readonly SerieGrafico[]>();
+  /** Tela estreita: viewBox menor para o texto não encolher junto com o SVG. */
+  readonly compacto = input(false);
 
-  protected readonly largura = L;
+  protected readonly largura = computed(() => (this.compacto() ? L_COMPACTO : L));
   protected readonly altura = A;
   protected readonly margem = M;
   protected readonly tracos = TRACOS;
 
+  protected readonly rotularPontos = computed(
+    () => this.series().reduce((n, s) => n + s.pontos.length, 0) <= MAX_ROTULOS,
+  );
+
   private readonly escala = computed(() => {
+    const largura = this.largura();
     const pontos = this.series().flatMap((s) => s.pontos);
     const tempos = pontos.map((p) => new Date(p.data).getTime());
     const valores = pontos.map((p) => p.valor);
@@ -109,16 +130,21 @@ export class GraficoHistorico {
     const v1 = Math.max(...valores) + folga;
     const x = (data: string) =>
       t1 === t0
-        ? (M.esq + L - M.dir) / 2
-        : M.esq + ((new Date(data).getTime() - t0) / (t1 - t0)) * (L - M.esq - M.dir);
+        ? (M.esq + largura - M.dir) / 2
+        : M.esq + ((new Date(data).getTime() - t0) / (t1 - t0)) * (largura - M.esq - M.dir);
     const y = (valor: number) => M.topo + (1 - (valor - v0) / (v1 - v0)) * (A - M.topo - M.base);
     return { x, y, v0, v1, t0, t1 };
   });
 
   protected readonly desenho = computed(() => {
     const { x, y } = this.escala();
+    const largura = this.largura();
     return this.series().map((s) => {
-      const pontos = s.pontos.map((p) => ({ ...p, x: x(p.data), y: y(p.valor) }));
+      const pontos = s.pontos.map((p) => {
+        const px = x(p.data);
+        const ancora = px < M.esq + 30 ? 'start' : px > largura - M.dir - 30 ? 'end' : 'middle';
+        return { ...p, x: px, y: y(p.valor), ancora };
+      });
       return {
         nome: s.nome,
         pontos,

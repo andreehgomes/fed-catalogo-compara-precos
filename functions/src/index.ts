@@ -9,6 +9,7 @@ import { contextoPadrao, type Contexto } from './importar/contexto';
 import { executarPreview } from './importar/preview-nfce';
 import { executarEnfileirar, executarRetentar } from './pendentes/enfileirar';
 import { executarReprocessamento } from './pendentes/reprocessar-pendentes';
+import { executarVinculoAuto } from './produtos/vincular-auto';
 import { executarDesvincular, executarVincular } from './produtos/vincular-produto';
 
 let ctx: Contexto | null = null;
@@ -67,5 +68,18 @@ export const reprocessarPendentes = onSchedule(
   async () => {
     const resumo = await executarReprocessamento(contexto());
     logger.info('reprocessamento', resumo);
+  },
+);
+
+export const vincularProdutosAuto = onSchedule(
+  {
+    schedule: 'every 30 minutes',
+    timeZone: 'America/Sao_Paulo',
+    timeoutSeconds: 300,
+    maxInstances: 1,
+  },
+  async () => {
+    const resumo = await executarVinculoAuto(contexto());
+    logger.info('vinculo-auto', resumo);
   },
 );

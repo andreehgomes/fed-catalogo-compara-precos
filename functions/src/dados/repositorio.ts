@@ -1,4 +1,4 @@
-import type { Pendente } from '@shared/model';
+import type { Pendente, VinculoAuto } from '@shared/model';
 
 export type Dados = Record<string, unknown>;
 
@@ -38,6 +38,9 @@ export interface Repositorio {
   lote(operacoes: readonly Operacao[]): Promise<void>;
   transacao<R>(fn: (tx: Transacao) => Promise<R>): Promise<R>;
   consultarPendentesVencidos(agora: Date, limite: number): Promise<PendenteVencido[]>;
+  consultarVinculosVencidos(agora: Date, limite: number): Promise<VinculoAuto[]>;
+  /** Ids de `colecao` em ordem, maiores que `depoisDe` e com o prefixo dado. */
+  listarIds(colecao: string, prefixo: string, depoisDe: string, limite: number): Promise<string[]>;
   consultar<T>(
     colecao: string,
     filtros: readonly Filtro[],

@@ -251,14 +251,12 @@
   z-index: 20;
   display: inline-flex;
   align-items: center;
-  gap: 8px;
-  min-height: 56px;
-  padding: 0 20px 0 16px;
+  justify-content: center;
+  width: 56px;
+  height: 56px;
   border-radius: $cp-radius-pill;
   background: $cp-accent;
   color: $cp-on-shell;
-  font-size: 15px;
-  font-weight: 650;
   text-decoration: none;
   box-shadow: $cp-shadow-accent-fab;
 }

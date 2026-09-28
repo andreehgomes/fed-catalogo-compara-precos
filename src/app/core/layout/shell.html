@@ -89,10 +89,9 @@
     </div>
   </div>
 
-  @if (estreito()) {
-    <a class="cp-fab" routerLink="/importar" aria-label="Importar nota">
+  @if (mostrarFab()) {
+    <a class="cp-fab" routerLink="/importar" aria-label="Importar nota" matTooltip="Importar nota">
       <mat-icon aria-hidden="true">qr_code_scanner</mat-icon>
-      <span>Importar</span>
     </a>
   }
 </div>

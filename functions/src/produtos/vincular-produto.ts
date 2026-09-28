@@ -1,4 +1,6 @@
 import type { Produto, ProdutoId } from '@shared/model';
+import { normalizarDescricao, tokens } from '@shared/normalizar';
+import { extrairConteudo } from '@shared/unidade';
 import type { Contexto } from '../importar/contexto';
 import { consumirRateLimit } from '../importar/rate-limit';
 
@@ -56,10 +58,66 @@ async function reapontar(ctx: Contexto, antigo: ProdutoId, novo: ProdutoId): Pro
 }
 
 /**
- * RF-18: diz que `origem` é o mesmo produto que `destino`. O vínculo vale para a base
+ * Cria `produtos/ean:{gtin}` a partir do `loc:` que o originou, quando ainda não existe
+ * (a NFC-e do PR não traz EAN, então o `ean:` nasce do vínculo).
+ */
+export async function garantirProdutoEan(
+  ctx: Contexto,
+  gtin: string,
+  base: Produto,
+  descricao: string,
+): Promise<ProdutoId> {
+  const id: ProdutoId = `ean:${gtin}`;
+  if (await ctx.repo.obter<Produto>(caminho(id))) return id;
+  const produto: Produto = {
+    id,
+    ean: gtin,
+    descricao,
+    descricaoNorm: normalizarDescricao(descricao),
+    tokens: tokens(descricao),
+    conteudo: extrairConteudo(descricao) ?? base.conteudo,
+    vinculadoA: null,
+    menorPreco: base.menorPreco,
+    ultimaObservacao: base.ultimaObservacao,
+    cnpjs: base.cnpjs ?? [],
+  };
+  await ctx.repo.gravar(caminho(id), { ...produto });
+  return id;
+}
+
+export type ResultadoVinculo =
+  { ok: true; canonico: ProdutoId } | { ok: false; codigo: 'ciclo' | 'eans-distintos' };
+
+/**
+ * Núcleo do RF-18, comum à callable e ao vínculo automático. O vínculo vale para a base
  * compartilhada. Um `ean:` nunca é vinculado a outro `ean:` diferente; quando um lado
  * tem EAN, ele vira o canônico.
  */
+export async function vincular(
+  ctx: Contexto,
+  origem: ProdutoId,
+  destino: ProdutoId,
+  origemVinculo: 'manual' | 'auto',
+): Promise<ResultadoVinculo> {
+  const raizOrigem = await canonicoDe(ctx, origem);
+  const raizDestino = await canonicoDe(ctx, destino);
+  if (!raizOrigem || !raizDestino) return { ok: false, codigo: 'ciclo' };
+  if (raizOrigem === raizDestino) return { ok: true, canonico: raizDestino };
+  if (raizOrigem.startsWith('ean:') && raizDestino.startsWith('ean:'))
+    return { ok: false, codigo: 'eans-distintos' };
+
+  const [filho, canonico] = raizOrigem.startsWith('ean:')
+    ? [raizDestino, raizOrigem]
+    : [raizOrigem, raizDestino];
+  await ctx.repo.gravar(
+    caminho(filho),
+    { vinculadoA: canonico, vinculoOrigem: origemVinculo, vinculoBloqueado: false },
+    { merge: true },
+  );
+  await reapontar(ctx, filho, canonico);
+  return { ok: true, canonico };
+}
+
 export async function executarVincular(
   uid: string,
   entrada: { origem?: unknown; destino?: unknown } | null | undefined,
@@ -85,22 +143,17 @@ export async function executarVincular(
     caminho(origem),
     caminho(destino),
   ]);
-  if (!pOrigem || !pDestino) return falha('produto-inexistente');
+  if (!pOrigem) return falha('produto-inexistente');
+  if (!pDestino) {
+    const sugestao = pOrigem.sugestoesEan?.find((s) => `ean:${s.gtin}` === destino);
+    if (!sugestao) return falha('produto-inexistente');
+    await garantirProdutoEan(ctx, sugestao.gtin, pOrigem, sugestao.descricao);
+  }
 
-  const raizOrigem = await canonicoDe(ctx, origem);
-  const raizDestino = await canonicoDe(ctx, destino);
-  if (!raizOrigem || !raizDestino) return falha('ciclo');
-  if (raizOrigem === raizDestino) return { ok: true, canonico: raizDestino };
-  if (raizOrigem.startsWith('ean:') && raizDestino.startsWith('ean:'))
-    return falha('eans-distintos');
-
-  const [filho, canonico] = raizOrigem.startsWith('ean:')
-    ? [raizDestino, raizOrigem]
-    : [raizOrigem, raizDestino];
-  await ctx.repo.gravar(caminho(filho), { vinculadoA: canonico }, { merge: true });
-  await reapontar(ctx, filho, canonico);
+  const r = await vincular(ctx, origem, destino, 'manual');
+  if (!r.ok) return falha(r.codigo);
   ctx.log({ etapa: 'vinculo', uf: 'PR', duracaoMs: Date.now() - inicio, resultado: 'sucesso' });
-  return { ok: true, canonico };
+  return { ok: true, canonico: r.canonico };
 }
 
 export async function executarDesvincular(
@@ -111,6 +164,6 @@ export async function executarDesvincular(
   if (!idValido(id)) return { ok: false, erro: { codigo: 'produto-invalido' } };
   const p = await ctx.repo.obter<Produto>(caminho(id));
   if (!p) return { ok: false, erro: { codigo: 'produto-inexistente' } };
-  await ctx.repo.gravar(caminho(id), { vinculadoA: null }, { merge: true });
+  await ctx.repo.gravar(caminho(id), { vinculadoA: null, vinculoBloqueado: true }, { merge: true });
   return { ok: true, canonico: id };
 }

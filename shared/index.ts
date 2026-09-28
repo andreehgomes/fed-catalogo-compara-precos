@@ -5,3 +5,4 @@ export * from './normalizar';
 export * from './unidade';
 export * from './similaridade';
 export * from './geohash';
+export * from './vinculo-auto';

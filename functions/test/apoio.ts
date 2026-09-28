@@ -77,6 +77,7 @@ export interface ContextoTeste extends Contexto {
   relogio: { agora: Date };
   htmlRegistrado: string[];
   buscar: ReturnType<typeof vi.fn<(url: string) => Promise<RespostaSefaz>>>;
+  buscarMenorPreco: ReturnType<typeof vi.fn<Contexto['buscarMenorPreco']>>;
 }
 
 export function criarContexto(
@@ -112,6 +113,7 @@ export function criarContexto(
     log: (r) => logs.push(r),
     logs,
     esperar: async () => undefined,
+    buscarMenorPreco: vi.fn<Contexto['buscarMenorPreco']>(async () => ({ produtos: [] })),
     registrarHtml: (html) => htmlRegistrado.push(html),
     htmlRegistrado,
   };

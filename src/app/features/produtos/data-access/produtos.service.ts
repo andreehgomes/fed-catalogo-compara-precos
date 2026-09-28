@@ -1,6 +1,7 @@
 import { Injectable, inject } from '@angular/core';
 import { normalizarGtin, tokens } from '@shared/index';
 import type { Estabelecimento, Preco, Produto, ProdutoId } from '@shared/model';
+import type { DocumentSnapshot } from 'firebase/firestore';
 import { CHAMAR_FUNCTION } from '../../../core/firebase/callable';
 import { FIRESTORE_API } from '../../../core/firebase/firestore-api';
 import { FIRESTORE } from '../../../core/firebase/firestore.token';
@@ -9,6 +10,13 @@ export const LIMITE_BUSCA = 30;
 export const LIMITE_IN = 30;
 export const JANELA_PRECOS_DIAS = 90;
 export const LIMITE_PRECOS = 300;
+export const TAMANHO_PAGINA_PRODUTOS = 20;
+
+export interface PaginaProdutos {
+  itens: Produto[];
+  cursor: DocumentSnapshot | null;
+  temMais: boolean;
+}
 
 export interface PrecoComId extends Preco {
   id: string;
@@ -61,6 +69,25 @@ export class ProdutosService {
     return snap.docs
       .map((d) => d.data() as Produto)
       .filter((p) => termos.every((t) => p.tokens.includes(t)));
+  }
+
+  /** Catálogo em ordem alfabética; pede um a mais para saber se há próxima página. */
+  async listar(cursor: DocumentSnapshot | null = null): Promise<PaginaProdutos> {
+    const { orderBy, limit, startAfter } = this.api;
+    const snap = await this.api.getDocs(
+      this.api.query(
+        this.api.collection(this.db, 'produtos'),
+        orderBy('descricaoNorm'),
+        ...(cursor ? [startAfter(cursor)] : []),
+        limit(TAMANHO_PAGINA_PRODUTOS + 1),
+      ),
+    );
+    const docs = snap.docs.slice(0, TAMANHO_PAGINA_PRODUTOS);
+    return {
+      itens: docs.map((d) => d.data() as Produto),
+      cursor: docs.at(-1) ?? null,
+      temMais: snap.docs.length > TAMANHO_PAGINA_PRODUTOS,
+    };
   }
 
   async obter(id: string): Promise<Produto | null> {

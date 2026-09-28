@@ -182,7 +182,9 @@ describe('ProdutoDetalhePage', () => {
     const { el } = await renderizar(ProdutoDetalhePage, { id: 'ean:7891000100103' });
     expect(s.precos).toHaveBeenCalledWith(['ean:7891000100103', 'loc:03644587000836:1001']);
     expect(texto(el)).toContain('R$ 4,49/L');
-    expect(texto(el)).toContain('R$ 4,89/L');
+    const resumo = texto(el.querySelector('.cp-summary'));
+    expect(resumo).toContain('R$ 4,89');
+    expect(resumo).not.toContain('/L');
     expect(texto(el)).toContain('R$ 5,29/L');
     expect(texto(el)).toContain('Menor preço');
     expect(texto(el)).toContain('R$ 0,80 mais caro');

@@ -146,3 +146,42 @@ describe('desvincularProduto', () => {
     });
   });
 });
+
+describe('vínculo com sugestão de EAN', () => {
+  const sugestao = { gtin: '7896098900239', descricao: 'DETERGENTE YPE 500ML COCO', lojas: 1 };
+
+  it('GTIN sugerido e inexistente: cria o ean: e vincula', async () => {
+    const ctx = await base();
+    await ctx.repo.gravar(`produtos/${LEITE_A}`, { sugestoesEan: [sugestao] }, { merge: true });
+    expect(
+      await executarVincular('u1', { origem: LEITE_A, destino: 'ean:7896098900239' }, ctx),
+    ).toEqual({ ok: true, canonico: 'ean:7896098900239' });
+    const ean = (await ctx.repo.obter<Produto>('produtos/ean:7896098900239'))!;
+    expect(ean).toMatchObject({
+      ean: '7896098900239',
+      descricao: sugestao.descricao,
+      vinculadoA: null,
+    });
+    expect(await ctx.repo.obter<Produto>(`produtos/${LEITE_A}`)).toMatchObject({
+      vinculadoA: 'ean:7896098900239',
+      vinculoOrigem: 'manual',
+    });
+  });
+
+  it('GTIN fora das sugestões e inexistente → produto-inexistente', async () => {
+    const ctx = await base();
+    expect(
+      await executarVincular('u1', { origem: LEITE_A, destino: 'ean:7896098900239' }, ctx),
+    ).toEqual({ ok: false, erro: { codigo: 'produto-inexistente' } });
+  });
+
+  it('desvincular bloqueia o vínculo automático', async () => {
+    const ctx = await base();
+    await executarVincular('u1', { origem: LEITE_A, destino: LEITE_EAN }, ctx);
+    await executarDesvincular({ id: LEITE_A }, ctx);
+    expect(await ctx.repo.obter<Produto>(`produtos/${LEITE_A}`)).toMatchObject({
+      vinculadoA: null,
+      vinculoBloqueado: true,
+    });
+  });
+});

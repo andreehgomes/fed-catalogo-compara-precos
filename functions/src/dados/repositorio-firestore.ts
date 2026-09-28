@@ -1,5 +1,5 @@
-import type { Pendente } from '@shared/model';
-import { getFirestore, type Firestore } from 'firebase-admin/firestore';
+import type { Pendente, VinculoAuto } from '@shared/model';
+import { FieldPath, getFirestore, type Firestore } from 'firebase-admin/firestore';
 import {
   LIMITE_LOTE,
   type Dados,
@@ -74,6 +74,34 @@ export class RepositorioFirestore implements Repositorio {
       uid: d.ref.parent.parent!.id,
       pendente: d.data() as Pendente,
     }));
+  }
+
+  async consultarVinculosVencidos(agora: Date, limite: number): Promise<VinculoAuto[]> {
+    const snap = await this.db
+      .collection('vinculosAuto')
+      .where('status', '==', 'aguardando')
+      .where('proximaTentativa', '<=', agora.toISOString())
+      .orderBy('proximaTentativa')
+      .limit(limite)
+      .get();
+    return snap.docs.map((d) => d.data() as VinculoAuto);
+  }
+
+  async listarIds(
+    colecao: string,
+    prefixo: string,
+    depoisDe: string,
+    limite: number,
+  ): Promise<string[]> {
+    const snap = await this.db
+      .collection(colecao)
+      .where(FieldPath.documentId(), '>', depoisDe > prefixo ? depoisDe : prefixo)
+      .where(FieldPath.documentId(), '<', `${prefixo}\uf8ff`)
+      .orderBy(FieldPath.documentId())
+      .limit(limite)
+      .select()
+      .get();
+    return snap.docs.map((d) => d.id);
   }
 
   async consultar<T>(

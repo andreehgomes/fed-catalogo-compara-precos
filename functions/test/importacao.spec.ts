@@ -268,6 +268,33 @@ describe('confirmarNfce e publicação de preços', () => {
     expect(leite.cnpjs).toEqual(['03644587000836', '11222333000181']);
   });
 
+  it('só produto loc: novo entra na fila do vínculo automático, sem uid e uma vez só', async () => {
+    const ctx = criarContexto({ resposta: PAGINA_NOTA_OK });
+    await importar(ctx, UID_A);
+    const fila = ctx.repo.colecao('vinculosAuto');
+    expect(fila.map(([c]) => c)).toEqual(['vinculosAuto/loc:03644587000836:2002']);
+    expect(fila[0][1]).toEqual({
+      produtoId: 'loc:03644587000836:2002',
+      cnpj: '03644587000836',
+      vlUnit: 5.99,
+      status: 'aguardando',
+      tentativas: 0,
+      proximaTentativa: '2026-09-27T15:05:12.000Z',
+      criadoEm: '2026-09-27T15:00:00.000Z',
+    });
+    expect(JSON.stringify(fila)).not.toContain(UID_A);
+
+    await ctx.repo.gravar(
+      'vinculosAuto/loc:03644587000836:2002',
+      { status: 'concluido' },
+      { merge: true },
+    );
+    const outra = notaExemplo(CHAVE_AGO);
+    const ctx2 = { ...criarContexto({ resposta: PAGINA_NOTA_OK, nota: outra }), repo: ctx.repo };
+    await importar(ctx2, UID_A, URL_QR_AGO);
+    expect(ctx.repo.colecao('vinculosAuto')[0][1]).toMatchObject({ status: 'concluido' });
+  });
+
   it('falha na transação não publica preços', async () => {
     const ctx = criarContexto({ resposta: PAGINA_NOTA_OK });
     await executarPreview(UID_A, { url: URL_QR }, ctx);

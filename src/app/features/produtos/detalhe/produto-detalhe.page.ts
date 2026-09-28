@@ -1,4 +1,4 @@
-import { CurrencyPipe } from '@angular/common';
+import { CurrencyPipe, DatePipe } from '@angular/common';
 import {
   ChangeDetectionStrategy,
   Component,
@@ -6,6 +6,7 @@ import {
   inject,
   input,
   resource,
+  signal,
 } from '@angular/core';
 import { MatDialog } from '@angular/material/dialog';
 import { MatIconModule } from '@angular/material/icon';
@@ -17,11 +18,14 @@ import { BadgePreco } from '../../../shared/ui/badge-preco/badge-preco';
 import { EmptyState } from '../../../shared/ui/empty-state/empty-state';
 import { FontePrecoInfo } from '../../../shared/ui/fonte-preco/fonte-preco';
 import { GraficoHistorico } from '../../../shared/ui/grafico-historico/grafico-historico';
+import { BreakpointService } from '../../../core/layout/breakpoint.service';
 import { NotasService } from '../../notas/data-access/notas.service';
 import { ProdutosService } from '../data-access/produtos.service';
 import { DadosVinculo, VincularDialog } from '../vincular/vincular-dialog';
 import { PrecosPerto } from './precos-perto';
 import { limitarSeries, resumirPrecos } from './resumo';
+
+export const OBSERVACOES_VISIVEIS = 10;
 
 interface DadosProduto {
   produto: Produto;
@@ -34,6 +38,7 @@ interface DadosProduto {
   imports: [
     BadgePreco,
     CurrencyPipe,
+    DatePipe,
     EmptyState,
     FontePrecoInfo,
     GraficoHistorico,
@@ -47,6 +52,7 @@ interface DadosProduto {
 export default class ProdutoDetalhePage {
   private readonly service = inject(ProdutosService);
   private readonly notas = inject(NotasService);
+  protected readonly estreito = inject(BreakpointService).estreito;
   private readonly dialog = inject(MatDialog);
   private readonly snack = inject(MatSnackBar);
 
@@ -70,11 +76,12 @@ export default class ProdutoDetalhePage {
   });
 
   protected readonly valor = computed(() => (this.dados.hasValue() ? this.dados.value() : null));
-  protected readonly series = computed(() => limitarSeries(this.valor()?.resumo?.series ?? []));
-  protected readonly unidade = computed(() => {
-    const u = this.valor()?.resumo?.unidade;
-    return u ? `/${u}` : '';
+  protected readonly todasObservacoes = signal(false);
+  protected readonly observacoes = computed(() => {
+    const lista = this.valor()?.resumo?.observacoes ?? [];
+    return this.todasObservacoes() ? lista : lista.slice(0, OBSERVACOES_VISIVEIS);
   });
+  protected readonly series = computed(() => limitarSeries(this.valor()?.resumo?.series ?? []));
   protected readonly ean = computed(
     () => this.valor()?.equivalentes.find((p) => p.ean)?.ean ?? null,
   );

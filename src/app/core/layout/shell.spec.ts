@@ -58,6 +58,18 @@ describe('Shell', () => {
     expect(el.querySelector('.cp-fab')?.getAttribute('aria-label')).toBe('Importar nota');
   });
 
+  it('estreito: FAB some nas telas de importação (não cobre o "Confirmar importação")', async () => {
+    const { fixture, el, router } = await montar(true);
+    for (const url of ['/importar', '/importar/preview', '/importar?x=1']) {
+      await router.navigateByUrl(url);
+      fixture.detectChanges();
+      expect(el.querySelector('.cp-fab')).toBeNull();
+    }
+    await router.navigateByUrl('/importacoes');
+    fixture.detectChanges();
+    expect(el.querySelector('.cp-fab')).not.toBeNull();
+  });
+
   it('estreito: o drawer fecha ao navegar', async () => {
     const { fixture, el, router } = await montar(true);
     botao(el, 'Abrir menu').click();

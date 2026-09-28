@@ -55,6 +55,28 @@ export function sugerir(
         "{{ dados.produto.descricao }}". Ao ligar, a comparação passa a considerar os dois juntos
         para todos os usuários.
       </p>
+      @if (sugestoesEan().length) {
+        <ul class="cp-list" aria-label="Códigos de barras encontrados no Menor Preço">
+          @for (s of sugestoesEan(); track s.gtin) {
+            <li>
+              <button
+                type="button"
+                class="cp-list-row"
+                [attr.aria-pressed]="escolhidoEan() === s.gtin"
+                (click)="escolherEan(s.gtin)"
+              >
+                <span class="item-principal">
+                  <span class="item-nome">{{ s.descricao }}</span>
+                  <span class="item-detalhe"
+                    >EAN {{ s.gtin }} · visto em {{ s.lojas }}
+                    {{ s.lojas === 1 ? 'mercado' : 'mercados' }} no Menor Preço</span
+                  >
+                </span>
+              </button>
+            </li>
+          }
+        </ul>
+      }
       <label class="cp-field">
         <span>Buscar produto</span>
         <input type="search" autocomplete="off" [value]="termo()" (input)="digitar($event)" />
@@ -69,7 +91,7 @@ export function sugerir(
               type="button"
               class="cp-list-row"
               [attr.aria-pressed]="escolhido()?.id === c.id"
-              (click)="escolhido.set(c)"
+              (click)="escolherProduto(c)"
             >
               <span class="item-principal">
                 <span class="item-nome">{{ c.descricao }}</span>
@@ -93,7 +115,7 @@ export function sugerir(
         <button
           type="button"
           class="cp-btn-primary"
-          [disabled]="!escolhido() || salvando()"
+          [disabled]="!destino() || salvando()"
           (click)="vincular()"
         >
           {{ salvando() ? 'Ligando…' : 'É o mesmo produto' }}
@@ -135,6 +157,14 @@ export class VincularDialog {
       .join(' '),
   );
   protected readonly escolhido = signal<Produto | null>(null);
+  protected readonly escolhidoEan = signal<string | null>(null);
+  protected readonly sugestoesEan = computed(() =>
+    this.dados.produto.vinculadoA ? [] : (this.dados.produto.sugestoesEan ?? []),
+  );
+  protected readonly destino = computed(() => {
+    const ean = this.escolhidoEan();
+    return ean ? `ean:${ean}` : (this.escolhido()?.id ?? null);
+  });
   protected readonly salvando = signal(false);
   protected readonly erro = signal<string | null>(null);
 
@@ -150,17 +180,27 @@ export class VincularDialog {
     ),
   );
 
+  protected escolherProduto(p: Produto): void {
+    this.escolhidoEan.set(null);
+    this.escolhido.set(p);
+  }
+
+  protected escolherEan(gtin: string): void {
+    this.escolhido.set(null);
+    this.escolhidoEan.set(gtin);
+  }
+
   protected digitar(evento: Event): void {
     this.termo.set((evento.target as HTMLInputElement).value);
   }
 
   protected async vincular(): Promise<void> {
-    const destino = this.escolhido();
+    const destino = this.destino();
     if (!destino) return;
     this.salvando.set(true);
     this.erro.set(null);
     try {
-      const r = await this.service.vincular(this.dados.produto.id, destino.id);
+      const r = await this.service.vincular(this.dados.produto.id, destino);
       if (r.ok) this.ref.close(true);
       else this.erro.set(MENSAGENS[r.erro.codigo] ?? 'Não foi possível ligar os produtos.');
     } catch {

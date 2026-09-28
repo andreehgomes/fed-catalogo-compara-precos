@@ -64,13 +64,21 @@ export class Shell {
     return u?.displayName || u?.email || '';
   });
 
+  private readonly url = signal(this.router.url);
+  protected readonly mostrarFab = computed(
+    () => this.estreito() && !/^\/importar(\/|\?|$)/.test(this.url()),
+  );
+
   constructor() {
     this.router.events
       .pipe(
         filter((e) => e instanceof NavigationEnd),
         takeUntilDestroyed(),
       )
-      .subscribe(() => this.drawerAberto.set(false));
+      .subscribe((e) => {
+        this.drawerAberto.set(false);
+        this.url.set(e.urlAfterRedirects);
+      });
   }
 
   protected alternarNav(): void {

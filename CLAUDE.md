@@ -143,7 +143,8 @@ no target `test`, relativo a `src/`).
   Functions** (allowlist de host, anti-SSRF). O portal responde erro com HTTP 200,
   então a resposta é classificada pelo conteúdo.
 - **Menor Preço (Nota Paraná)** — API REST pública com CORS aberto, chamada **direto
-  do navegador** com cache de 30 min e debounce.
+  do navegador** com cache de 30 min e debounce. As Functions só a chamam no vínculo
+  automático (agendada, poucas consultas espaçadas).
 
 Detalhes: [docs/analise/compara-precos-nfce-analise.md](docs/analise/compara-precos-nfce-analise.md).
 
@@ -223,8 +224,8 @@ Instale as dependências **de dentro da pasta** (`cd functions && npm install`):
   `enforceAppCheck: true`.
 - **Callables:** `previewNfce({url}|{chave})`, `confirmarNfce({chave})`,
   `enfileirarNfce({url}|{chave})`, `retentarPendente({chave})`. **Agendada:**
-  `reprocessarPendentes` (a cada 15 min, até 20 por execução, 1 s entre fetches).
-  Respondem `{ ok: true, … }` ou `{ ok: false, erro: ErroImportacao }`; só erro inesperado
+  `reprocessarPendentes` (a cada 15 min, até 20 por execução, 1 s entre fetches) e
+  `vincularProdutosAuto` (a cada 30 min; ver Produtos). Callables respondem `{ ok: true, … }` ou `{ ok: false, erro: ErroImportacao }`; só erro inesperado
   vira exceção.
 - **Regras de negócio** recebem um `Contexto` (`importar/contexto.ts`): repositório,
   relógio (`agora`), `buscar`, adaptador por UF, `log`, `esperar`. Todo acesso ao
@@ -308,7 +309,20 @@ Instale as dependências **de dentro da pasta** (`cd functions && npm install`):
 - Vínculo (RF-18): callable `vincularProduto` (`functions/src/produtos/`) — o EAN vira o
   canônico, `ean:` × `ean:` diferente é recusado, cadeia seguida até a raiz sem ciclo,
   quem apontava para a origem é reapontado, rate limit da importação. Diálogo
-  `vincular-dialog.ts` sugere por Jaccard com o mesmo conteúdo.
+  `vincular-dialog.ts` sugere por Jaccard com o mesmo conteúdo e, antes, os
+  `sugestoesEan` do produto; destino `ean:` inexistente só é aceito se estiver nelas (o
+  `ean:` é criado por `garantirProdutoEan`). Desvincular grava `vinculoBloqueado`.
+- **Vínculo automático** (`functions/src/produtos/vincular-auto.ts`, spike em
+  `docs/analise/spike-vinculo-automatico-2026-09.md`): `publicarPrecos` põe cada `loc:`
+  novo em `vinculosAuto/{produtoId}` (sem uid, a partir da emissão + 2 h); a agendada
+  busca a descrição no Menor Preço pelo centro do município da loja (raio 10 km) e
+  `decidirGtin` (`shared/vinculo-auto.ts`) vincula quando a mesma loja vende pelo mesmo
+  preço ou um único GTIN aparece em ≥ 2 lojas; GTINs concorrentes viram `sugestoesEan`
+  (até 3). **O Menor Preço devolve dados sintéticos sob volume** (HTTP 200, lojas de outras
+  UFs): `lerOfertas` recusa a resposta com qualquer UF ≠ PR e o job pausa 2 h
+  (`controle/vinculoAuto.pausadoAte`). Máx. 12 consultas por execução, 10 s entre elas;
+  sem resultado tenta de novo em 1, 7 e 30 dias. Com a fila vazia, o backfill enfileira os
+  `loc:` antigos aos poucos (`cursorBackfill`).
 - `produtos/{id}.cnpjs` (até 50) é mantido pela publicação de preços, para contar
   estabelecimentos sem consulta extra.
 - Estabelecimentos: lista por `atualizadoEm desc` (30 por página, busca por nome no
