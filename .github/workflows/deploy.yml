@@ -1,8 +1,11 @@
 name: Deploy
 
-# Publica o Hosting depois do CI verde: push em develop → dv, em main → produção.
-# Secrets criados pelo `npx firebase init hosting:github` (-P dev e -P prod), o mesmo
-# padrão dos outros projetos fed-catalogo-*. Functions e regras seguem por deploy manual.
+# Depois do CI verde: push em develop → dv, em main → produção.
+# Publica Hosting, Functions, regras e índices do Firestore com a conta
+# github-action-<id do repo> (secret FIREBASE_SERVICE_ACCOUNT_FED_CATALOGO_COMPARA_PRECOS(_DV)),
+# que além dos papéis do `firebase init hosting:github` precisa de firebase.admin,
+# cloudfunctions.admin, run.admin, cloudscheduler.admin, artifactregistry.admin e
+# iam.serviceAccountUser.
 
 on:
   workflow_run:
@@ -29,15 +32,28 @@ jobs:
         with:
           node-version: '22'
           cache: npm
+          cache-dependency-path: |
+            package-lock.json
+            functions/package-lock.json
 
       - run: npm ci
+
+      - working-directory: functions
+        run: npm ci
 
       - name: Build (produção em main, dv em develop)
         run: npm run build -- --configuration=${{ env.PRODUCAO == 'true' && 'production' || 'dv' }}
 
-      - uses: FirebaseExtended/action-hosting-deploy@v0
-        with:
-          repoToken: ${{ secrets.GITHUB_TOKEN }}
-          firebaseServiceAccount: ${{ env.PRODUCAO == 'true' && secrets.FIREBASE_SERVICE_ACCOUNT_FED_CATALOGO_COMPARA_PRECOS || secrets.FIREBASE_SERVICE_ACCOUNT_FED_CATALOGO_COMPARA_PRECOS_DV }}
-          channelId: live
-          projectId: ${{ env.PRODUCAO == 'true' && 'fed-catalogo-compara-precos' || 'fed-catalogo-compara-precos-dv' }}
+      - name: Credencial da conta de deploy
+        env:
+          CONTA: ${{ env.PRODUCAO == 'true' && secrets.FIREBASE_SERVICE_ACCOUNT_FED_CATALOGO_COMPARA_PRECOS || secrets.FIREBASE_SERVICE_ACCOUNT_FED_CATALOGO_COMPARA_PRECOS_DV }}
+        run: |
+          printf '%s' "$CONTA" > "$RUNNER_TEMP/conta.json"
+          echo "GOOGLE_APPLICATION_CREDENTIALS=$RUNNER_TEMP/conta.json" >> "$GITHUB_ENV"
+
+      - name: firebase deploy
+        run: >
+          npx firebase deploy
+          --only hosting,functions,firestore:rules,firestore:indexes
+          -P ${{ env.PRODUCAO == 'true' && 'prod' || 'dev' }}
+          --non-interactive --force

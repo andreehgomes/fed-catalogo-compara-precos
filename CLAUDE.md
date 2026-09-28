@@ -83,11 +83,12 @@ com `authGuard`: `/` (painel), `/importar`, `/importar/preview`, `/notas`,
   texto da ligadura.
 - `.github/workflows/ci.yml`: lint, contraste, `test:ci`, Functions (typecheck, testes,
   build) e build de produção; e2e com os secrets `E2E_EMAIL`/`E2E_SENHA` (sem eles os
-  testes logados são pulados). `deploy.yml`: depois do CI verde, publica **só o Hosting**
-  — push em `develop` → dv (build `dv`), em `main` → produção (build `production`) — com
-  a `FirebaseExtended/action-hosting-deploy` e os secrets
-  `FIREBASE_SERVICE_ACCOUNT_FED_CATALOGO_COMPARA_PRECOS(_DV)` criados pelo
-  `npx firebase init hosting:github`. Functions e regras seguem por deploy manual.
+  testes logados são pulados). `deploy.yml`: depois do CI verde, `firebase deploy` de
+  Hosting, Functions, regras e índices — push em `develop` → dv (build `dv`), em `main` →
+  produção (build `production`) — com a conta `github-action-1390935729` dos secrets
+  `FIREBASE_SERVICE_ACCOUNT_FED_CATALOGO_COMPARA_PRECOS(_DV)` (criados no molde do
+  `firebase init hosting:github`, com papéis extras para Functions; ver o cabeçalho do
+  workflow).
 
 Os specs de `shared/` rodam junto com o `npm test` (`include: ../shared/**/*.spec.ts`
 no target `test`, relativo a `src/`).
