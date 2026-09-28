@@ -238,8 +238,9 @@ Instale as dependências **de dentro da pasta** (`cd functions && npm install`):
   é pelo conteúdo — "mal formatado" com DV válido, "206", JDBC e 5xx →
   `sefaz-indisponivel` (vai para a fila); "não consta" até 48 h após o mês da chave →
   indisponível, depois `nao-encontrada`.
-- **Parser do PR (`parsers/pr.ts`) é PROVISÓRIO** (layout SVRS, fixture sintética): a
-  Tarefa 6.3 depende do portal voltar. Fixtures reais passam antes por
+- **Parser do PR (`parsers/pr.ts`)**: layout SVRS conferido com cupom real (fixture
+  `nota-real-pr-2026-09.html`; descrição em `.txtTit2`, **sem EAN** na página). A URL v3
+  só com a chave abre a nota. Fixtures reais passam antes por
   `node scripts/anonimizar-fixture.mjs`.
 - **Gravação** (`gravar-nota.ts`, comum à confirmação e à fila): transação com nota,
   perfil, estabelecimento e `nfceImportadas/{chave}`; preços publicados só na 1ª

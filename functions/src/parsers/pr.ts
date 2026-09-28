@@ -4,14 +4,13 @@ import type { ItemNfce, NfceParsed } from '@shared/model';
 import { LayoutInesperadoError } from '../importar/erros';
 
 /**
- * Parser PROVISÓRIO da página de consulta da NFC-e do PR, escrito sobre o layout padrão
- * (SVRS) usado pelos projetos open source de referência. O portal estava fora do ar em
- * 27/09/2026 (Tarefa 6.3 ⛔): os seletores precisam ser confirmados com cupons reais
- * anonimizados antes de o parser ser considerado pronto.
+ * Página de consulta da NFC-e do PR (layout SVRS). Conferido com cupom real em
+ * 28/09/2026 (`test/fixtures/sefaz-pr/nota-real-pr-2026-09.html`): a descrição do item
+ * vem em `.txtTit2` e a página não traz EAN.
  */
 export const SELETORES_PR = {
   itens: '#tabResult tr',
-  descricao: '.txtTit',
+  descricao: '.txtTit2, .txtTit',
   codigo: '.RCod',
   qtd: '.Rqtd',
   unidade: '.RUN',

@@ -9,9 +9,8 @@ import { consumirRateLimit } from './rate-limit';
 export const PREVIEW_TTL_MS = 30 * 60 * 1000;
 
 /**
- * Se a URL v3 montada só com a chave abre a nota no portal do PR. Não deu para confirmar
- * no spike de 27/09/2026 (portal fora do ar); se o spike da 6.3 mostrar que não, mudar
- * para false e o app passa a pedir o QR (`chave-sem-qr`).
+ * A URL v3 montada só com a chave abre a nota no portal do PR (confirmado em 28/09/2026).
+ * Se o portal passar a recusar, mudar para false e o app pede o QR (`chave-sem-qr`).
  */
 export const ACEITA_V3_SO_COM_CHAVE = true;
 

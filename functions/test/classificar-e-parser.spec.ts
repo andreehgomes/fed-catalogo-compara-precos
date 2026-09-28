@@ -85,7 +85,7 @@ describe('classificarResposta (páginas reais do spike, HTTP 200)', () => {
   });
 });
 
-describe('parser PR (PROVISÓRIO: fixture sintética, Tarefa 6.3 ⛔)', () => {
+describe('parser PR (fixture sintética)', () => {
   it('interpreta emitente, itens, totais, emissão e chave', () => {
     const n = parsePr(fixture('nota-sintetica-svrs.html'));
     expect(n.chave).toBe(CHAVE);
@@ -162,5 +162,37 @@ describe('parser PR (PROVISÓRIO: fixture sintética, Tarefa 6.3 ⛔)', () => {
     } catch (e) {
       expect((e as ErroNegocio).codigo).toBe('uf-nao-suportada');
     }
+  });
+});
+
+describe('parser PR sobre página real (28/09/2026, consumidor não identificado)', () => {
+  const html = fixture('nota-real-pr-2026-09.html');
+
+  it('é classificada como nota', () => {
+    expect(classificar(html)).toBe('ok');
+  });
+
+  it('lê emitente, os 95 itens (descrição em .txtTit2), totais, emissão e chave', () => {
+    const n = parsePr(html);
+    expect(n.chave).toBe(CHAVE);
+    expect(n.emitente.cnpj).toBe('03644587000836');
+    expect(n.emitente.nome).toBe('Sanches e Vecchiate Ltda');
+    expect(n.emitente.uf).toBe('PR');
+    expect(n.emissao).toBe('2026-09-26T20:34:20.000Z');
+    expect(n.itens).toHaveLength(95);
+    expect(n.itens[0]).toEqual({
+      n: 1,
+      descricao: 'Cerv Therez 500ml Go',
+      codigo: '1220756',
+      ean: null,
+      qtd: 1,
+      unidade: 'UN',
+      vlUnit: 11.79,
+      vlTotal: 11.79,
+    });
+    expect(n.total).toBe(983.97);
+    expect(n.desconto).toBe(15.3);
+    const soma = n.itens.reduce((s, i) => s + i.vlTotal, 0);
+    expect(Math.round((soma - n.desconto) * 100) / 100).toBe(n.total);
   });
 });
