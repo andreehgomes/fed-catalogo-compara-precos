@@ -1,4 +1,4 @@
-import { EM_DEV, OPCOES_CALLABLE } from './config';
+import { ANTHROPIC_API_KEY, EM_DEV, OPCOES_CALLABLE } from './config';
 import { logger } from 'firebase-functions';
 import { HttpsError, onCall, type CallableRequest } from 'firebase-functions/v2/https';
 import { onSchedule } from 'firebase-functions/v2/scheduler';
@@ -9,13 +9,20 @@ import { contextoPadrao, type Contexto } from './importar/contexto';
 import { executarPreview } from './importar/preview-nfce';
 import { executarEnfileirar, executarRetentar } from './pendentes/enfileirar';
 import { executarReprocessamento } from './pendentes/reprocessar-pendentes';
-import { executarVinculoAuto } from './produtos/vincular-auto';
 import { executarDesvincular, executarVincular } from './produtos/vincular-produto';
+import { criarClassificador, type ClassificarVinculos } from './vinculo/ia';
 
 let ctx: Contexto | null = null;
+let classificador: ClassificarVinculos | null = null;
+
+/** O secret só existe nas funções que o declaram, então o cliente nasce na 1ª chamada. */
+const classificarVinculos: ClassificarVinculos = (itens) => {
+  classificador ??= criarClassificador(ANTHROPIC_API_KEY.value());
+  return classificador(itens);
+};
 
 function contexto(): Contexto {
-  ctx ??= contextoPadrao(new RepositorioFirestore(), (html, motivo) => {
+  ctx ??= contextoPadrao(new RepositorioFirestore(), classificarVinculos, (html, motivo) => {
     if (EM_DEV) logger.warn('html-layout-inesperado', { motivo, html: html.slice(0, 20_000) });
   });
   return ctx;
@@ -31,8 +38,10 @@ export const previewNfce = onCall(OPCOES_CALLABLE, (req: CallableRequest<Preview
   executarPreview(uidDe(req), req.data, contexto()),
 );
 
-export const confirmarNfce = onCall(OPCOES_CALLABLE, (req: CallableRequest<{ chave?: string }>) =>
-  executarConfirmacao(uidDe(req), req.data, contexto()),
+/** A gravação chama a IA do vínculo (até ~25 s). */
+export const confirmarNfce = onCall(
+  { ...OPCOES_CALLABLE, timeoutSeconds: 120, secrets: [ANTHROPIC_API_KEY] },
+  (req: CallableRequest<{ chave?: string }>) => executarConfirmacao(uidDe(req), req.data, contexto()),
 );
 
 export const enfileirarNfce = onCall(OPCOES_CALLABLE, (req: CallableRequest<PreviewEntrada>) =>
@@ -62,24 +71,12 @@ export const reprocessarPendentes = onSchedule(
   {
     schedule: 'every 15 minutes',
     timeZone: 'America/Sao_Paulo',
-    timeoutSeconds: 300,
+    timeoutSeconds: 540,
     maxInstances: 1,
+    secrets: [ANTHROPIC_API_KEY],
   },
   async () => {
     const resumo = await executarReprocessamento(contexto());
     logger.info('reprocessamento', resumo);
-  },
-);
-
-export const vincularProdutosAuto = onSchedule(
-  {
-    schedule: 'every 30 minutes',
-    timeZone: 'America/Sao_Paulo',
-    timeoutSeconds: 300,
-    maxInstances: 1,
-  },
-  async () => {
-    const resumo = await executarVinculoAuto(contexto());
-    logger.info('vinculo-auto', resumo);
   },
 );

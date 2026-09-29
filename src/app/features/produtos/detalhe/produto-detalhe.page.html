@@ -128,8 +128,8 @@
       }
       @if (v.produto.vinculadoA && v.produto.vinculoOrigem === 'auto') {
         <p class="cp-source">
-          Código de barras identificado automaticamente pelo Menor Preço. Se estiver errado, desfaça
-          o vínculo.
+          Ligado automaticamente a produtos de outros mercados. Se estiver errado, desfaça o
+          vínculo.
         </p>
       } @else if (!v.produto.vinculadoA && v.produto.sugestoesEan?.length) {
         <p class="cp-source">

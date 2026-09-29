@@ -44,6 +44,17 @@ const RespostaCategoriasSchema = v.object({
 
 export class FormatoInvalidoError extends Error {}
 
+/**
+ * Sob volume, a API responde 200 com ofertas sintéticas (lojas de nome embaralhado, de
+ * outras UFs). Uma oferta fora do PR condena a resposta inteira.
+ */
+export class RespostaSinteticaError extends Error {}
+
+function ufDe(bruto: unknown): string {
+  const e = (bruto as { estabelecimento?: { uf?: unknown } } | null)?.estabelecimento;
+  return typeof e?.uf === 'string' ? e.uf.trim() : '';
+}
+
 function limpar(s: string | null | undefined): string {
   return (s ?? '').replace(/\s+/g, ' ').trim();
 }
@@ -81,6 +92,9 @@ export function mapearItem(item: v.InferOutput<typeof ItemSchema>): OfertaRegiao
 export function mapearProdutos(json: unknown): ResultadoBusca {
   const resposta = v.safeParse(RespostaProdutosSchema, json);
   if (!resposta.success) throw new FormatoInvalidoError('Resposta sem produtos');
+  if (resposta.output.produtos.some((p) => !['', 'PR'].includes(ufDe(p)))) {
+    throw new RespostaSinteticaError('Resposta sintética do Menor Preço');
+  }
   const ofertas: OfertaRegiao[] = [];
   let descartados = 0;
   for (const bruto of resposta.output.produtos) {

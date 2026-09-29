@@ -77,6 +77,28 @@ export function sugerir(
           }
         </ul>
       }
+      @if (possiveis().length) {
+        <span class="cp-label" id="possiveis-titulo">Possíveis equivalentes</span>
+        <ul class="cp-list" aria-labelledby="possiveis-titulo">
+          @for (c of possiveis(); track c.id) {
+            <li>
+              <button
+                type="button"
+                class="cp-list-row"
+                [attr.aria-pressed]="escolhido()?.id === c.id"
+                (click)="escolherProduto(c)"
+              >
+                <span class="item-principal">
+                  <span class="item-nome">{{ c.descricao }}</span>
+                  <span class="item-detalhe">{{
+                    c.ean ? 'EAN ' + c.ean : 'Sem código de barras'
+                  }}</span>
+                </span>
+              </button>
+            </li>
+          }
+        </ul>
+      }
       <label class="cp-field">
         <span>Buscar produto</span>
         <input type="search" autocomplete="off" [value]="termo()" (input)="digitar($event)" />
@@ -168,6 +190,22 @@ export class VincularDialog {
   protected readonly salvando = signal(false);
   protected readonly erro = signal<string | null>(null);
 
+  private readonly candidatosVinculo = resource({
+    params: () =>
+      !this.dados.produto.vinculadoA && this.dados.produto.candidatosVinculo?.length
+        ? this.dados.produto.candidatosVinculo
+        : undefined,
+    loader: async ({ params }) => {
+      const produtos = await this.service.produtosPorIds(params);
+      return params.flatMap((id) => produtos.get(id) ?? []);
+    },
+  });
+  protected readonly possiveis = computed(() =>
+    this.candidatosVinculo.hasValue()
+      ? this.candidatosVinculo.value().filter((p) => !this.dados.excluir.includes(p.id))
+      : [],
+  );
+
   protected readonly candidatos = resource({
     params: () => this.termo().trim() || undefined,
     loader: ({ params }) => this.service.buscar(params),
@@ -176,7 +214,7 @@ export class VincularDialog {
     sugerir(
       this.dados.produto,
       this.candidatos.hasValue() ? this.candidatos.value() : [],
-      new Set(this.dados.excluir),
+      new Set([...this.dados.excluir, ...this.possiveis().map((p) => p.id)]),
     ),
   );
 

@@ -392,6 +392,58 @@ describe('VincularDialog: códigos de barras do Menor Preço', () => {
   });
 });
 
+describe('VincularDialog: possíveis equivalentes da IA', () => {
+  it('mostra os candidatosVinculo antes das sugestões e vincula ao escolhido', async () => {
+    const leite = produto('loc:1:leite', {
+      descricao: 'LEITE LIDER 1L',
+      descricaoNorm: 'LEITE LIDER 1L',
+      candidatosVinculo: ['loc:2:integral' as ProdutoId, 'loc:3:desnatado' as ProdutoId],
+    });
+    firestoreFalso({
+      produtos: {
+        'loc:2:integral': produto('loc:2:integral', { descricao: 'LEITE LIDER 1L INTEGRAL' }),
+        'loc:3:desnatado': produto('loc:3:desnatado', { descricao: 'LEITE LIDER 1L DESN' }),
+      },
+    });
+    const fechar = vi.fn();
+    TestBed.overrideProvider(MAT_DIALOG_DATA, { useValue: { produto: leite, excluir: [] } });
+    TestBed.overrideProvider(MatDialogRef, { useValue: { close: fechar } });
+    const fixture = TestBed.createComponent(VincularDialog);
+    fixture.detectChanges();
+    await fixture.whenStable();
+    fixture.detectChanges();
+    const el = fixture.nativeElement as HTMLElement;
+    const lista = el.querySelector('ul[aria-labelledby="possiveis-titulo"]')!;
+    expect(texto(el.querySelector('#possiveis-titulo'))).toBe('Possíveis equivalentes');
+    expect(texto(lista)).toContain('LEITE LIDER 1L INTEGRAL');
+    expect(texto(lista)).toContain('LEITE LIDER 1L DESN');
+
+    botao(lista as HTMLElement, /DESN/).click();
+    fixture.detectChanges();
+    botao(el, 'É o mesmo produto').click();
+    await fixture.whenStable();
+    expect(TestBed.inject(CHAMAR_FUNCTION)).toHaveBeenCalledWith('vincularProduto', {
+      origem: 'loc:1:leite',
+      destino: 'loc:3:desnatado',
+    });
+    expect(fechar).toHaveBeenCalledWith(true);
+  });
+
+  it('produto já vinculado não busca os possíveis equivalentes', () => {
+    const api = firestoreFalso({});
+    const p = produto('loc:1:x', {
+      vinculadoA: 'ean:7891000100103' as ProdutoId,
+      candidatosVinculo: ['loc:2:y' as ProdutoId],
+    });
+    TestBed.overrideProvider(MAT_DIALOG_DATA, { useValue: { produto: p, excluir: [] } });
+    TestBed.overrideProvider(MatDialogRef, { useValue: { close: vi.fn() } });
+    const fixture = TestBed.createComponent(VincularDialog);
+    fixture.detectChanges();
+    expect((fixture.nativeElement as HTMLElement).querySelector('#possiveis-titulo')).toBeNull();
+    expect(api.documentId).not.toHaveBeenCalled();
+  });
+});
+
 describe('ProdutosBuscaPage', () => {
   it('EAN existente abre o resultado; inexistente oferece o atalho para o Menor Preço', async () => {
     firestoreFalso({

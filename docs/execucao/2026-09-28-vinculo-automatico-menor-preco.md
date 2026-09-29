@@ -130,3 +130,33 @@ docs/plano/vinculo-automatico-menor-preco-plano.md (M) revisão após o spike
 docs/qualidade/functions-dv-checklist.md         (M)
 CLAUDE.md                                        (M)
 ```
+
+---
+
+## Revisão: consulta pelo navegador (28/09, tarde)
+
+**Motivo:** em produção, a primeira consulta da agendada ao Menor Preço (15:43) já veio
+com dados sintéticos. A mesma consulta, com o mesmo código, feita de um IP residencial
+voltou real. A API trata os IPs das Functions (Google Cloud) como robôs.
+
+**Decisão do usuário:** consultar pelo navegador, **sem nenhum CTA novo**. O único gatilho é
+"Confirmar importação", e o app retoma sozinho ao abrir.
+
+| Parte | Arquivo |
+|---|---|
+| Callables `itensParaVincular` e `registrarVinculos` | `functions/src/produtos/vinculo-navegador.ts` (+ spec, 17 testes) |
+| `aplicarDecisao`/`concluirOuAdiar` exportadas (comuns à agendada) | `functions/src/produtos/vincular-auto.ts` |
+| Rate limit com escopo próprio | `functions/src/importar/rate-limit.ts` |
+| Tipos de ida e volta | `shared/vinculo-auto.ts` |
+| Serviço em segundo plano | `src/app/features/produtos/data-access/vinculo-auto.service.ts` (+ spec) |
+| Gatilho no "Confirmar importação" | `src/app/features/importar/importar.store.ts` |
+| Retomada 15 s após abrir, por `import()` | `src/app/core/layout/shell.ts` |
+| Resposta sintética → `bloqueado` (não cacheada) | `src/app/features/regiao/data-access/menor-preco.schema.ts`/`.client.ts` |
+
+**Risco aceito:** o servidor confia na decisão enviada pelo navegador (não consegue
+conferir no Menor Preço). Mitigação: login, App Check, só produto de nota do próprio
+usuário, GTIN com dígito verificador válido, rate limit e "Desfazer vínculo".
+
+**Verificação:** lint ok; front 289 testes; Functions 107; typecheck; build de produção
+(inicial 481,32 kB). Fluxo real depende do deploy das callables novas (cenários 14 e 15 do
+checklist).

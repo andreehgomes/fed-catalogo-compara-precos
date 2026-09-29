@@ -10,7 +10,12 @@ import {
   type ResultadoBusca,
 } from './regiao.model';
 import { MenorPrecoCache, chaveCache } from './menor-preco.cache';
-import { FormatoInvalidoError, mapearCategorias, mapearProdutos } from './menor-preco.schema';
+import {
+  FormatoInvalidoError,
+  RespostaSinteticaError,
+  mapearCategorias,
+  mapearProdutos,
+} from './menor-preco.schema';
 
 export const MENOR_PRECO_API = 'https://menorpreco.notaparana.pr.gov.br/api/v1';
 export const TIMEOUT_MS = 10_000;
@@ -26,6 +31,7 @@ function paraIndisponivel(erro: unknown): FonteIndisponivelError {
   if (erro instanceof FonteIndisponivelError) return erro;
   if (erro instanceof TimeoutError) return new FonteIndisponivelError('timeout', erro);
   if (erro instanceof FormatoInvalidoError) return new FonteIndisponivelError('formato', erro);
+  if (erro instanceof RespostaSinteticaError) return new FonteIndisponivelError('bloqueado', erro);
   const status = (erro as { status?: number } | null)?.status;
   return new FonteIndisponivelError(status ? 'http' : 'rede', erro);
 }

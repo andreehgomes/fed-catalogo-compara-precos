@@ -36,16 +36,20 @@
 curl -s -X POST https://southamerica-east1-fed-catalogo-compara-precos-dv.cloudfunctions.net/previewNfce -H "Content-Type: application/json" -H "Authorization: Bearer <ID_TOKEN>" -d "{\"data\":{\"chave\":\"41260903644587000836652100000168701620438547\"}}"
 ```
 
-## Vínculo automático pelo Menor Preço
+## Vínculo automático (etiquetas + IA)
 
-Depois de `npm run deploy:rules:dev` (índice novo de `vinculosAuto`) e
-`npm run deploy:functions:dev` (agendada `vincularProdutosAuto`, a cada 30 min):
+Pré-requisito: secret `ANTHROPIC_API_KEY` no dv (`npx firebase functions:secrets:set ANTHROPIC_API_KEY -P dev`),
+depois `npm run deploy:functions:dev`. O deploy apaga `vincularProdutosAuto`, `itensParaVincular` e
+`registrarVinculos` (a CLI pergunta). Opcional: apagar a coleção `vinculosAuto` e `controle/vinculoAuto`.
 
 | # | Cenário | Esperado | OK |
 |---|---|---|---|
-| 8 | Importar uma nota nova no dv | um `vinculosAuto/{loc:…}` por produto novo, `status: aguardando`, `proximaTentativa` = emissão + 2 h; nenhum campo com uid | [ ] |
-| 9 | Primeira execução depois de `controle/vinculoAuto` ainda não existir | Logs `vinculo-auto` com `enfileiradosBackfill` > 0 (produtos `loc:` antigos entram na fila) | [ ] |
-| 10 | Execuções seguintes | no máximo 12 `consultas` por execução; itens como "Det Ype 500ml Coco" viram `vinculadoA: ean:7896098900239` e o `produtos/ean:…` é criado | [ ] |
-| 11 | Item ambíguo (ex.: "Cafe Itamaraty 500g") | sem `vinculadoA`, com `sugestoesEan`; no app, "Este produto é o mesmo que…" mostra os códigos e o vínculo com um deles funciona | [ ] |
-| 12 | "Desfazer vínculo" num produto vinculado automaticamente | `vinculoBloqueado: true`; o job não o vincula de novo | [ ] |
-| 13 | Menor Preço devolvendo dados sintéticos (bloqueio por volume) | Logs com `parada: 'bloqueio'`, `controle/vinculoAuto.pausadoAte` = +2 h, nenhum vínculo novo nesse intervalo | [ ] |
+| 8 | Importar uma nota de um mercado novo, com produtos já vistos em outro mercado | produtos novos com `etiquetas` e `bloco` (ou `bloco: null`); os de mesma variante ligados na hora (`vinculoMotivo: 'etiquetas'`), os em dúvida decididos pela IA (`vinculoMotivo: 'ia'`) ou com `candidatosVinculo` | [ ] |
+| 9 | Tempo do "Confirmar importação" nesse cenário | abaixo de 30 s | [ ] |
+| 10 | Consulta `produtos` por `bloco` + `vinculadoA == null` | roda sem pedir índice composto (sem erro `FAILED_PRECONDITION` nos logs) | [ ] |
+| 11 | `controle/iaVinculo_AAAA-MM` depois de algumas importações | `custoUsd` e `chamadas` somando; no máximo 1 chamada por nota (2 com mais de 40 dúvidas) | [ ] |
+| 12 | Teto: baixar `IA_TETO_MENSAL_USD` (em `functions/src/vinculo/config-ia.ts`) para 0,01, publicar e importar | log `vinculo` com `erro: 'teto-ia'`; nenhuma chamada nova | [ ] |
+| 13 | Chave inválida no secret | importação conclui normalmente; log `vinculo` com `resultado: 'falha'` e produtos sem vínculo | [ ] |
+| 14 | Produto com `candidatosVinculo` no app | "Este produto é o mesmo que…" mostra "Possíveis equivalentes" e o vínculo com um deles funciona | [ ] |
+| 15 | "Desfazer vínculo" num produto ligado automaticamente | `vinculoBloqueado: true`; aparecer em outra nota não religa nem apaga o campo | [ ] |
+| 16 | Logs `importacao` da etapa `vinculo` | só contagens e `chavePrefixo`; nenhuma descrição, CNPJ ou uid | [ ] |

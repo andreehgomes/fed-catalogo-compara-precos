@@ -1,4 +1,4 @@
-import type { Pendente, VinculoAuto } from '@shared/model';
+import type { Pendente } from '@shared/model';
 import {
   LIMITE_LOTE,
   type Dados,
@@ -83,27 +83,6 @@ export class RepositorioMemoria implements Repositorio {
           p.pendente.status === 'aguardando' && p.pendente.proximaTentativa <= agora.toISOString(),
       )
       .sort((a, b) => a.pendente.proximaTentativa.localeCompare(b.pendente.proximaTentativa))
-      .slice(0, limite);
-  }
-
-  async consultarVinculosVencidos(agora: Date, limite: number): Promise<VinculoAuto[]> {
-    return this.colecao('vinculosAuto')
-      .map(([, d]) => copiar(d) as unknown as VinculoAuto)
-      .filter((v) => v.status === 'aguardando' && v.proximaTentativa <= agora.toISOString())
-      .sort((a, b) => a.proximaTentativa.localeCompare(b.proximaTentativa))
-      .slice(0, limite);
-  }
-
-  async listarIds(
-    colecao: string,
-    prefixo: string,
-    depoisDe: string,
-    limite: number,
-  ): Promise<string[]> {
-    return this.colecao(colecao)
-      .map(([c]) => c.slice(colecao.length + 1))
-      .filter((id) => id.startsWith(prefixo) && id > depoisDe)
-      .sort()
       .slice(0, limite);
   }
 

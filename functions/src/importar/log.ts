@@ -11,6 +11,8 @@ export interface RegistroImportacao {
   qtdItens?: number;
   erro?: string;
   chave?: string;
+  /** Só contagens (vínculo automático), nunca descrição ou CNPJ. */
+  contagens?: Record<string, number>;
 }
 
 export type Logger = Pick<typeof logger, 'info' | 'warn'>;

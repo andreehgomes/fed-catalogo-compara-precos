@@ -1,5 +1,6 @@
 import type { Estabelecimento, NfceParsed, Nota } from '@shared/model';
 import type { Contexto } from './contexto';
+import { vincularNota } from '../vinculo/vincular-nota';
 import { montarNota, publicarPrecos } from './publicar-precos';
 
 interface DocImportada {
@@ -15,7 +16,8 @@ export interface ResultadoGravacao {
 /**
  * Rotina comum à confirmação (6.5) e à fila (6.6). Numa transação: nota do usuário,
  * perfil mínimo, estabelecimento e `nfceImportadas/{chave}` (dedup RF-09). Os preços só
- * são publicados na primeira importação da chave, fora da transação e em lotes.
+ * são publicados na primeira importação da chave, fora da transação e em lotes, e só então
+ * os produtos novos são ligados a outros mercados (etiquetas + IA).
  */
 export async function gravarNota(
   ctx: Contexto,
@@ -55,6 +57,6 @@ export async function gravarNota(
     return { jaExistia: false, publicou: !importada };
   });
 
-  if (resultado.publicou) await publicarPrecos(ctx.repo, nota);
+  if (resultado.publicou) await vincularNota(ctx, nota, await publicarPrecos(ctx.repo, nota));
   return resultado;
 }

@@ -3,6 +3,7 @@ import { HttpTestingController, provideHttpClientTesting } from '@angular/common
 import { TestBed } from '@angular/core/testing';
 import { vi } from 'vitest';
 import categorias from '../../../../testing/fixtures/menor-preco/categorias-leite-integral.json';
+import envenenada from '../../../../testing/fixtures/menor-preco/envenenada-leite-lider.json';
 import coca from '../../../../testing/fixtures/menor-preco/gtin-coca-cola.json';
 import p1 from '../../../../testing/fixtures/menor-preco/termo-leite-integral-p1.json';
 import vazio from '../../../../testing/fixtures/menor-preco/termo-vazio-total-0.json';
@@ -101,6 +102,14 @@ describe('MenorPrecoClient', () => {
     http.expectOne(() => true).flush({ erro: 'x' });
     expect(r.erro()).toBeInstanceOf(FonteIndisponivelError);
     expect((r.erro() as FonteIndisponivelError).motivo).toBe('formato');
+  });
+
+  it('resposta sintética (lojas de outras UFs) vira bloqueado e não entra no cache', () => {
+    const r = pedirGtin();
+    http.expectOne(() => true).flush(envenenada);
+    expect((r.erro() as FonteIndisponivelError).motivo).toBe('bloqueado');
+    pedirGtin();
+    http.expectOne(() => true).flush(coca);
   });
 
   it('HTTP 503 vira FonteIndisponivelError http, sem retry', () => {

@@ -1,3 +1,5 @@
+import type { Etiquetas } from './etiquetas';
+
 export type Uf = 'PR';
 
 export type TpAmb = '1' | '2';
@@ -140,32 +142,23 @@ export interface Produto {
   /** CNPJs onde o produto já foi visto (até 50), para contar estabelecimentos sem consulta. */
   cnpjs?: string[];
   vinculoOrigem?: 'manual' | 'auto';
+  /** Como o vínculo automático decidiu: regra das etiquetas ou IA. */
+  vinculoMotivo?: 'etiquetas' | 'ia' | 'manual';
   /** Desvinculado à mão: o vínculo automático não mexe mais nele. */
   vinculoBloqueado?: boolean;
   /** GTINs concorrentes achados no Menor Preço, para o usuário escolher. */
   sugestoesEan?: SugestaoEan[];
+  etiquetas?: Etiquetas;
+  /** `tipo|marca|tamanho` das etiquetas, no topo para a consulta de candidatos. */
+  bloco?: string | null;
+  /** Produtos que a IA achou possíveis mas não soube escolher (até 3). */
+  candidatosVinculo?: ProdutoId[];
 }
 
 export interface SugestaoEan {
   gtin: string;
   descricao: string;
   lojas: number;
-}
-
-export type StatusVinculoAuto = 'aguardando' | 'concluido';
-
-export type ResultadoVinculoAuto = 'vinculado' | 'ambiguo' | 'sem-resultado' | 'ignorado';
-
-/** `vinculosAuto/{produtoId}` — fila das Functions, sem uid. */
-export interface VinculoAuto {
-  produtoId: ProdutoId;
-  cnpj: string;
-  vlUnit: number;
-  status: StatusVinculoAuto;
-  tentativas: number;
-  proximaTentativa: DataIso;
-  criadoEm: DataIso;
-  resultado?: ResultadoVinculoAuto;
 }
 
 /** `precos/{chave}_{n}` — compartilhado e anônimo: nunca uid nem referência ao usuário. */

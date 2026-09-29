@@ -1,6 +1,6 @@
 import type { Repositorio } from '../dados/repositorio';
-import { buscarMenorPreco, type ConsultaMenorPreco } from '../menor-preco/cliente';
 import { adaptadorPara, type AdaptadorUf } from '../parsers';
+import type { ClassificarVinculos } from '../vinculo/ia';
 import { buscarSefaz, type RespostaSefaz } from './fetch-sefaz';
 import { logImportacao, type RegistroImportacao } from './log';
 
@@ -12,14 +12,15 @@ export interface Contexto {
   adaptador: (uf: string) => AdaptadorUf;
   log: (r: RegistroImportacao) => void;
   esperar: (ms: number) => Promise<void>;
-  /** JSON cru da busca do Menor Preço (vínculo automático). */
-  buscarMenorPreco: (q: ConsultaMenorPreco) => Promise<unknown>;
+  /** IA que decide os vínculos em dúvida; lança em qualquer falha. */
+  classificarVinculos: ClassificarVinculos;
   /** Em dev, guarda o HTML de layout inesperado no log para diagnóstico (RF-10). */
   registrarHtml?: (html: string, motivo: string) => void;
 }
 
 export function contextoPadrao(
   repo: Repositorio,
+  classificarVinculos: ClassificarVinculos,
   registrarHtml?: Contexto['registrarHtml'],
 ): Contexto {
   return {
@@ -29,7 +30,7 @@ export function contextoPadrao(
     adaptador: adaptadorPara,
     log: (r) => logImportacao(r),
     esperar: (ms) => new Promise((res) => setTimeout(res, ms)),
-    buscarMenorPreco: (q) => buscarMenorPreco(q),
+    classificarVinculos,
     registrarHtml,
   };
 }

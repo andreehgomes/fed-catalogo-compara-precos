@@ -98,6 +98,7 @@ export async function vincular(
   origem: ProdutoId,
   destino: ProdutoId,
   origemVinculo: 'manual' | 'auto',
+  motivo: NonNullable<Produto['vinculoMotivo']> = 'manual',
 ): Promise<ResultadoVinculo> {
   const raizOrigem = await canonicoDe(ctx, origem);
   const raizDestino = await canonicoDe(ctx, destino);
@@ -111,7 +112,12 @@ export async function vincular(
     : [raizOrigem, raizDestino];
   await ctx.repo.gravar(
     caminho(filho),
-    { vinculadoA: canonico, vinculoOrigem: origemVinculo, vinculoBloqueado: false },
+    {
+      vinculadoA: canonico,
+      vinculoOrigem: origemVinculo,
+      vinculoMotivo: motivo,
+      vinculoBloqueado: false,
+    },
     { merge: true },
   );
   await reapontar(ctx, filho, canonico);

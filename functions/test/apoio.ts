@@ -5,6 +5,7 @@ import type { NfceParsed } from '@shared/model';
 import type { Contexto } from '../src/importar/contexto';
 import type { RespostaSefaz } from '../src/importar/fetch-sefaz';
 import type { RegistroImportacao } from '../src/importar/log';
+import type { ClassificarVinculos } from '../src/vinculo/ia';
 import { adaptadorPara } from '../src/parsers';
 import { RepositorioMemoria } from './fakes/repositorio-memoria';
 
@@ -77,7 +78,7 @@ export interface ContextoTeste extends Contexto {
   relogio: { agora: Date };
   htmlRegistrado: string[];
   buscar: ReturnType<typeof vi.fn<(url: string) => Promise<RespostaSefaz>>>;
-  buscarMenorPreco: ReturnType<typeof vi.fn<Contexto['buscarMenorPreco']>>;
+  classificarVinculos: ReturnType<typeof vi.fn<ClassificarVinculos>>;
 }
 
 export function criarContexto(
@@ -113,7 +114,7 @@ export function criarContexto(
     log: (r) => logs.push(r),
     logs,
     esperar: async () => undefined,
-    buscarMenorPreco: vi.fn<Contexto['buscarMenorPreco']>(async () => ({ produtos: [] })),
+    classificarVinculos: vi.fn<ClassificarVinculos>(async () => ({ decisoes: [], custoUsd: 0 })),
     registrarHtml: (html) => htmlRegistrado.push(html),
     htmlRegistrado,
   };

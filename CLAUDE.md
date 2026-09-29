@@ -130,7 +130,7 @@ no target `test`, relativo a `src/`).
 
 **Testes**
 - Vitest no front e nas Functions. Fixtures reais em `functions/test/fixtures/` e
-  `src/testing/fixtures/`. Nunca bater em SEFAZ ou Menor Preço de verdade num teste.
+  `src/testing/fixtures/`. Nunca bater em SEFAZ, Menor Preço ou Claude API de verdade num teste.
 - **Sem Firebase Emulator Suite.** Testes unitários mockam o SDK; as Functions
   acessam o Firestore por um repositório com fake em memória. O e2e roda contra o dv
   com usuário de teste e Functions/SEFAZ/Menor Preço interceptados. Regras e
@@ -143,8 +143,13 @@ no target `test`, relativo a `src/`).
   Functions** (allowlist de host, anti-SSRF). O portal responde erro com HTTP 200,
   então a resposta é classificada pelo conteúdo.
 - **Menor Preço (Nota Paraná)** — API REST pública com CORS aberto, chamada **direto
-  do navegador** com cache de 30 min e debounce. As Functions só a chamam no vínculo
-  automático (agendada, poucas consultas espaçadas).
+  do navegador** com cache de 30 min e debounce, **só para a tela `/regiao` e o "Tem mais
+  barato perto?"**. Não é usado no vínculo de produtos: para os IPs das Functions (Google
+  Cloud) e sob volume a API devolve dados sintéticos (a tela `/regiao` detecta e mostra
+  como indisponível, motivo `bloqueado`).
+- **Claude API (Anthropic)** — só nas Functions, no vínculo automático, com o secret
+  `ANTHROPIC_API_KEY` (Secret Manager, em `confirmarNfce` e `reprocessarPendentes`). Recebe
+  só descrições de produto.
 
 Detalhes: [docs/analise/compara-precos-nfce-analise.md](docs/analise/compara-precos-nfce-analise.md).
 
@@ -219,16 +224,21 @@ npm --prefix functions run test:cov
 Instale as dependências **de dentro da pasta** (`cd functions && npm install`): o
 `npm install --prefix functions` sem pacote adiciona o projeto raiz como dependência.
 
-- Node 22, `firebase-functions` 7, `firebase-admin` 14, `cheerio`. Região
+- Node 22, `firebase-functions` 7, `firebase-admin` 14, `cheerio`, `@anthropic-ai/sdk` e
+  `zod` (vínculo por IA). Secret `ANTHROPIC_API_KEY` (`defineSecret` em `src/config.ts`),
+  criado em cada projeto com `npx firebase functions:secrets:set ANTHROPIC_API_KEY -P dev|prod`
+  antes do deploy. Região
   `southamerica-east1`, `maxInstances: 5` (`src/config.ts`). Callables com
   `enforceAppCheck: true`.
 - **Callables:** `previewNfce({url}|{chave})`, `confirmarNfce({chave})`,
-  `enfileirarNfce({url}|{chave})`, `retentarPendente({chave})`. **Agendada:**
-  `reprocessarPendentes` (a cada 15 min, até 20 por execução, 1 s entre fetches) e
-  `vincularProdutosAuto` (a cada 30 min; ver Produtos). Callables respondem `{ ok: true, … }` ou `{ ok: false, erro: ErroImportacao }`; só erro inesperado
-  vira exceção.
+  `enfileirarNfce({url}|{chave})`, `retentarPendente({chave})`, `vincularProduto`,
+  `vincularProduto` e `desvincularProduto` (`confirmarNfce` com `timeoutSeconds: 120`, por
+  causa da IA). **Agendada:** `reprocessarPendentes` (a cada 15 min, até 20 por execução,
+  1 s entre fetches, timeout 540 s). Callables respondem `{ ok: true, … }` ou
+  `{ ok: false, erro: ErroImportacao }`; só erro inesperado vira exceção.
 - **Regras de negócio** recebem um `Contexto` (`importar/contexto.ts`): repositório,
-  relógio (`agora`), `buscar`, adaptador por UF, `log`, `esperar`. Todo acesso ao
+  relógio (`agora`), `buscar`, adaptador por UF, `log`, `esperar` e `classificarVinculos`
+  (IA; fake nos testes, nenhum teste chama a API). Todo acesso ao
   Firestore passa por `dados/repositorio.ts`; `repositorio-firestore.ts` é o real e
   `test/fakes/repositorio-memoria.ts` o fake (transação com commit no fim). **Sem
   emulador.**
@@ -312,17 +322,26 @@ Instale as dependências **de dentro da pasta** (`cd functions && npm install`):
   `vincular-dialog.ts` sugere por Jaccard com o mesmo conteúdo e, antes, os
   `sugestoesEan` do produto; destino `ean:` inexistente só é aceito se estiver nelas (o
   `ean:` é criado por `garantirProdutoEan`). Desvincular grava `vinculoBloqueado`.
-- **Vínculo automático** (`functions/src/produtos/vincular-auto.ts`, spike em
-  `docs/analise/spike-vinculo-automatico-2026-09.md`): `publicarPrecos` põe cada `loc:`
-  novo em `vinculosAuto/{produtoId}` (sem uid, a partir da emissão + 2 h); a agendada
-  busca a descrição no Menor Preço pelo centro do município da loja (raio 10 km) e
-  `decidirGtin` (`shared/vinculo-auto.ts`) vincula quando a mesma loja vende pelo mesmo
-  preço ou um único GTIN aparece em ≥ 2 lojas; GTINs concorrentes viram `sugestoesEan`
-  (até 3). **O Menor Preço devolve dados sintéticos sob volume** (HTTP 200, lojas de outras
-  UFs): `lerOfertas` recusa a resposta com qualquer UF ≠ PR e o job pausa 2 h
-  (`controle/vinculoAuto.pausadoAte`). Máx. 12 consultas por execução, 10 s entre elas;
-  sem resultado tenta de novo em 1, 7 e 30 dias. Com a fila vazia, o backfill enfileira os
-  `loc:` antigos aos poucos (`cursorBackfill`).
+- **Vínculo automático** (plano `docs/plano/vinculo-etiquetas-ia-plano.md`), síncrono na
+  gravação (`gravarNota`, só na 1ª importação da chave): `publicarPrecos` grava em todo
+  produto as `etiquetas` (`shared/etiquetas.ts`: `tipo`, `marca`, `tamanho`, `variantes`,
+  com abreviações e sinônimos da NFC-e) e o `bloco` (`marca|tamanho`, ou `null`; o tipo fica
+  fora porque há mercado que cadastra "COCA COLA 2L ZERO" sem "REFR"), e
+  devolve os ids novos. `vincularNota` (`functions/src/vinculo/`) busca, para cada `loc:`
+  novo, as raízes do mesmo bloco vistas em outro mercado (`bloco ==` + `vinculadoA ==
+  null`) e decide com `decidirPorEtiquetas`: tipos diferentes dos dois lados → conflito;
+  mesma variante com um só candidato → liga
+  (`vinculoMotivo: 'etiquetas'`); conflito claro → nada; o resto (inclusive sem variante
+  nenhuma: a mesma loja vende produtos diferentes com a mesma descrição) vai para **uma**
+  chamada à IA por nota (`vinculo/ia.ts`: `claude-opus-5-5`, effort `low`, saída
+  estruturada, fallback do servidor em recusa, ids curtos `c1..c5`, até 5 candidatos por
+  item, 2 chamadas acima de 40 dúvidas). Resposta: id → vínculo `ia`; `A` →
+  `candidatosVinculo` (até 3, oferecidos primeiro no diálogo como "Possíveis
+  equivalentes"); `N` → nada. Custo somado em `controle/iaVinculo_AAAA-MM`; acima de
+  `IA_TETO_MENSAL_USD` (`vinculo/config-ia.ts`) a IA é pulada. Qualquer falha só deixa os
+  itens sem vínculo e loga `etapa: 'vinculo'` com contagens. `vinculoBloqueado` é
+  respeitado. Medição no gabarito real: `functions/test/etiquetas-gabarito.spec.ts`;
+  avaliação da IA real (manual, custa centavos): `functions/scripts/avaliar-ia-vinculo.ts`.
 - `produtos/{id}.cnpjs` (até 50) é mantido pela publicação de preços, para contar
   estabelecimentos sem consulta extra.
 - Estabelecimentos: lista por `atualizadoEm desc` (30 por página, busca por nome no

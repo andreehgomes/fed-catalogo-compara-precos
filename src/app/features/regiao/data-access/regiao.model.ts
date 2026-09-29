@@ -47,7 +47,7 @@ export interface ConsultaTermo {
   offset?: number;
 }
 
-export type MotivoIndisponivel = 'rede' | 'timeout' | 'http' | 'formato';
+export type MotivoIndisponivel = 'rede' | 'timeout' | 'http' | 'formato' | 'bloqueado';
 
 export class FonteIndisponivelError extends Error {
   constructor(

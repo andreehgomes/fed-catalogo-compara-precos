@@ -219,6 +219,26 @@ describe('ProdutoDetalhePage', () => {
     expect(s.desvincular).toHaveBeenCalledWith('loc:03644587000836:1001');
   });
 
+  it('vínculo automático explica que foi ligado a outros mercados', async () => {
+    const s = servico([
+      produto('loc:03644587000836:1001', { vinculadoA: 'loc:1:x', vinculoOrigem: 'auto' }),
+    ]);
+    base([
+      { provide: ProdutosService, useValue: s },
+      { provide: NotasService, useValue: { chaves: vi.fn(async () => new Set()) } },
+      { provide: MatDialog, useValue: { open: vi.fn() } },
+      {
+        provide: LocalizacaoStore,
+        useValue: { pronta: signal(false), geohash: signal(null), raioKm: signal(2) },
+      },
+    ]);
+    const { el } = await renderizar(ProdutoDetalhePage, { id: 'loc:03644587000836:1001' });
+    expect(texto(el)).toContain(
+      'Ligado automaticamente a produtos de outros mercados. Se estiver errado, desfaça o vínculo.',
+    );
+    expect(texto(el)).not.toContain('identificado automaticamente pelo Menor Preço');
+  });
+
   it('produto inexistente', async () => {
     base([
       { provide: ProdutosService, useValue: servico([]) },

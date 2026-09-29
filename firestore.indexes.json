@@ -9,14 +9,6 @@
       ]
     },
     {
-      "collectionGroup": "vinculosAuto",
-      "queryScope": "COLLECTION",
-      "fields": [
-        { "fieldPath": "status", "order": "ASCENDING" },
-        { "fieldPath": "proximaTentativa", "order": "ASCENDING" }
-      ]
-    },
-    {
       "collectionGroup": "notas",
       "queryScope": "COLLECTION",
       "fields": [
