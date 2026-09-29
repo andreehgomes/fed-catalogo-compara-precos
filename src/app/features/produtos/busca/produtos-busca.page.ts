@@ -38,32 +38,6 @@ export class CatalogoProdutosEstado {
   selector: 'cp-produtos-busca',
   imports: [CurrencyPipe, EmptyState, FormField, MatIconModule, RouterLink, Scanner],
   templateUrl: './produtos-busca.page.html',
-  styles: `
-    .paginacao {
-      display: grid;
-      grid-template-columns: 1fr auto 1fr;
-      align-items: center;
-      gap: 8px;
-      padding-top: 4px;
-
-      button {
-        min-width: 0;
-        padding-inline: 10px;
-        gap: 2px;
-        white-space: nowrap;
-      }
-
-      button:last-child {
-        justify-self: end;
-      }
-
-      span {
-        font-size: 14px;
-        font-weight: 600;
-        white-space: nowrap;
-      }
-    }
-  `,
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export default class ProdutosBuscaPage {

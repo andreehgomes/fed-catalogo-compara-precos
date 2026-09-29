@@ -2,6 +2,7 @@ import { Injectable, computed, inject, signal } from '@angular/core';
 import { MatSnackBar } from '@angular/material/snack-bar';
 import { Router } from '@angular/router';
 import type { ErroImportacao, NfceParsed, PreviewEntrada } from '@shared/model';
+import { HistoricoPessoalStore } from '../notas/data-access/historico-pessoal.store';
 import { ImportarService } from './data-access/importar.service';
 import { interpretarEntrada } from './mensagens';
 
@@ -20,6 +21,7 @@ export class ImportarStore {
   private readonly service = inject(ImportarService);
   private readonly router = inject(Router);
   private readonly snack = inject(MatSnackBar);
+  private readonly historico = inject(HistoricoPessoalStore);
 
   private readonly _estado = signal<EstadoImportacao>({ tipo: 'ocioso' });
   readonly estado = this._estado.asReadonly();
@@ -71,6 +73,7 @@ export class ImportarStore {
       this._estado.set({ tipo: 'erro', entrada: e.entrada, erro: r.erro, nota: e.nota });
       return;
     }
+    this.historico.invalidar();
     this._estado.set({ tipo: 'ocioso' });
     await this.router.navigate(['/notas', r.valor]);
     this.snack.open('Nota importada', 'OK', { duration: 4000 });

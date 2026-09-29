@@ -153,6 +153,23 @@ export class ProdutosService {
     return mapa;
   }
 
+  /** Produtos vinculados a algum dos canônicos (sem os próprios canônicos). */
+  async membrosDosGrupos(canonicos: readonly string[]): Promise<Produto[]> {
+    const grupos = await Promise.all(
+      emGrupos([...new Set(canonicos)]).map((grupo) =>
+        this.api.getDocs(
+          this.api.query(
+            this.api.collection(this.db, 'produtos'),
+            this.api.where('vinculadoA', 'in', grupo),
+          ),
+        ),
+      ),
+    );
+    const membros = new Map<string, Produto>();
+    for (const s of grupos) for (const d of s.docs) membros.set(d.id, d.data() as Produto);
+    return [...membros.values()];
+  }
+
   async estabelecimentosPorCnpj(cnpjs: readonly string[]): Promise<Map<string, Estabelecimento>> {
     const mapa = new Map<string, Estabelecimento>();
     const grupos = await Promise.all(

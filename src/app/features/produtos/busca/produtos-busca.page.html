@@ -76,10 +76,9 @@
       </ul>
 
       @if (!consulta() && (pagina() > 0 || temProxima())) {
-        <nav class="paginacao" aria-label="Páginas de produtos">
+        <nav class="cp-pagination" aria-label="Páginas de produtos">
           <button
             type="button"
-            class="cp-btn-secondary"
             [disabled]="pagina() === 0"
             (click)="irPara(pagina() - 1)"
           >
@@ -89,7 +88,6 @@
           <span aria-current="page">Página {{ pagina() + 1 }}</span>
           <button
             type="button"
-            class="cp-btn-secondary"
             [disabled]="!temProxima()"
             (click)="irPara(pagina() + 1)"
           >

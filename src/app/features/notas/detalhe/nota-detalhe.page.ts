@@ -2,16 +2,20 @@ import { CurrencyPipe, DatePipe, DecimalPipe } from '@angular/common';
 import {
   ChangeDetectionStrategy,
   Component,
+  Injector,
+  afterNextRender,
   computed,
   effect,
   inject,
   input,
+  resource,
   signal,
 } from '@angular/core';
 import { rxResource } from '@angular/core/rxjs-interop';
 import { MatDialog } from '@angular/material/dialog';
 import { MatIconModule } from '@angular/material/icon';
 import { MatSnackBar } from '@angular/material/snack-bar';
+import { MatTooltipModule } from '@angular/material/tooltip';
 import { Router, RouterLink } from '@angular/router';
 import { formatarChave, formatarCnpj } from '@shared/chave-acesso';
 import type { Nota } from '@shared/model';
@@ -24,9 +28,36 @@ import { Preco } from '../../../shared/ui/preco/preco';
 import { LocalizacaoSeletor } from '../../regiao/localizacao/localizacao-seletor';
 import { LocalizacaoStore } from '../../regiao/localizacao/localizacao.store';
 import { formatarDistancia } from '../../regiao/ui/oferta-row';
+import { HistoricoPessoalStore } from '../data-access/historico-pessoal.store';
 import { NotasAbertasService } from '../data-access/notas-abertas.service';
 import { NotasService } from '../data-access/notas.service';
+import { HistoricoItem } from './historico-item';
+import {
+  ComparacaoHistorico,
+  FILTROS_HISTORICO,
+  FiltroHistorico,
+  comValores,
+  consolidarItens,
+  contarPorFiltro,
+  destaques,
+  filtrarItens,
+  resumirHistorico,
+  sufixoDaBase,
+} from './historico-pessoal';
 import { MaisBaratoPerto } from './mais-barato-perto';
+
+const ROTULOS_FILTRO: Record<FiltroHistorico, string> = {
+  todos: 'Todos',
+  subiram: 'Subiram',
+  baixaram: 'Baixaram',
+  primeira: 'Primeira compra',
+};
+
+type TipoDestaque = 'mais-barato' | 'mais-caro';
+
+const LIMITE_DESTAQUES = 3;
+
+const SEM_HISTORICO: ReadonlyMap<number, ComparacaoHistorico> = new Map();
 
 @Component({
   selector: 'cp-nota-detalhe',
@@ -37,8 +68,10 @@ import { MaisBaratoPerto } from './mais-barato-perto';
     DecimalPipe,
     EmptyState,
     FontePrecoInfo,
+    HistoricoItem,
     LocalizacaoSeletor,
     MatIconModule,
+    MatTooltipModule,
     Preco,
     RouterLink,
   ],
@@ -52,10 +85,14 @@ export default class NotaDetalhePage {
   private readonly dialog = inject(MatDialog);
   private readonly snack = inject(MatSnackBar);
   private readonly router = inject(Router);
+  private readonly injector = inject(Injector);
+  private readonly historicoStore = inject(HistoricoPessoalStore);
   protected readonly comparacao = inject(MaisBaratoPerto);
   protected readonly loc = inject(LocalizacaoStore);
 
   readonly chave = input.required<string>();
+  /** Filtro da lista em `?itens=`. */
+  readonly itens = input<string | undefined>();
 
   protected readonly nota = rxResource<Nota | null, string>({
     params: () => this.chave(),
@@ -67,10 +104,70 @@ export default class NotaDetalhePage {
   protected readonly dados = computed(() => (this.nota.hasValue() ? this.nota.value() : null));
   protected readonly cnpj = computed(() => formatarCnpj(this.dados()?.cnpj ?? ''));
   protected readonly chaveFormatada = computed(() => formatarChave(this.chave()));
+  /** Lançamentos repetidos do mesmo produto e preço viram uma linha. */
+  protected readonly itensConsolidados = computed(() => consolidarItens(this.dados()?.itens ?? []));
   protected readonly comEan = computed(
-    () => (this.dados()?.itens ?? []).filter((i) => !!i.ean).length,
+    () => this.itensConsolidados().filter((i) => !!i.ean).length,
   );
   protected readonly distancia = formatarDistancia;
+
+  protected readonly historico = resource({
+    params: () => this.dados() ?? undefined,
+    loader: ({ params }) => this.historicoStore.comparar(params),
+  });
+  protected readonly comparacoes = computed(() =>
+    this.historico.hasValue() ? this.historico.value() : SEM_HISTORICO,
+  );
+  protected readonly resumo = computed(() => {
+    const n = this.dados();
+    return n && this.historico.hasValue()
+      ? resumirHistorico(this.itensConsolidados(), this.historico.value())
+      : null;
+  });
+  protected readonly filtros = FILTROS_HISTORICO.map((valor) => ({
+    valor,
+    rotulo: ROTULOS_FILTRO[valor],
+  }));
+  protected readonly filtro = computed<FiltroHistorico>(() => {
+    const f = this.itens();
+    return FILTROS_HISTORICO.includes(f as FiltroHistorico) ? (f as FiltroHistorico) : 'todos';
+  });
+  protected readonly contagens = computed(() =>
+    contarPorFiltro(this.itensConsolidados(), this.comparacoes()),
+  );
+  protected readonly itensVisiveis = computed(() =>
+    filtrarItens(this.itensConsolidados(), this.comparacoes(), this.filtro()),
+  );
+  protected readonly limiteDestaques = LIMITE_DESTAQUES;
+  private readonly destaquesAbertos = signal<ReadonlySet<TipoDestaque>>(new Set());
+  protected readonly gruposDestaque = computed(() => {
+    const itens = new Map(this.itensConsolidados().map((i) => [i.n, i]));
+    const r = this.comparacoes();
+    const d = destaques(r);
+    const abertos = this.destaquesAbertos();
+    const grupo = (tipo: TipoDestaque, titulo: string, ns: number[]) => {
+      const lista = ns.flatMap((n) => {
+        const item = itens.get(n);
+        const c = comValores(r.get(n));
+        return item && c
+          ? [{ item, c, impacto: Math.abs(c.impacto), sufixo: sufixoDaBase(c) }]
+          : [];
+      });
+      const aberto = abertos.has(tipo);
+      return {
+        tipo,
+        titulo,
+        total: lista.length,
+        aberto,
+        itens: aberto ? lista : lista.slice(0, LIMITE_DESTAQUES),
+      };
+    };
+    return [
+      grupo('mais-barato', 'Ficaram mais baratos', d.quedas),
+      grupo('mais-caro', 'Ficaram mais caros', d.altas),
+    ].filter((g) => g.total > 0);
+  });
+  protected readonly comDestaques = computed(() => this.gruposDestaque().length > 0);
 
   constructor() {
     const abertas = inject(NotasAbertasService);
@@ -88,7 +185,37 @@ export default class NotaDetalhePage {
       return;
     }
     this.escolhendoLocal.set(false);
-    this.comparacao.comparar(n.itens);
+    this.comparacao.comparar(this.itensConsolidados());
+  }
+
+  protected alternarDestaques(tipo: TipoDestaque): void {
+    this.destaquesAbertos.update((atual) => {
+      const novo = new Set(atual);
+      if (!novo.delete(tipo)) novo.add(tipo);
+      return novo;
+    });
+  }
+
+  protected filtrar(filtro: FiltroHistorico): Promise<boolean> {
+    return this.router.navigate([], {
+      queryParams: { itens: filtro === 'todos' ? null : filtro },
+      queryParamsHandling: 'merge',
+      replaceUrl: true,
+    });
+  }
+
+  protected async irPara(n: number): Promise<void> {
+    const rolar = () => {
+      const el = document.getElementById(`item-${n}`);
+      el?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      el?.focus({ preventScroll: true });
+    };
+    if (this.itensVisiveis().some((i) => i.n === n)) {
+      rolar();
+      return;
+    }
+    await this.filtrar('todos');
+    afterNextRender(rolar, { injector: this.injector });
   }
 
   protected async copiarChave(): Promise<void> {
@@ -115,6 +242,7 @@ export default class NotaDetalhePage {
     this.excluindo.set(true);
     try {
       await this.service.excluir(this.chave());
+      this.historicoStore.invalidar();
       await this.router.navigate(['/notas']);
       this.snack.open('Nota excluída', 'OK', { duration: 3000 });
     } catch {

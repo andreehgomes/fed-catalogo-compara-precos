@@ -1,4 +1,4 @@
-# Compara Preços
+# Cupom Esperto
 
 App (Angular 22 + Firebase) que importa a NFC-e de supermercado do Paraná pelo QR Code do
 cupom e compara preços entre mercados, com a base comunitária das notas importadas e a

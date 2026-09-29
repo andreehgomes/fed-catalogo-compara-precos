@@ -67,7 +67,7 @@
           <div class="importar-erro">
             <span>{{ m.texto }}</span>
             @if (m.acao) {
-              <button type="button" class="cp-btn-secondary" (click)="executarAcao(m.acao)">
+              <button type="button" class="cp-btn-secondary-compact" (click)="executarAcao(m.acao)">
                 {{ rotuloAcao(m.acao) }}
               </button>
             }
@@ -106,7 +106,7 @@
       <div class="importar-acoes">
         <button
           type="button"
-          class="cp-btn-secondary"
+          class="cp-btn-secondary-compact"
           [disabled]="store.ocupado()"
           (click)="colar()"
         >

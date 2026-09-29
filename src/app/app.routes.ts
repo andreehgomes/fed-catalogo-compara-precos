@@ -12,7 +12,7 @@ export const routes: Routes = [
       {
         path: '',
         pathMatch: 'full',
-        title: 'Painel · Compara Preços',
+        title: 'Painel · Cupom Esperto',
         loadComponent: () => import('./features/painel/painel.page'),
       },
       {
@@ -26,7 +26,7 @@ export const routes: Routes = [
       },
       {
         path: 'regiao',
-        title: 'Preços perto de mim · Compara Preços',
+        title: 'Preços perto de mim · Cupom Esperto',
         loadComponent: () => import('./features/regiao/busca-regiao.page'),
       },
       {
@@ -45,7 +45,7 @@ export const routes: Routes = [
   },
   {
     path: '**',
-    title: 'Página não encontrada · Compara Preços',
+    title: 'Página não encontrada · Cupom Esperto',
     loadComponent: () => import('./features/erro/erro.page'),
   },
 ];

@@ -81,7 +81,7 @@ async function tentativa(url: string, deps: DepsFetch): Promise<RespostaSefaz> {
       resposta = await deps.fetch(atual, {
         redirect: 'manual',
         signal: AbortSignal.timeout(TIMEOUT_MS),
-        headers: { accept: 'text/html', 'user-agent': 'ComparaPrecos/1.0 (+importacao de NFC-e)' },
+        headers: { accept: 'text/html', 'user-agent': 'CupomEsperto/1.0 (+importacao de NFC-e)' },
       });
     } catch (e) {
       throw new SefazIndisponivelError('Falha de rede ou timeout', e);

@@ -1,0 +1,321 @@
+[
+  {
+    "chave": "41260603644587000836650010000000011000000011",
+    "cnpj": "03644587000836",
+    "estabelecimentoNome": "Mercado A",
+    "estabelecimentoCidade": "CURITIBA",
+    "emissao": "2026-06-10T14:00:00.000Z",
+    "total": 63.67,
+    "desconto": 0,
+    "qtdItens": 4,
+    "itens": [
+      {
+        "n": 1,
+        "descricao": "Cafe Itamaraty 500g",
+        "codigo": "101",
+        "ean": null,
+        "qtd": 1,
+        "unidade": "UN",
+        "vlUnit": 18.9,
+        "vlTotal": 18.9,
+        "produtoId": "loc:03644587000836:101",
+        "precoPorUnidadeBase": {
+          "valor": 37.8,
+          "unidade": "kg"
+        }
+      },
+      {
+        "n": 2,
+        "descricao": "Det Ype 500ml Coco",
+        "codigo": "102",
+        "ean": null,
+        "qtd": 10,
+        "unidade": "UN",
+        "vlUnit": 2.79,
+        "vlTotal": 27.9,
+        "produtoId": "loc:03644587000836:102",
+        "precoPorUnidadeBase": {
+          "valor": 5.58,
+          "unidade": "L"
+        }
+      },
+      {
+        "n": 3,
+        "descricao": "Tomate Italiano Kg",
+        "codigo": "104",
+        "ean": null,
+        "qtd": 1.1,
+        "unidade": "KG",
+        "vlUnit": 8.99,
+        "vlTotal": 9.89,
+        "produtoId": "loc:03644587000836:104",
+        "precoPorUnidadeBase": {
+          "valor": 8.99,
+          "unidade": "kg"
+        }
+      },
+      {
+        "n": 4,
+        "descricao": "Mol Pomarola 300g Cl",
+        "codigo": "108",
+        "ean": null,
+        "qtd": 2,
+        "unidade": "UN",
+        "vlUnit": 3.49,
+        "vlTotal": 6.98,
+        "produtoId": "loc:03644587000836:108",
+        "precoPorUnidadeBase": {
+          "valor": 11.6333,
+          "unidade": "kg"
+        }
+      }
+    ],
+    "importadaEm": "2026-06-10T14:00:00.000Z"
+  },
+  {
+    "chave": "41260811222333000181650010000000021000000021",
+    "cnpj": "11222333000181",
+    "estabelecimentoNome": "Mercado B",
+    "estabelecimentoCidade": "CURITIBA",
+    "emissao": "2026-08-20T18:30:00.000Z",
+    "total": 48.26,
+    "desconto": 0,
+    "qtdItens": 4,
+    "itens": [
+      {
+        "n": 1,
+        "descricao": "LEITE LIDER DESNATADO 1L",
+        "codigo": "201",
+        "ean": null,
+        "qtd": 3,
+        "unidade": "UN",
+        "vlUnit": 4.59,
+        "vlTotal": 13.77,
+        "produtoId": "loc:11222333000181:201",
+        "precoPorUnidadeBase": {
+          "valor": 4.59,
+          "unidade": "L"
+        }
+      },
+      {
+        "n": 2,
+        "descricao": "REFR COCA COLA ZERO 3L",
+        "codigo": "202",
+        "ean": null,
+        "qtd": 1,
+        "unidade": "UN",
+        "vlUnit": 13.5,
+        "vlTotal": 13.5,
+        "produtoId": "loc:11222333000181:202",
+        "precoPorUnidadeBase": {
+          "valor": 4.5,
+          "unidade": "L"
+        }
+      },
+      {
+        "n": 3,
+        "descricao": "REPOLHO VERDE",
+        "codigo": "203",
+        "ean": null,
+        "qtd": 1.5,
+        "unidade": "KG",
+        "vlUnit": 3.99,
+        "vlTotal": 5.99,
+        "produtoId": "loc:11222333000181:203",
+        "precoPorUnidadeBase": {
+          "valor": 3.99,
+          "unidade": "kg"
+        }
+      },
+      {
+        "n": 4,
+        "descricao": "CAFE ITAMARATY 500G",
+        "codigo": "204",
+        "ean": null,
+        "qtd": 1,
+        "unidade": "UN",
+        "vlUnit": 15,
+        "vlTotal": 15,
+        "produtoId": "loc:11222333000181:204",
+        "precoPorUnidadeBase": {
+          "valor": 30,
+          "unidade": "kg"
+        }
+      }
+    ],
+    "importadaEm": "2026-08-20T18:30:00.000Z"
+  },
+  {
+    "chave": "41260903644587000836650010000000031000000031",
+    "cnpj": "03644587000836",
+    "estabelecimentoNome": "Mercado A",
+    "estabelecimentoCidade": "CURITIBA",
+    "emissao": "2026-09-20T13:10:00.000Z",
+    "total": 139.51,
+    "desconto": 0,
+    "qtdItens": 8,
+    "itens": [
+      {
+        "n": 1,
+        "descricao": "Cafe Itamaraty 500g",
+        "codigo": "101",
+        "ean": null,
+        "qtd": 2,
+        "unidade": "UN",
+        "vlUnit": 21.4,
+        "vlTotal": 42.8,
+        "produtoId": "loc:03644587000836:101",
+        "precoPorUnidadeBase": {
+          "valor": 42.8,
+          "unidade": "kg"
+        }
+      },
+      {
+        "n": 2,
+        "descricao": "Det Ype 500ml Coco",
+        "codigo": "102",
+        "ean": null,
+        "qtd": 10,
+        "unidade": "UN",
+        "vlUnit": 2.49,
+        "vlTotal": 24.9,
+        "produtoId": "loc:03644587000836:102",
+        "precoPorUnidadeBase": {
+          "valor": 4.98,
+          "unidade": "L"
+        }
+      },
+      {
+        "n": 3,
+        "descricao": "Leite Lider 1l Desn",
+        "codigo": "103",
+        "ean": null,
+        "qtd": 3,
+        "unidade": "UN",
+        "vlUnit": 4.99,
+        "vlTotal": 14.97,
+        "produtoId": "loc:03644587000836:103",
+        "precoPorUnidadeBase": {
+          "valor": 4.99,
+          "unidade": "L"
+        }
+      },
+      {
+        "n": 4,
+        "descricao": "Tomate Italiano Kg",
+        "codigo": "104",
+        "ean": null,
+        "qtd": 1.25,
+        "unidade": "KG",
+        "vlUnit": 7.99,
+        "vlTotal": 9.99,
+        "produtoId": "loc:03644587000836:104",
+        "precoPorUnidadeBase": {
+          "valor": 7.99,
+          "unidade": "kg"
+        }
+      },
+      {
+        "n": 5,
+        "descricao": "Refr Coca Cola 2l Ze",
+        "codigo": "105",
+        "ean": null,
+        "qtd": 2,
+        "unidade": "UN",
+        "vlUnit": 9.98,
+        "vlTotal": 19.96,
+        "produtoId": "loc:03644587000836:105",
+        "precoPorUnidadeBase": {
+          "valor": 4.99,
+          "unidade": "L"
+        }
+      },
+      {
+        "n": 6,
+        "descricao": "Repolho Verde Un",
+        "codigo": "106",
+        "ean": null,
+        "qtd": 1,
+        "unidade": "UN",
+        "vlUnit": 4.5,
+        "vlTotal": 4.5,
+        "produtoId": "loc:03644587000836:106",
+        "precoPorUnidadeBase": null
+      },
+      {
+        "n": 7,
+        "descricao": "Ovos Cortez 30un Bco",
+        "codigo": "107",
+        "ean": null,
+        "qtd": 1,
+        "unidade": "UN",
+        "vlUnit": 18.9,
+        "vlTotal": 18.9,
+        "produtoId": "loc:03644587000836:107",
+        "precoPorUnidadeBase": {
+          "valor": 0.63,
+          "unidade": "un"
+        }
+      },
+      {
+        "n": 8,
+        "descricao": "Mol Pomarola 300g Cl",
+        "codigo": "108",
+        "ean": null,
+        "qtd": 1,
+        "unidade": "UN",
+        "vlUnit": 3.49,
+        "vlTotal": 3.49,
+        "produtoId": "loc:03644587000836:108",
+        "precoPorUnidadeBase": {
+          "valor": 11.6333,
+          "unidade": "kg"
+        }
+      }
+    ],
+    "importadaEm": "2026-09-20T13:10:00.000Z"
+  },
+  {
+    "chave": "41260903644587000836650010000000041000000041",
+    "cnpj": "03644587000836",
+    "estabelecimentoNome": "Mercado A",
+    "estabelecimentoCidade": "CURITIBA",
+    "emissao": "2026-09-27T10:00:00.000Z",
+    "total": 36.9,
+    "desconto": 0,
+    "qtdItens": 2,
+    "itens": [
+      {
+        "n": 1,
+        "descricao": "Ovos Cortez 30un Bco",
+        "codigo": "107",
+        "ean": null,
+        "qtd": 1,
+        "unidade": "UN",
+        "vlUnit": 17.9,
+        "vlTotal": 17.9,
+        "produtoId": "loc:03644587000836:107",
+        "precoPorUnidadeBase": {
+          "valor": 0.5967,
+          "unidade": "un"
+        }
+      },
+      {
+        "n": 2,
+        "descricao": "Cafe Itamaraty 500g",
+        "codigo": "101",
+        "ean": null,
+        "qtd": 1,
+        "unidade": "UN",
+        "vlUnit": 19,
+        "vlTotal": 19,
+        "produtoId": "loc:03644587000836:101",
+        "precoPorUnidadeBase": {
+          "valor": 38,
+          "unidade": "kg"
+        }
+      }
+    ],
+    "importadaEm": "2026-09-27T10:00:00.000Z"
+  }
+]

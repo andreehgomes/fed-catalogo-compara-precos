@@ -5,18 +5,18 @@ export const AUTH_ROUTES: Routes = [
   {
     path: 'login',
     canActivate: [guestGuard],
-    title: 'Entrar · Compara Preços',
+    title: 'Entrar · Cupom Esperto',
     loadComponent: () => import('./login/login.page'),
   },
   {
     path: 'cadastro',
     canActivate: [guestGuard],
-    title: 'Criar conta · Compara Preços',
+    title: 'Criar conta · Cupom Esperto',
     loadComponent: () => import('./cadastro/cadastro.page'),
   },
   {
     path: 'redefinir-senha',
-    title: 'Redefinir senha · Compara Preços',
+    title: 'Redefinir senha · Cupom Esperto',
     loadComponent: () => import('./redefinir-senha/redefinir-senha.page'),
   },
 ];

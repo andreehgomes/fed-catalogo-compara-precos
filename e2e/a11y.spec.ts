@@ -54,4 +54,17 @@ test.describe('acessibilidade com login (usuário de teste no dv)', () => {
       expect(await violacoesGraves(page)).toEqual([]);
     });
   }
+
+  test('axe sem violações graves no detalhe da nota', async ({ page }) => {
+    await page.goto('/notas');
+    const notas = page.getByRole('list', { name: 'Notas' }).getByRole('link');
+    await expect(notas.first().or(page.getByText('Importar primeira nota'))).toBeVisible();
+    test.skip((await notas.count()) === 0, 'O usuário de teste não tem notas');
+    await notas.first().click();
+    await expect(page.getByRole('heading', { name: 'Itens' })).toBeVisible();
+    await expect(
+      page.getByRole('status').filter({ hasText: 'Comparado com a última vez' }),
+    ).not.toContainText('Comparando');
+    expect(await violacoesGraves(page)).toEqual([]);
+  });
 });

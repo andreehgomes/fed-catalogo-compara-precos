@@ -14,6 +14,7 @@ import { Router, RouterLink } from '@angular/router';
 import type { Nota } from '@shared/model';
 import type { DocumentSnapshot } from 'firebase/firestore';
 import { EmptyState } from '../../../shared/ui/empty-state/empty-state';
+import { HistoricoPessoalStore } from '../data-access/historico-pessoal.store';
 import { NotasAbertasService } from '../data-access/notas-abertas.service';
 import { FiltroNotas, NotasService, PaginaNotas } from '../data-access/notas.service';
 import { PendentesBloco } from '../ui/pendentes-bloco';
@@ -29,6 +30,7 @@ import { PERIODOS, Periodo, intervaloDe } from './periodo';
 export default class NotasListaPage {
   private readonly service = inject(NotasService);
   private readonly router = inject(Router);
+  private readonly historico = inject(HistoricoPessoalStore);
   protected readonly abertas = inject(NotasAbertasService);
 
   readonly cnpj = input<string>();
@@ -70,6 +72,17 @@ export default class NotasListaPage {
     ...(this.primeira.hasValue() ? this.primeira.value().notas : []),
     ...this.extras(),
   ]);
+  /** Saldo de cada nota contra a última compra de cada item; falha só esconde o valor. */
+  private readonly resumos = resource({
+    params: () => this.notas(),
+    loader: ({ params }) => this.historico.resumir(params),
+  });
+  protected readonly saldos = computed(() => {
+    const r = this.resumos.hasValue() ? this.resumos.value() : null;
+    return new Map(
+      [...(r ?? [])].filter(([, v]) => v.comparados > 0).map(([chave, v]) => [chave, v.saldo]),
+    );
+  });
   protected readonly temMais = computed(
     () => this._temMais() ?? (this.primeira.hasValue() && this.primeira.value().temMais),
   );

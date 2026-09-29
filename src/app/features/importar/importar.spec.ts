@@ -5,6 +5,7 @@ import { Router, provideRouter } from '@angular/router';
 import type { CodigoErroImportacao, NfceParsed } from '@shared/model';
 import { vi } from 'vitest';
 import { CHAMAR_FUNCTION } from '../../core/firebase/callable';
+import { HistoricoPessoalStore } from '../notas/data-access/historico-pessoal.store';
 import { PendentesService } from '../notas/data-access/pendentes.service';
 import { botao, texto } from '../../../testing/dom';
 import { ImportarService, erroDeFunctions } from './data-access/importar.service';
@@ -60,16 +61,18 @@ function montar(respostas: Record<string, unknown[]> = {}) {
     return r;
   });
   const snack = { open: vi.fn() };
+  const historico = { invalidar: vi.fn() };
   TestBed.configureTestingModule({
     providers: [
       provideRouter([]),
       { provide: CHAMAR_FUNCTION, useValue: chamar },
       { provide: MatSnackBar, useValue: snack },
       { provide: PendentesService, useValue: { pendentes: signal([]) } },
+      { provide: HistoricoPessoalStore, useValue: historico },
     ],
   });
   const navegar = vi.spyOn(TestBed.inject(Router), 'navigate').mockResolvedValue(true);
-  return { chamar, snack, navegar };
+  return { chamar, snack, navegar, historico };
 }
 
 describe('ImportarService', () => {
@@ -191,7 +194,7 @@ describe('ImportarStore', () => {
   });
 
   it('confirmar leva ao detalhe com snackbar; preview-expirado refaz a prévia uma vez', async () => {
-    const { navegar, snack, chamar } = montar({
+    const { navegar, snack, chamar, historico } = montar({
       previewNfce: [
         { ok: true, nota: NOTA },
         { ok: true, nota: NOTA },
@@ -212,11 +215,12 @@ describe('ImportarStore', () => {
     ]);
     expect(navegar).toHaveBeenLastCalledWith(['/notas', CHAVE]);
     expect(snack.open).toHaveBeenCalledWith('Nota importada', 'OK', expect.anything());
+    expect(historico.invalidar).toHaveBeenCalledOnce();
     expect(store.estado()).toEqual({ tipo: 'ocioso' });
   });
 
   it('erro na confirmação mantém a nota na tela', async () => {
-    montar({
+    const { historico } = montar({
       previewNfce: [{ ok: true, nota: NOTA }],
       confirmarNfce: [{ ok: false, erro: { codigo: 'rate-limit' } }],
     });
@@ -225,6 +229,7 @@ describe('ImportarStore', () => {
     await store.confirmar();
     expect(store.nota()).toEqual(NOTA);
     expect(store.estado()).toMatchObject({ tipo: 'erro', erro: { codigo: 'rate-limit' } });
+    expect(historico.invalidar).not.toHaveBeenCalled();
   });
 
   it('sefaz-indisponivel → guardar chama enfileirarNfce com a mesma entrada', async () => {

@@ -12,7 +12,6 @@ import { mensagemDe } from '../mensagens';
   selector: 'cp-preview-nota',
   imports: [CurrencyPipe, DatePipe, DecimalPipe, MatIconModule, Preco],
   templateUrl: './preview-nota.page.html',
-  styleUrl: './preview-nota.page.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export default class PreviewNotaPage {

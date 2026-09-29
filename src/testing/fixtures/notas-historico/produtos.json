@@ -1,0 +1,222 @@
+[
+  {
+    "id": "loc:03644587000836:101",
+    "ean": null,
+    "descricao": "Cafe Itamaraty 500g",
+    "descricaoNorm": "CAFE ITAMARATY 500G",
+    "tokens": [
+      "CAFE",
+      "ITAMARATY",
+      "500G"
+    ],
+    "conteudo": null,
+    "vinculadoA": null,
+    "menorPreco": null,
+    "ultimaObservacao": null
+  },
+  {
+    "id": "loc:03644587000836:102",
+    "ean": null,
+    "descricao": "Det Ype 500ml Coco",
+    "descricaoNorm": "DET YPE 500ML COCO",
+    "tokens": [
+      "DET",
+      "YPE",
+      "500ML",
+      "COCO"
+    ],
+    "conteudo": null,
+    "vinculadoA": null,
+    "menorPreco": null,
+    "ultimaObservacao": null
+  },
+  {
+    "id": "loc:03644587000836:103",
+    "ean": null,
+    "descricao": "Leite Lider 1l Desn",
+    "descricaoNorm": "LEITE LIDER 1L DESN",
+    "tokens": [
+      "LEITE",
+      "LIDER",
+      "1L",
+      "DESN"
+    ],
+    "conteudo": null,
+    "vinculadoA": "ean:7896000000017",
+    "menorPreco": null,
+    "ultimaObservacao": null
+  },
+  {
+    "id": "loc:03644587000836:104",
+    "ean": null,
+    "descricao": "Tomate Italiano Kg",
+    "descricaoNorm": "TOMATE ITALIANO KG",
+    "tokens": [
+      "TOMATE",
+      "ITALIANO",
+      "KG"
+    ],
+    "conteudo": null,
+    "vinculadoA": null,
+    "menorPreco": null,
+    "ultimaObservacao": null
+  },
+  {
+    "id": "loc:03644587000836:105",
+    "ean": null,
+    "descricao": "Refr Coca Cola 2l Ze",
+    "descricaoNorm": "REFR COCA COLA 2L ZE",
+    "tokens": [
+      "REFR",
+      "COCA",
+      "COLA",
+      "2L",
+      "ZE"
+    ],
+    "conteudo": null,
+    "vinculadoA": "ean:7894900700015",
+    "menorPreco": null,
+    "ultimaObservacao": null
+  },
+  {
+    "id": "loc:03644587000836:106",
+    "ean": null,
+    "descricao": "Repolho Verde Un",
+    "descricaoNorm": "REPOLHO VERDE UN",
+    "tokens": [
+      "REPOLHO",
+      "VERDE",
+      "UN"
+    ],
+    "conteudo": null,
+    "vinculadoA": "loc:11222333000181:203",
+    "menorPreco": null,
+    "ultimaObservacao": null
+  },
+  {
+    "id": "loc:03644587000836:107",
+    "ean": null,
+    "descricao": "Ovos Cortez 30un Bco",
+    "descricaoNorm": "OVOS CORTEZ 30UN BCO",
+    "tokens": [
+      "OVOS",
+      "CORTEZ",
+      "30UN",
+      "BCO"
+    ],
+    "conteudo": null,
+    "vinculadoA": null,
+    "menorPreco": null,
+    "ultimaObservacao": null
+  },
+  {
+    "id": "loc:03644587000836:108",
+    "ean": null,
+    "descricao": "Mol Pomarola 300g Cl",
+    "descricaoNorm": "MOL POMAROLA 300G CL",
+    "tokens": [
+      "MOL",
+      "POMAROLA",
+      "300G",
+      "CL"
+    ],
+    "conteudo": null,
+    "vinculadoA": null,
+    "menorPreco": null,
+    "ultimaObservacao": null
+  },
+  {
+    "id": "ean:7896000000017",
+    "ean": "7896000000017",
+    "descricao": "LEITE LIDER DESNATADO 1L",
+    "descricaoNorm": "LEITE LIDER DESNATADO 1L",
+    "tokens": [
+      "LEITE",
+      "LIDER",
+      "DESNATADO",
+      "1L"
+    ],
+    "conteudo": null,
+    "vinculadoA": null,
+    "menorPreco": null,
+    "ultimaObservacao": null
+  },
+  {
+    "id": "ean:7894900700015",
+    "ean": "7894900700015",
+    "descricao": "REFR COCA COLA ZERO",
+    "descricaoNorm": "REFR COCA COLA ZERO",
+    "tokens": [
+      "REFR",
+      "COCA",
+      "COLA",
+      "ZERO"
+    ],
+    "conteudo": null,
+    "vinculadoA": null,
+    "menorPreco": null,
+    "ultimaObservacao": null
+  },
+  {
+    "id": "loc:11222333000181:201",
+    "ean": null,
+    "descricao": "LEITE LIDER DESNATADO 1L",
+    "descricaoNorm": "LEITE LIDER DESNATADO 1L",
+    "tokens": [
+      "LEITE",
+      "LIDER",
+      "DESNATADO",
+      "1L"
+    ],
+    "conteudo": null,
+    "vinculadoA": "ean:7896000000017",
+    "menorPreco": null,
+    "ultimaObservacao": null
+  },
+  {
+    "id": "loc:11222333000181:202",
+    "ean": null,
+    "descricao": "REFR COCA COLA ZERO 3L",
+    "descricaoNorm": "REFR COCA COLA ZERO 3L",
+    "tokens": [
+      "REFR",
+      "COCA",
+      "COLA",
+      "ZERO",
+      "3L"
+    ],
+    "conteudo": null,
+    "vinculadoA": "ean:7894900700015",
+    "menorPreco": null,
+    "ultimaObservacao": null
+  },
+  {
+    "id": "loc:11222333000181:203",
+    "ean": null,
+    "descricao": "REPOLHO VERDE",
+    "descricaoNorm": "REPOLHO VERDE",
+    "tokens": [
+      "REPOLHO",
+      "VERDE"
+    ],
+    "conteudo": null,
+    "vinculadoA": null,
+    "menorPreco": null,
+    "ultimaObservacao": null
+  },
+  {
+    "id": "loc:11222333000181:204",
+    "ean": null,
+    "descricao": "CAFE ITAMARATY 500G",
+    "descricaoNorm": "CAFE ITAMARATY 500G",
+    "tokens": [
+      "CAFE",
+      "ITAMARATY",
+      "500G"
+    ],
+    "conteudo": null,
+    "vinculadoA": null,
+    "menorPreco": null,
+    "ultimaObservacao": null
+  }
+]

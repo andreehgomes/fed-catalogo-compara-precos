@@ -297,6 +297,14 @@ Instale as dependências **de dentro da pasta** (`cd functions && npm install`):
   `localStorage` (`NotasAbertasService`), porque o cliente não grava nas notas.
 - Detalhe (`/notas/:chave`): link para estabelecimento e produto, copiar chave,
   exclusão com `<cp-confirm-dialog>` (`shared/ui/confirm-dialog`).
+- "Comparado com a última vez" (histórico pessoal): `HistoricoPessoalStore`
+  (`data-access/historico-pessoal.store.ts`) lê as notas dos últimos 12 meses (até 20 páginas =
+  400 notas) uma vez por sessão e por `uid`, resolve os grupos de vínculo (`produtosPorIds` +
+  `membrosDosGrupos`) e cacheia; `invalidar()` após excluir nota e após `confirmarNfce`. Regra
+  pura em `detalhe/historico-pessoal.ts`: cada item compara com a **última compra anterior** do
+  mesmo produto/grupo (a própria nota e compras posteriores não contam); base `vlUnit` (mesma
+  unidade comercial e mesmo conteúdo) → R$/unidade base (impacto × `quantidadeNaUnidadeBase`)
+  → "sem comparação". Resumo, destaques (`@defer on viewport`) e filtro em `?itens=`.
 - "Tem mais barato perto?" (`detalhe/mais-barato-perto.ts`): sob demanda, item a item
   com `concatMap` (1 requisição em voo, cache do client), menor oferta **coerente**
   (`separarDivergentes`) e economia potencial = Σ diferença × qtd. Item sem EAN usa a
@@ -387,7 +395,10 @@ geradas por `scripts/gerar-imagens-codigo.mjs` em `e2e/fixtures/`.
 
 ## Theming
 
-Design system **"Compara Preços"**: a estrutura do DS do `fed-catalogo-confeccoes`
+Nome do app: **Cupom Esperto** (domínio `cupomesperto.com.br`). O prefixo `cp`, os
+projetos Firebase e o repositório mantêm o nome antigo (`compara-precos`).
+
+Design system **"Cupom Esperto"**: a estrutura do DS do `fed-catalogo-confeccoes`
 com prefixo `cp` e paleta verde.
 
 - **Tokens** em `src/app/shared/style/_tokens.scss` — acento (`$cp-accent` `#1f7a4d`,

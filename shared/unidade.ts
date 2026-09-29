@@ -23,7 +23,9 @@ const MEDIDA = new RegExp(`(?<![\\d.])(${NUM})\\s*(${UNIDADES})(?![A-Z])`);
 const EMBALAGEM = /(?:^|\s)C\s*\/\s*(\d+)(?!\d)/;
 
 function preparar(descricao: string): string {
-  return semAcento(descricao).toUpperCase().replace(/(\d),(\d)/g, '$1.$2');
+  return semAcento(descricao)
+    .toUpperCase()
+    .replace(/(\d),(\d)/g, '$1.$2');
 }
 
 function arredondar(n: number): number {
@@ -36,7 +38,10 @@ export function extrairConteudo(descricao: string): Conteudo | null {
   const multiplo = MULTIPLO.exec(d);
   if (multiplo) {
     const { base, fator } = FATOR[multiplo[3]];
-    return { quantidade: arredondar(Number(multiplo[1]) * Number(multiplo[2]) * fator), unidadeBase: base };
+    return {
+      quantidade: arredondar(Number(multiplo[1]) * Number(multiplo[2]) * fator),
+      unidadeBase: base,
+    };
   }
 
   const medida = MEDIDA.exec(d);
@@ -64,4 +69,21 @@ export function precoPorUnidadeBase(
   }
   if (!conteudo || conteudo.quantidade <= 0) return null;
   return { valor: arredondar(vlUnit / conteudo.quantidade), unidade: conteudo.unidadeBase };
+}
+
+/**
+ * Quantidade comprada na unidade base de `precoPorUnidadeBase` (kg, L ou un), para
+ * multiplicar uma diferença em R$/kg ou R$/L. `null` quando o conteúdo é desconhecido.
+ */
+export function quantidadeNaUnidadeBase(
+  qtd: number,
+  unidadeNota: string,
+  descricao: string,
+): number | null {
+  const un = semAcento(unidadeNota).toUpperCase().trim();
+  const vendidoPor = FATOR[un];
+  if (vendidoPor && vendidoPor.base !== 'un') return arredondar(qtd * vendidoPor.fator);
+  const conteudo = extrairConteudo(descricao);
+  if (!conteudo || conteudo.quantidade <= 0) return null;
+  return arredondar(qtd * conteudo.quantidade);
 }

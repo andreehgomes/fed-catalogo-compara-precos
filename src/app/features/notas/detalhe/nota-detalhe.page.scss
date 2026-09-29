@@ -1,4 +1,5 @@
 @use '../../../shared/style/tokens' as *;
+@use '../../../shared/style/breakpoints' as *;
 
 .cp-detail-header h1 a {
   color: inherit;
@@ -27,12 +28,120 @@
   }
 }
 
+.detalhe-item:focus:not(:focus-visible) {
+  outline: none;
+}
+
+.item-comparacoes {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 4px;
+  margin-top: 4px;
+
+  &:empty {
+    display: none;
+  }
+}
+
 .detalhe-comparacao {
   display: flex;
   flex-wrap: wrap;
   align-items: center;
   gap: 6px;
-  margin-top: 4px;
+}
+
+.historico-resumo {
+  grid-column: 1 / -1;
+}
+
+.historico-saldo {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+
+  mat-icon {
+    width: 20px;
+    height: 20px;
+    font-size: 20px;
+  }
+
+  &--mais-caro {
+    color: $cp-pricier;
+  }
+
+  &--mais-barato {
+    color: $cp-cheaper;
+  }
+}
+
+.historico-resumo-detalhe {
+  font-size: 12.5px;
+  color: $cp-text-muted;
+}
+
+.historico-resumo-skeleton {
+  display: block;
+  height: 38px;
+}
+
+.historico-erro {
+  align-items: center;
+
+  button {
+    margin-left: auto;
+  }
+}
+
+.destaques {
+  display: grid;
+  gap: 16px;
+  align-items: start;
+
+  @include tablet-up {
+    grid-template-columns: 1fr 1fr;
+  }
+
+  .cp-block {
+    margin: 0;
+  }
+}
+
+.destaques-contagem {
+  font-variant-numeric: tabular-nums;
+  color: $cp-text-muted;
+}
+
+.destaques-mais {
+  align-self: center;
+}
+
+.destaque {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 8px;
+}
+
+.destaque-nome {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+.destaques-placeholder {
+  height: 120px;
+}
+
+.itens-filtro {
+  flex-wrap: nowrap;
+  max-width: 100%;
+  overflow-x: auto;
+  margin-bottom: 8px;
+}
+
+.itens-filtro-contagem {
+  font-variant-numeric: tabular-nums;
+  color: $cp-text-muted;
 }
 
 .detalhe-economia {

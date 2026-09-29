@@ -1,4 +1,54 @@
 @use '../../../shared/style/mixins' as *;
+@use '../../../shared/style/breakpoints' as *;
+@use '../../../shared/style/tokens' as *;
+
+.notas-filtros {
+  display: grid;
+  gap: 14px;
+
+  @include desktop {
+    grid-template-columns: minmax(0, 1fr) auto;
+    align-items: end;
+    column-gap: 16px;
+  }
+}
+
+.notas-periodo {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  min-width: 0;
+
+  .cp-segmented {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 2px;
+    border-radius: $cp-radius-input;
+
+    @include tablet-up {
+      grid-template-columns: repeat(4, auto);
+      border-radius: $cp-radius-pill;
+    }
+  }
+
+  button {
+    min-height: 38px;
+    border-radius: calc(#{$cp-radius-input} - 3px);
+
+    @include tablet-up {
+      border-radius: $cp-radius-pill;
+    }
+  }
+}
+
+.notas-datas,
+.notas-limpar {
+  grid-column: 1 / -1;
+}
+
+.notas-limpar {
+  justify-self: start;
+}
 
 .notas-datas {
   @include cp-grid(140px, auto-fit, 10px);
@@ -16,4 +66,36 @@
 
 .cp-status--novo {
   align-self: flex-start;
+}
+
+.item-lado {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 2px;
+}
+
+.notas-saldo {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  font-size: 12px;
+  font-weight: 600;
+  color: $cp-text-muted;
+  white-space: nowrap;
+  font-variant-numeric: tabular-nums;
+
+  mat-icon {
+    width: 16px;
+    height: 16px;
+    font-size: 16px;
+  }
+
+  &--mais-caro {
+    color: $cp-pricier;
+  }
+
+  &--mais-barato {
+    color: $cp-cheaper;
+  }
 }

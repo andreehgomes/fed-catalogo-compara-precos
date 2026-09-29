@@ -23,7 +23,7 @@
       </select>
     </label>
 
-    <div>
+    <div class="notas-periodo">
       <span class="cp-label" id="periodo-rotulo">Período</span>
       <div class="cp-segmented" role="group" aria-labelledby="periodo-rotulo">
         @for (p of periodos; track p.valor) {
@@ -52,7 +52,10 @@
     }
 
     @if (filtrando()) {
-      <button type="button" class="cp-btn-ghost" (click)="limpar()">Limpar filtros</button>
+      <button type="button" class="cp-btn-ghost notas-limpar" (click)="limpar()">
+        <mat-icon aria-hidden="true">filter_alt_off</mat-icon>
+        Limpar filtros
+      </button>
     }
   </section>
 
@@ -103,6 +106,24 @@
               </div>
               <div class="item-lado">
                 <span class="cp-price">{{ n.total | currency }}</span>
+                @if (saldos().get(n.chave); as saldo) {
+                  <span
+                    class="notas-saldo"
+                    [class.notas-saldo--mais-caro]="saldo > 0"
+                    [class.notas-saldo--mais-barato]="saldo < 0"
+                  >
+                    <mat-icon aria-hidden="true">{{
+                      saldo > 0 ? 'trending_up' : 'trending_down'
+                    }}</mat-icon>
+                    {{ (saldo > 0 ? saldo : -saldo) | currency }}
+                    {{ saldo > 0 ? 'a mais' : 'de economia' }}
+                  </span>
+                } @else if (saldos().has(n.chave)) {
+                  <span class="notas-saldo">
+                    <mat-icon aria-hidden="true">check</mat-icon>
+                    Mesmo valor
+                  </span>
+                }
               </div>
               <mat-icon aria-hidden="true">chevron_right</mat-icon>
             </a>

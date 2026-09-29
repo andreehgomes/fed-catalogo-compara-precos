@@ -179,6 +179,23 @@ describe('ProdutosService', () => {
     ]);
   });
 
+  it('membrosDosGrupos consulta vinculadoA em grupos de 30, sem duplicados', async () => {
+    const canonicos = Array.from({ length: 65 }, (_, i) => `ean:${1000 + i}`);
+    const api = firestoreFalso({
+      produtos: {
+        'loc:1:a': produto('loc:1:a', { vinculadoA: 'ean:1000' as ProdutoId }),
+        'loc:2:a': produto('loc:2:a', { vinculadoA: 'ean:1064' as ProdutoId }),
+        'loc:3:a': produto('loc:3:a'),
+      },
+    });
+    const r = await TestBed.inject(ProdutosService).membrosDosGrupos([...canonicos, 'ean:1000']);
+    expect(api.getDocs).toHaveBeenCalledTimes(3);
+    expect(api.where.mock.calls.every(([campo, op]) => campo === 'vinculadoA' && op === 'in')).toBe(
+      true,
+    );
+    expect(r.map((p) => p.id).sort()).toEqual(['loc:1:a', 'loc:2:a']);
+  });
+
   it('vincular chama a callable', async () => {
     firestoreFalso({});
     const r = await TestBed.inject(ProdutosService).vincular('loc:1:a', 'ean:7891000100103');
