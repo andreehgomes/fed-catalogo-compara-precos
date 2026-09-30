@@ -361,7 +361,7 @@ Tudo no cliente, nada gravado no Firestore.
   `CICLO_MIN_DIAS`/`CICLO_MAX_DIAS`, `EM_BREVE_A_PARTIR`, `PAROU_ACIMA`, `CV_INSTAVEL`,
   `DIAS_HORIZONTE`): ocasiões (< 2 dias juntam), ciclo = mediana dos intervalos, estado
   `repor`/`em-breve`/`parou` pelo atraso e pelo horizonte, confiança, quantidade (mediana, em
-  kg/L/un quando dá), faixa último/mais barato/mais caro (`baseComum` de `historico-pessoal.ts`),
+  kg/L só a granel; comprado por UN/CX/PCT fica na unidade comercial), faixa último/mais barato/mais caro (`baseComum` de `historico-pessoal.ts`),
   totais, agrupamento por mercado mais barato (último preço em cada `cnpj`) e cestas "um mercado
   só". `hoje` sempre por parâmetro; 100 % de cobertura com a fixture
   `src/testing/fixtures/sugestao/`.

@@ -156,7 +156,7 @@ describe('confianca', () => {
 });
 
 describe('quantidadeSugerida', () => {
-  it('2 × 1 L e 1 × 2 L → 2 L', () => {
+  it('comprado por UN fica em UN, mesmo com o conteúdo na descrição (2 × 1 L e 1 × 2 L → 2 UN)', () => {
     const r = quantidadeSugerida(
       ocasioes([
         compra(0, { qtd: 2 }),
@@ -164,7 +164,7 @@ describe('quantidadeSugerida', () => {
         compra(14, { qtd: 3 }),
       ]),
     );
-    expect(r).toEqual({ valor: 2, unidade: 'L', base: 'L' });
+    expect(r).toEqual({ valor: 2, unidade: 'UN', base: null });
   });
 
   it('granel em kg com 3 casas', () => {
@@ -191,11 +191,16 @@ describe('quantidadeSugerida', () => {
     expect(r).toEqual({ valor: 2, unidade: 'UN', base: null });
   });
 
-  it('base diferente entre compras cai na unidade comercial', () => {
+  it('granel misturado com unidade cai na unidade comercial mais frequente', () => {
+    const kg = {
+      unidade: 'KG',
+      descricao: 'BANANA',
+      porUnidade: { valor: 5, unidade: 'kg' as const },
+    };
     const r = quantidadeSugerida(
-      ocasioes([compra(0), compra(7, { porUnidade: { valor: 5, unidade: 'kg' } })]),
+      ocasioes([compra(0, { ...kg, qtd: 1.2 }), compra(7, { ...kg, qtd: 0.8 }), compra(14)]),
     );
-    expect(r).toEqual({ valor: 1, unidade: 'UN', base: null });
+    expect(r).toEqual({ valor: 1, unidade: 'KG', base: null });
   });
 });
 
@@ -269,7 +274,7 @@ describe('sugerir (fixture de 12 meses)', () => {
     ]);
     const g = porGrupo(s);
     expect(g[LEITE]).toMatchObject({ cicloDias: 7, diasDesdeUltima: 9 });
-    expect(g[LEITE].quantidade).toEqual({ valor: 2, unidade: 'L', base: 'L' });
+    expect(g[LEITE].quantidade).toEqual({ valor: 2, unidade: 'UN', base: null });
     expect(g[LEITE].ocasioes.find((o) => o.compras.length === 2)!.data).toBe(diasAtras(15));
     expect(g[BANANA].quantidade).toEqual({ valor: 1.245, unidade: 'kg', base: 'kg' });
     expect(g[ARROZ].porMercado.size).toBe(2);
@@ -286,7 +291,7 @@ describe('sugerir (fixture de 12 meses)', () => {
     expect(detergente.estado).toBe('em-breve');
     expect(detergente.faixa).toMatchObject({ base: 'L', sufixo: '/L' });
     expect(detergente.faixa.maisBarato.valor).toBe(5.58);
-    expect(detergente.quantidade).toEqual({ valor: 1, unidade: 'L', base: 'L' });
+    expect(detergente.quantidade).toEqual({ valor: 2, unidade: 'UN', base: null });
     expect(sugerir(indice, HOJE, 'hoje', NADA).some((x) => x.grupo === DETERGENTE_1L)).toBe(false);
   });
 
@@ -443,7 +448,7 @@ describe('totais, agrupamento e cestas', () => {
         '',
         '- BANANA PRATA KG (≈ 1,245 kg): última vez R$ 5,49/kg no Mercado Gama em 19/09; ' +
           'mais barato R$ 4,99/kg no Mercado Gama',
-        '- CAFE TORRADO 500G (≈ 0,5 kg): última vez R$ 18,90/un no Mercado Alfa em 17/09; ' +
+        '- CAFE TORRADO 500G (≈ 1 UN): última vez R$ 18,90/un no Mercado Alfa em 17/09; ' +
           'mais barato R$ 15,90/un no Mercado Beta',
         '',
         'Como da última vez: R$ 25,74',
@@ -463,7 +468,7 @@ describe('totais, agrupamento e cestas', () => {
         'Lista de compras · Cupom Esperto',
         '',
         'Mercado Beta: 1 item, R$ 16,50',
-        '- CAFE TORRADO 500G (≈ 0,5 kg): R$ 16,50',
+        '- CAFE TORRADO 500G (≈ 1 UN): R$ 16,50',
         '',
         'Mercado Gama: 1 item, R$ 6,84',
         '- BANANA PRATA KG (≈ 1,245 kg): R$ 6,84',

@@ -261,8 +261,8 @@ describe('itens de outras telas', () => {
       texto: 'LEITE INTEGRAL 1L',
       grupo: LEITE,
       quantidade: 2,
-      unidade: 'L',
-      base: 'L',
+      unidade: 'UN',
+      base: null,
       origem: 'historico',
     });
   });
@@ -381,7 +381,7 @@ describe('autocompletar', () => {
     expect(r[0]).toEqual({
       grupo: LEITE,
       descricao: 'LEITE INTEGRAL 1L',
-      quantidade: { valor: 2, unidade: 'L', base: 'L' },
+      quantidade: { valor: 2, unidade: 'UN', base: null },
     });
   });
 

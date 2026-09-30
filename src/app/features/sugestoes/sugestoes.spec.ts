@@ -245,7 +245,7 @@ describe('SugestaoItem', () => {
     expect(texto(el.querySelector(`label[for="${check.id}"]`))).toBe('LEITE INTEGRAL 1L');
     check.dispatchEvent(new Event('change'));
     const qtd = el.querySelector<HTMLInputElement>('input[type="number"]')!;
-    expect(qtd.getAttribute('aria-label')).toBe('Quantidade de LEITE INTEGRAL 1L (L)');
+    expect(qtd.getAttribute('aria-label')).toBe('Quantidade de LEITE INTEGRAL 1L (UN)');
     qtd.value = '3.5';
     qtd.dispatchEvent(new Event('change'));
     qtd.value = '0';

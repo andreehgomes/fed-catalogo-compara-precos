@@ -57,6 +57,12 @@ export function extrairConteudo(descricao: string): Conteudo | null {
   return null;
 }
 
+/** Unidade base quando a nota vende a granel (KG, G, L, ML…); `null` para UN, CX, PCT… */
+export function baseDoGranel(unidadeNota: string): UnidadeBase | null {
+  const vendidoPor = FATOR[semAcento(unidadeNota).toUpperCase().trim()];
+  return vendidoPor && vendidoPor.base !== 'un' ? vendidoPor.base : null;
+}
+
 export function precoPorUnidadeBase(
   vlUnit: number,
   unidadeNota: string,

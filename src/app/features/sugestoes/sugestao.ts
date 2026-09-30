@@ -1,5 +1,5 @@
 import type { DataIso, UnidadeBase } from '@shared/model';
-import { quantidadeNaUnidadeBase } from '@shared/unidade';
+import { baseDoGranel, quantidadeNaUnidadeBase } from '@shared/unidade';
 import {
   BaseComparacao,
   CENTAVO,
@@ -189,10 +189,15 @@ export function confianca(oc: readonly Ocasiao[], dias: readonly number[]): Conf
   return (['alta', 'media', 'baixa'] as const)[Math.min(2, nivel + (instavel ? 1 : 0))];
 }
 
+/**
+ * Só o que é vendido a granel vira kg/L: "AGUA 1L" comprada por UN é sugerida em UN (não existe
+ * embalagem de 1,5 L), e a mistura de tamanhos também fica na unidade comercial.
+ */
 function naBase(c: CompraPessoal): { valor: number; unidade: UnidadeBase } | null {
-  if (!c.porUnidade) return null;
-  const valor = quantidadeNaUnidadeBase(c.qtd, c.unidade, c.descricao);
-  return valor === null ? null : { valor, unidade: c.porUnidade.unidade };
+  const unidade = baseDoGranel(c.unidade);
+  return unidade
+    ? { valor: quantidadeNaUnidadeBase(c.qtd, c.unidade, c.descricao)!, unidade }
+    : null;
 }
 
 function arredondar(valor: number, unidade: string): number {
@@ -201,7 +206,7 @@ function arredondar(valor: number, unidade: string): number {
     : Math.max(1, Math.round(valor));
 }
 
-/** RF-06: mediana por ocasião, em kg/L/un quando todas as compras permitem. */
+/** RF-06: mediana por ocasião, em kg/L quando tudo foi comprado a granel; senão na unidade comercial. */
 export function quantidadeSugerida(oc: readonly Ocasiao[]): QuantidadeSugerida {
   const compras = oc.flatMap((o) => o.compras);
   const bases = compras.map(naBase);
