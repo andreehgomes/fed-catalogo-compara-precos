@@ -719,8 +719,9 @@ describe('HistoricoItem', () => {
     expect(painel.hidden).toBe(false);
     expect(painel.querySelectorAll('li')).toHaveLength(1);
     expect(texto(painel)).toContain('10/06/26 · Mercado A');
-    expect(texto(painel)).toContain('Menor que você pagou: R$ 18,90/un');
-    expect(texto(painel)).toContain('Média (1 compra): R$ 18,90/un');
+    expect(texto(painel)).toContain('Menor preço que você já pagou: R$ 18,90/un');
+    expect(texto(painel)).not.toContain('nesta compra');
+    expect(texto(painel)).toContain('Média da compra anterior: R$ 18,90/un');
     expect(botao(painel, 'Ver histórico completo').getAttribute('href')).toBe('/produtos/loc:1:1');
   });
 
@@ -728,8 +729,15 @@ describe('HistoricoItem', () => {
     const r = (await compararComFixture(ATUAL_H)).get(6)!;
     const { el } = criar(r);
     expect(texto(el)).toContain('Unidade diferente da última compra');
-    expect(texto(el)).not.toContain('Menor que você pagou');
+    expect(texto(el)).not.toContain('Menor preço');
     expect(el.querySelector('.cp-badge')).toBeNull();
+  });
+
+  it('quando baixou, o menor preço é o desta compra', async () => {
+    const r = (await compararComFixture(ATUAL_H)).get(2)!;
+    const { el } = criar(r);
+    expect(texto(el)).toContain('Menor preço que você já pagou: R$ 2,49/un (nesta compra)');
+    expect(texto(el)).toContain('Média da compra anterior: R$ 2,79/un');
   });
 
   it('primeira compra é neutra, sem badge nem expansão', () => {
@@ -804,6 +812,40 @@ describe('HistoricoPessoalStore', () => {
     expect(todas).toHaveBeenCalledOnce();
     expect(produtosPorIds).toHaveBeenCalledOnce();
     expect(await store.resumir([])).toEqual(new Map());
+  });
+
+  it('indiceCompleto: uma leitura por sessão, grupos entre mercados e invalidar()', async () => {
+    const soUmaVez = {
+      ...ATUAL_H,
+      chave: 'avulsa',
+      itens: [{ ...ATUAL_H.itens[0], produtoId: 'ean:7890000000001' as const }],
+    };
+    const { store, todas, produtosPorIds } = montarStore([...NOTAS_H, soUmaVez]);
+    const [a, b] = await Promise.all([store.indiceCompleto(), store.indiceCompleto()]);
+    expect(a).toBe(b);
+    expect(await store.indiceCompleto()).toBe(a);
+    expect(todas).toHaveBeenCalledOnce();
+    expect(produtosPorIds).toHaveBeenCalledOnce();
+    expect(produtosPorIds.mock.calls[0][0]).not.toContain('ean:7890000000001');
+    expect(a.grupos.get('loc:03644587000836:103')).toBe('ean:7896000000017');
+    expect(a.grupos.get('loc:11222333000181:201')).toBe('ean:7896000000017');
+    expect(a.indice.get('ean:7896000000017')!.map((c) => c.cnpj)).toEqual(
+      expect.arrayContaining(['03644587000836', '11222333000181']),
+    );
+    expect(a.indice.get('ean:7890000000001')).toHaveLength(1);
+
+    const versao = store.versao();
+    store.invalidar();
+    expect(store.versao()).toBe(versao + 1);
+    expect(await store.indiceCompleto()).not.toBe(a);
+    expect(todas).toHaveBeenCalledTimes(2);
+  });
+
+  it('indiceCompleto: falha não fica em cache', async () => {
+    const { store, todas } = montarStore();
+    todas.mockRejectedValueOnce(new Error('offline'));
+    await expect(store.indiceCompleto()).rejects.toThrow('offline');
+    await expect(store.indiceCompleto()).resolves.toMatchObject({ notas: NOTAS_H });
   });
 
   it('falha na leitura não fica em cache; sem usuário rejeita', async () => {

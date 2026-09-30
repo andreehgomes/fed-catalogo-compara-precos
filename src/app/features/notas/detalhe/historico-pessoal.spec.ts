@@ -4,6 +4,7 @@ import produtosJson from '../../../../testing/fixtures/notas-historico/produtos.
 import {
   CompraPessoal,
   ComparacaoHistorico,
+  baseComum,
   compararItem,
   compararNota,
   comValores,
@@ -14,6 +15,7 @@ import {
   indexarCompras,
   montarGrupos,
   resumirHistorico,
+  unidadeNormalizada,
 } from './historico-pessoal';
 
 const NOTAS = notasJson as Nota[];
@@ -202,7 +204,7 @@ describe('compararItem', () => {
     expect(r).toEqual({ tipo: 'primeira-compra' });
   });
 
-  it('referência é a última anterior; menor, média e vezes sobre as anteriores', () => {
+  it('referência é a última anterior; menor conta esta compra, média e vezes só as anteriores', () => {
     const compras = [
       compra({ chave: 'depois', emissao: '2026-09-20T00:00:00.000Z', vlUnit: 1 }),
       compra({ chave: 'c3', emissao: '2026-08-20T00:00:00.000Z', vlUnit: 12 }),
@@ -212,7 +214,9 @@ describe('compararItem', () => {
     const r = comValores(compararItem(item({ vlUnit: 10 }), NOTA, compras))!;
     expect(r.referencia.chave).toBe('c3');
     expect(r.tipo).toBe('mais-barato');
-    expect(r).toMatchObject({ menor: 9, media: 10.67, vezes: 3 });
+    expect(r).toMatchObject({ menor: 9, menorNestaCompra: false, media: 10.67, vezes: 3 });
+    const minimo = comValores(compararItem(item({ vlUnit: 8 }), NOTA, compras))!;
+    expect(minimo).toMatchObject({ menor: 8, menorNestaCompra: true, media: 10.67 });
     expect(r.compras.map((c) => c.chave)).toEqual(['c3', 'c2', 'c1']);
   });
 
@@ -273,6 +277,65 @@ describe('compararItem', () => {
     const r = comValores(compararItem(item({}), NOTA, compras))!;
     expect(r.compras).toHaveLength(5);
     expect(r.vezes).toBe(8);
+  });
+});
+
+describe('baseComum', () => {
+  const d = (dia: number) => `2026-08-${String(dia).padStart(2, '0')}T12:00:00.000Z`;
+  const aceitas = (compras: CompraPessoal[]) => {
+    const b = baseComum(compras)!;
+    return { base: b.base, aceitas: compras.filter(b.aceita).map((c) => b.valor(c)) };
+  };
+
+  it('sem compras não há base', () => {
+    expect(baseComum([])).toBeNull();
+  });
+
+  it('mesma unidade e conteúdo: vlUnit', () => {
+    const compras = [compra({ emissao: d(1), vlUnit: 10 }), compra({ emissao: d(9), vlUnit: 12 })];
+    expect(aceitas(compras)).toEqual({ base: 'unidade', aceitas: [10, 12] });
+  });
+
+  it('granel em kg: vlUnit, que já é R$/kg', () => {
+    const kg = { unidade: 'KG', descricao: 'BANANA PRATA KG' };
+    const compras = [
+      compra({ ...kg, emissao: d(2), vlUnit: 5.49, porUnidade: { valor: 5.49, unidade: 'kg' } }),
+      compra({ ...kg, emissao: d(1), vlUnit: 4.99, porUnidade: { valor: 4.99, unidade: 'kg' } }),
+    ];
+    expect(aceitas(compras)).toEqual({ base: 'unidade', aceitas: [5.49, 4.99] });
+  });
+
+  it('embalagens diferentes: R$ por unidade base aceita as duas', () => {
+    const compras = [
+      compra({
+        emissao: d(9),
+        descricao: 'DETERGENTE 1L',
+        vlUnit: 6,
+        porUnidade: { valor: 6, unidade: 'L' },
+      }),
+      compra({
+        emissao: d(1),
+        descricao: 'DETERGENTE 500ML',
+        vlUnit: 2.5,
+        porUnidade: { valor: 5, unidade: 'L' },
+      }),
+    ];
+    expect(aceitas(compras)).toEqual({ base: 'L', aceitas: [6, 5] });
+  });
+
+  it('UN × KG sem unidade base: a incompatível fica fora', () => {
+    const compras = [
+      compra({ emissao: d(9), descricao: 'MAMAO', vlUnit: 7 }),
+      compra({
+        emissao: d(1),
+        descricao: 'MAMAO',
+        unidade: 'KG',
+        vlUnit: 5,
+        porUnidade: { valor: 5, unidade: 'kg' },
+      }),
+    ];
+    expect(aceitas(compras)).toEqual({ base: 'unidade', aceitas: [7] });
+    expect(unidadeNormalizada(' kg ')).toBe('KG');
   });
 });
 

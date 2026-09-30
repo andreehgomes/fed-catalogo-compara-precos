@@ -4,8 +4,8 @@ name: Deploy
 # Publica Hosting, Functions, regras e índices do Firestore com a conta
 # github-action-<id do repo> (secret FIREBASE_SERVICE_ACCOUNT_FED_CATALOGO_COMPARA_PRECOS(_DV)),
 # que além dos papéis do `firebase init hosting:github` precisa de firebase.admin,
-# cloudfunctions.admin, run.admin, cloudscheduler.admin, artifactregistry.admin e
-# iam.serviceAccountUser.
+# cloudfunctions.admin, run.admin, cloudscheduler.admin, artifactregistry.admin,
+# secretmanager.admin (secret ANTHROPIC_API_KEY) e iam.serviceAccountUser.
 
 on:
   workflow_run:

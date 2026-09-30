@@ -1,9 +1,11 @@
-import { Injectable, inject } from '@angular/core';
+import { Injectable, inject, signal } from '@angular/core';
 import type { Nota, Produto } from '@shared/model';
 import { AuthStore } from '../../../core/auth/auth.store';
 import { ProdutosService } from '../../produtos/data-access/produtos.service';
 import {
+  CompraPessoal,
   ComparacaoHistorico,
+  Grupos,
   ResumoHistorico,
   compararNota,
   consolidarItens,
@@ -15,6 +17,12 @@ import { NotasService } from './notas.service';
 
 export const JANELA_HISTORICO_MESES = 12;
 export const MAX_PAGINAS_HISTORICO = 20;
+
+export interface IndiceCompleto {
+  notas: Nota[];
+  grupos: Grupos;
+  indice: Map<string, CompraPessoal[]>;
+}
 
 interface CacheNotas {
   uid: string;
@@ -39,6 +47,10 @@ export class HistoricoPessoalStore {
   private readonly auth = inject(AuthStore);
 
   private cache: CacheNotas | null = null;
+  private completo: { de: Promise<Nota[]>; indice: Promise<IndiceCompleto> } | null = null;
+  private readonly _versao = signal(0);
+  /** Muda a cada `invalidar()`, para quem deriva do histórico recarregar. */
+  readonly versao = this._versao.asReadonly();
   private readonly produtosCache = new Map<string, Produto | null>();
   private readonly membrosCache = new Map<string, Produto[]>();
   /** Chaves que já provocaram uma releitura: evita reler a cada abertura se passar de 400 notas. */
@@ -46,7 +58,7 @@ export class HistoricoPessoalStore {
 
   async comparar(nota: Nota): Promise<Map<number, ComparacaoHistorico>> {
     const notas = await this.notasCom([nota]);
-    const grupos = await this.grupos([nota]);
+    const grupos = await this.gruposDe(idsDe([nota]));
     return compararNota(nota, indexarCompras(notas, grupos), grupos);
   }
 
@@ -54,7 +66,7 @@ export class HistoricoPessoalStore {
   async resumir(alvo: readonly Nota[]): Promise<Map<string, ResumoHistorico>> {
     if (!alvo.length) return new Map();
     const notas = await this.notasCom(alvo);
-    const grupos = await this.grupos(alvo);
+    const grupos = await this.gruposDe(idsDe(alvo));
     const indice = indexarCompras(notas, grupos);
     return new Map(
       alvo.map((n) => [
@@ -64,10 +76,33 @@ export class HistoricoPessoalStore {
     );
   }
 
+  /**
+   * Todas as compras da janela com os grupos de equivalência resolvidos (sugestão de compra).
+   * Só busca o grupo de `loc:` e de produto visto em 2 notas ou mais (RNF-01): o `ean:`
+   * comprado uma vez fica como o próprio grupo.
+   */
+  indiceCompleto(): Promise<IndiceCompleto> {
+    const de = this.notas();
+    if (this.completo?.de !== de) {
+      const indice = de.then(async (notas) => {
+        const grupos = await this.gruposDe(idsParaResolver(notas));
+        return { notas, grupos, indice: indexarCompras(notas, grupos) };
+      });
+      const completo = { de, indice };
+      indice.catch(() => {
+        if (this.completo === completo) this.completo = null;
+      });
+      this.completo = completo;
+    }
+    return this.completo.indice;
+  }
+
   invalidar(): void {
     this.cache = null;
+    this.completo = null;
     this.produtosCache.clear();
     this.membrosCache.clear();
+    this._versao.update((v) => v + 1);
   }
 
   /** Relê uma vez se alguma nota da janela ainda não está no cache (chegou depois da leitura). */
@@ -100,8 +135,7 @@ export class HistoricoPessoalStore {
     return this.cache.notas;
   }
 
-  private async grupos(notas: readonly Nota[]): Promise<Map<string, string>> {
-    const ids = [...new Set(notas.flatMap((n) => n.itens.map((i) => i.produtoId as string)))];
+  private async gruposDe(ids: readonly string[]): Promise<Map<string, string>> {
     const faltando = ids.filter((id) => !this.produtosCache.has(id));
     if (faltando.length) {
       const achados = await this.produtos.produtosPorIds(faltando);
@@ -125,4 +159,18 @@ export class HistoricoPessoalStore {
       canonicos.flatMap((c) => this.membrosCache.get(c) ?? []),
     );
   }
+}
+
+function idsDe(notas: readonly Nota[]): string[] {
+  return [...new Set(notas.flatMap((n) => n.itens.map((i) => i.produtoId as string)))];
+}
+
+function idsParaResolver(notas: readonly Nota[]): string[] {
+  const vezes = new Map<string, number>();
+  for (const n of notas) {
+    for (const id of new Set(n.itens.map((i) => i.produtoId as string))) {
+      vezes.set(id, (vezes.get(id) ?? 0) + 1);
+    }
+  }
+  return [...vezes].filter(([id, v]) => id.startsWith('loc:') || v >= 2).map(([id]) => id);
 }

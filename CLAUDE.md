@@ -68,7 +68,7 @@ supermercado do Paraná pelo QR Code do cupom e compara preços entre mercados.
 
 **Rotas:** `/login`, `/cadastro`, `/redefinir-senha` (fora do shell); dentro do shell
 com `authGuard`: `/` (painel), `/importar`, `/importar/preview`, `/notas`,
-`/notas/:chave`, `/regiao`, `/produtos`, `/produtos/:id`, `/estabelecimentos`,
+`/notas/:chave`, `/sugestoes`, `/regiao`, `/produtos`, `/produtos/:id`, `/estabelecimentos`,
 `/estabelecimentos/:cnpj`; `**` → página de erro.
 
 ## PWA e CI
@@ -206,9 +206,10 @@ erro (`**`) ficam fora dele.
   `inert`.
 - Header sticky (fora da área de rolagem) e **scroll interno em `.cp-content`**.
 - `BreakpointService.estreito` (`matchMedia('(max-width: 900px)')`) decide o modo.
-- No celular, **FAB "Importar nota"** fixo.
-- Itens: Painel, Importar nota, Minhas notas, Preços perto de mim, Produtos,
-  Estabelecimentos (`ITENS_NAV`) e Sair.
+- No celular, **FAB "Importar nota"** fixo (some em `/importar` e `/sugestoes`, que têm ação
+  fixa no rodapé).
+- Itens: Painel, Importar nota, Minhas notas, Sugestão de compra, Preços perto de mim,
+  Produtos, Estabelecimentos (`ITENS_NAV`) e Sair.
 - Telas ainda não implementadas usam `features/em-breve` (título pela `data.secao`
   da rota).
 
@@ -310,6 +311,35 @@ Instale as dependências **de dentro da pasta** (`cd functions && npm install`):
   (`separarDivergentes`) e economia potencial = Σ diferença × qtd. Item sem EAN usa a
   busca por texto (`equivalentesPorTexto`: Jaccard ≥ 0,3 + mesmo conteúdo) marcada como
   "aproximado". Menor Preço fora → para e mostra aviso único.
+
+## Sugestão de compra
+
+Tela `/sugestoes` (plano `docs/plano/sugestao-compra-plano.md`): o que o usuário costuma
+recomprar, **só com os preços das notas dele** (sem `precos` comunitário nem Menor Preço, D-05).
+Tudo no cliente, nada gravado no Firestore.
+
+- Regra pura em `features/sugestoes/sugestao.ts` (constantes `MIN_OCASIOES`, `JUNTAR_DIAS`,
+  `CICLO_MIN_DIAS`/`CICLO_MAX_DIAS`, `EM_BREVE_A_PARTIR`, `PAROU_ACIMA`, `CV_INSTAVEL`,
+  `DIAS_HORIZONTE`): ocasiões (< 2 dias juntam), ciclo = mediana dos intervalos, estado
+  `repor`/`em-breve`/`parou` pelo atraso e pelo horizonte, confiança, quantidade (mediana, em
+  kg/L/un quando dá), faixa último/mais barato/mais caro (`baseComum` de `historico-pessoal.ts`),
+  totais, agrupamento por mercado mais barato (último preço em cada `cnpj`) e cestas "um mercado
+  só". `hoje` sempre por parâmetro; 100 % de cobertura com a fixture
+  `src/testing/fixtures/sugestao/`.
+- Dados: `HistoricoPessoalStore.indiceCompleto()` (mesmo cache de notas da sessão; resolve grupo
+  só de `loc:` e de produto em ≥ 2 notas). `versao` muda no `invalidar()` e recarrega o
+  `SugestoesStore` (root: `resource` + `computed`, seleção em `linkedSignal` que reinicia ao
+  trocar o horizonte).
+- Data de referência pelo token `RELOGIO` (`core/relogio.ts`), que os testes fixam.
+- "Já tenho"/"Não sugerir mais": `DispensadosService`, `localStorage`
+  `cp-sugestao-dispensados:<uid>`; `AuthStore.sair()` apaga essas chaves
+  (`limparDispensados`).
+- Confiança baixa (2 ocasiões ou intervalos irregulares) aparece nas seções normais, marcada
+  "estimativa com N compras": com pouco histórico é tudo o que há. Período sem nada mostra
+  "Ver o próximo mês (N itens)" (`SugestoesStore.noProximoMes`).
+- Query params `horizonte` (`hoje|semana|quinzena|mes`) e `visao` (`lista|mercado`), padrão fora da
+  URL. "Copiar lista"/"Compartilhar" (`navigator.share`) com `textoDaLista`.
+- Painel: `<cp-hora-de-repor>` (até 5 vencidos) em `@defer (on viewport)`.
 
 ## Produtos, estabelecimentos e painel
 

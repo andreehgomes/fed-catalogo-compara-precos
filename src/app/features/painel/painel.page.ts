@@ -8,6 +8,7 @@ import { NotasService } from '../notas/data-access/notas.service';
 import { intervaloDe } from '../notas/lista/periodo';
 import { PendentesBloco } from '../notas/ui/pendentes-bloco';
 import { ProdutosService } from '../produtos/data-access/produtos.service';
+import { HoraDeRepor } from './hora-de-repor';
 import { economiaPotencial, totalDe, variacao } from './painel.calculos';
 
 @Component({
@@ -17,6 +18,7 @@ import { economiaPotencial, totalDe, variacao } from './painel.calculos';
     DatePipe,
     DecimalPipe,
     EmptyState,
+    HoraDeRepor,
     MatIconModule,
     PendentesBloco,
     RouterLink,

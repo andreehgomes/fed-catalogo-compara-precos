@@ -60,7 +60,12 @@ describe('Shell', () => {
 
   it('estreito: FAB some nas telas de importação (não cobre o "Confirmar importação")', async () => {
     const { fixture, el, router } = await montar(true);
-    for (const url of ['/importar', '/importar/preview', '/importar?x=1']) {
+    for (const url of [
+      '/importar',
+      '/importar/preview',
+      '/importar?x=1',
+      '/sugestoes?visao=mercado',
+    ]) {
       await router.navigateByUrl(url);
       fixture.detectChanges();
       expect(el.querySelector('.cp-fab')).toBeNull();

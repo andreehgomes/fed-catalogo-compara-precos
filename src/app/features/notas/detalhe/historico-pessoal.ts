@@ -42,7 +42,11 @@ export interface ComparacaoComValores {
   percentual: number;
   /** Diferença × quantidade desta nota, com sinal. */
   impacto: number;
+  /** Menor valor já pago, contando esta compra. */
   menor: number;
+  /** Esta compra é (ou empata com) a mais barata. */
+  menorNestaCompra: boolean;
+  /** Média e quantidade das compras anteriores (sem esta). */
   media: number;
   vezes: number;
   compras: CompraPessoal[];
@@ -77,7 +81,7 @@ function centavos(n: number): number {
   return Math.round(n * 100) / 100;
 }
 
-function unidadeNormalizada(unidade: string): string {
+export function unidadeNormalizada(unidade: string): string {
   return semAcento(unidade).toUpperCase().trim();
 }
 
@@ -167,37 +171,65 @@ function conteudoCompativel(a: string, b: string): boolean {
   );
 }
 
-interface Base {
+export interface BaseComum {
   base: BaseComparacao;
   valor: (c: { vlUnit: number; porUnidade: PrecoPorUnidade | null }) => number;
   aceita: (c: CompraPessoal) => boolean;
+}
+
+interface Base extends BaseComum {
   quantidade: number;
 }
+
+function mesmaUnidadeQue(
+  unidade: string,
+  descricao: string,
+): (c: Pick<CompraPessoal, 'unidade' | 'descricao'>) => boolean {
+  const un = unidadeNormalizada(unidade);
+  return (c) => unidadeNormalizada(c.unidade) === un && conteudoCompativel(descricao, c.descricao);
+}
+
+function porUnidadeBase(unidade: UnidadeBase): BaseComum {
+  return {
+    base: unidade,
+    valor: (c) => c.porUnidade!.valor,
+    aceita: (c) => c.porUnidade?.unidade === unidade,
+  };
+}
+
+const PELO_VL_UNIT = (c: { vlUnit: number }) => c.vlUnit;
 
 /**
  * RF-05: mesma unidade comercial com o mesmo conteúdo → `vlUnit`; senão R$/unidade base
  * dos dois lados; senão não há comparação.
  */
 function escolherBase(item: ItemNota, ref: CompraPessoal): Base | null {
-  const un = unidadeNormalizada(item.unidade);
-  const mesmaUnidade = (c: CompraPessoal) =>
-    unidadeNormalizada(c.unidade) === un && conteudoCompativel(item.descricao, c.descricao);
+  const mesmaUnidade = mesmaUnidadeQue(item.unidade, item.descricao);
   if (mesmaUnidade(ref)) {
-    return { base: 'unidade', valor: (c) => c.vlUnit, aceita: mesmaUnidade, quantidade: item.qtd };
+    return { base: 'unidade', valor: PELO_VL_UNIT, aceita: mesmaUnidade, quantidade: item.qtd };
   }
   const pu = item.precoPorUnidadeBase;
   if (pu && ref.porUnidade?.unidade === pu.unidade) {
     const quantidade = quantidadeNaUnidadeBase(item.qtd, item.unidade, item.descricao);
-    if (quantidade !== null) {
-      return {
-        base: pu.unidade,
-        valor: (c) => c.porUnidade!.valor,
-        aceita: (c) => c.porUnidade?.unidade === pu.unidade,
-        quantidade,
-      };
-    }
+    if (quantidade !== null) return { ...porUnidadeBase(pu.unidade), quantidade };
   }
   return null;
+}
+
+/**
+ * Base em que as compras podem ser comparadas, tomando a mais recente como referência: `vlUnit`
+ * (mesma unidade comercial e conteúdo compatível) ou R$/unidade base, a que aceitar mais
+ * compras (no empate, `vlUnit`). As compras que a base não aceita ficam de fora.
+ */
+export function baseComum(compras: readonly CompraPessoal[]): BaseComum | null {
+  if (!compras.length) return null;
+  const ref = compras.reduce((a, b) => (b.emissao > a.emissao ? b : a));
+  const mesmaUnidade = mesmaUnidadeQue(ref.unidade, ref.descricao);
+  const porVlUnit: BaseComum = { base: 'unidade', valor: PELO_VL_UNIT, aceita: mesmaUnidade };
+  if (!ref.porUnidade) return porVlUnit;
+  const porBase = porUnidadeBase(ref.porUnidade.unidade);
+  const contar = (b: BaseComum) => compras.filter(b.aceita).length;
+  return contar(porBase) > contar(porVlUnit) ? porBase : porVlUnit;
 }
 
 /** RF-03: compara com a última compra do mesmo produto antes desta nota. */
@@ -228,7 +260,8 @@ export function compararItem(
     diferenca: igual ? 0 : centavos(bruto),
     percentual: igual || !valorAnterior ? 0 : Math.round((bruto / valorAnterior) * 1000) / 10,
     impacto: igual ? 0 : centavos(bruto * base.quantidade),
-    menor: Math.min(...valores),
+    menor: Math.min(valorAtual, ...valores),
+    menorNestaCompra: valorAtual < Math.min(...valores) + CENTAVO,
     media: centavos(valores.reduce((s, v) => s + v, 0) / valores.length),
     vezes: valores.length,
     compras: recentes,

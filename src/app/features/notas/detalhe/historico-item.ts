@@ -70,8 +70,15 @@ let proximoId = 0;
           </ul>
           @if (valores(); as v) {
             <p>
-              Menor que você pagou: <strong>{{ v.menor | currency }}{{ sufixo() }}</strong> · Média
-              ({{ v.vezes }} {{ v.vezes === 1 ? 'compra' : 'compras' }}):
+              Menor preço que você já pagou:
+              <strong>{{ v.menor | currency }}{{ sufixo() }}</strong>
+              @if (v.menorNestaCompra) {
+                (nesta compra)
+              }
+            </p>
+            <p>
+              Média
+              {{ v.vezes === 1 ? 'da compra anterior' : 'das ' + v.vezes + ' compras anteriores' }}:
               <strong>{{ v.media | currency }}{{ sufixo() }}</strong>
             </p>
           }

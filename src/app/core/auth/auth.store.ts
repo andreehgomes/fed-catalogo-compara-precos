@@ -48,6 +48,7 @@ export class AuthStore {
 
   async sair(): Promise<void> {
     await this.api.signOut(this.auth);
+    limparDispensados();
   }
 
   async redefinirSenha(email: string): Promise<void> {
@@ -56,6 +57,19 @@ export class AuthStore {
 }
 
 const MARCA_REDIRECT = 'cp-login-google-redirect';
+
+/** Prefixo das chaves `<prefixo><uid>` dos itens dispensados da sugestão de compra. */
+export const PREFIXO_DISPENSADOS = 'cp-sugestao-dispensados:';
+
+/** O que o usuário dispensou na sugestão de compra não fica no aparelho depois de sair. */
+export function limparDispensados(): void {
+  try {
+    const chaves = Array.from({ length: localStorage.length }, (_, i) => localStorage.key(i));
+    for (const k of chaves) if (k?.startsWith(PREFIXO_DISPENSADOS)) localStorage.removeItem(k);
+  } catch {
+    /* sem storage: nada foi guardado */
+  }
+}
 
 /** Só completa o redirect do Google quando foi este app que o iniciou (evita o iframe no boot). */
 function marcarRedirect(): void {

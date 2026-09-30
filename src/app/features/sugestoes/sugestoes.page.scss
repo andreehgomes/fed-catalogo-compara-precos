@@ -1,0 +1,78 @@
+@use '../../shared/style/tokens' as *;
+@use '../../shared/style/breakpoints' as *;
+
+.sug-resumo {
+  margin: 0;
+  font-size: 14px;
+  color: $cp-text-secondary;
+
+  strong {
+    color: $cp-text;
+  }
+}
+
+.cp-info-block p {
+  margin: 0 0 8px;
+}
+
+.sug-controles {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px 24px;
+}
+
+.sug-controle {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  min-width: 0;
+}
+
+.sug-skeleton {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+
+  .cp-skeleton {
+    height: 96px;
+  }
+}
+
+.sug-acoes {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+
+  @include mobile {
+    position: fixed;
+    right: 0;
+    bottom: 0;
+    left: 0;
+    z-index: 5;
+    padding: 10px 16px max(10px, env(safe-area-inset-bottom));
+    border-top: 1px solid $cp-border;
+    background: $cp-surface;
+    box-shadow: $cp-shadow-card;
+
+    button {
+      flex: 1;
+    }
+  }
+}
+
+.sug-pagina {
+  @include mobile {
+    padding-bottom: 96px;
+  }
+}
+
+.sug-vazio {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+
+  p {
+    margin: 0;
+  }
+}

@@ -78,8 +78,10 @@ describe('AuthStore', () => {
     expect(fake.api.updateProfile).toHaveBeenCalledTimes(1);
     await store.redefinirSenha('a@b.com');
     expect(fake.api.sendPasswordResetEmail).toHaveBeenCalledWith(auth, 'a@b.com');
+    localStorage.setItem('cp-sugestao-dispensados:u1', '{}');
     await store.sair();
     expect(fake.api.signOut).toHaveBeenCalledWith(auth);
+    expect(localStorage.getItem('cp-sugestao-dispensados:u1')).toBeNull();
   });
 
   it('entra com Google por popup, escolhendo a conta', async () => {

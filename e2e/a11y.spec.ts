@@ -46,7 +46,15 @@ test.describe('acessibilidade com login (usuário de teste no dv)', () => {
     await entrar(page);
   });
 
-  for (const rota of ['/', '/importar', '/notas', '/regiao', '/produtos', '/estabelecimentos']) {
+  for (const rota of [
+    '/',
+    '/importar',
+    '/notas',
+    '/sugestoes',
+    '/regiao',
+    '/produtos',
+    '/estabelecimentos',
+  ]) {
     test(`axe sem violações graves em ${rota}`, async ({ page }) => {
       await page.goto(rota);
       await expect(page.getByRole('main')).toBeVisible();

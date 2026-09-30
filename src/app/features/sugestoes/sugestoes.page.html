@@ -1,0 +1,134 @@
+<main class="cp-page sug-pagina">
+  <header class="cp-page-header">
+    <div>
+      <h1>Sugestão de compra</h1>
+      <p>O que costuma acabar, pelas suas notas, com os preços que você mesmo pagou.</p>
+    </div>
+  </header>
+
+  @if (store.carregando()) {
+    <div class="sug-skeleton" role="status">
+      <span class="cp-sr-only">Carregando a sugestão…</span>
+      <div class="cp-skeleton" aria-hidden="true"></div>
+      <div class="cp-skeleton" aria-hidden="true"></div>
+      <div class="cp-skeleton" aria-hidden="true"></div>
+    </div>
+  } @else if (store.erro()) {
+    <div class="cp-info-block cp-info-block--erro" role="alert">
+      <mat-icon aria-hidden="true">cloud_off</mat-icon>
+      <div>
+        <p>Não foi possível carregar suas notas. Verifique a conexão.</p>
+        <button type="button" class="cp-btn-secondary" (click)="store.recarregar()">
+          Tentar de novo
+        </button>
+      </div>
+    </div>
+  } @else if (store.insuficiente()) {
+    <cp-empty-state
+      icone="event_repeat"
+      titulo="Ainda não dá para sugerir"
+      texto="Importe suas notas por algumas semanas; a sugestão aparece quando um produto se repete."
+    >
+      <a class="cp-btn-primary" routerLink="/importar">
+        <mat-icon aria-hidden="true">qr_code_scanner</mat-icon>
+        Importar nota
+      </a>
+    </cp-empty-state>
+  } @else {
+    @if (!vazio()) {
+      <p class="sug-resumo" role="status">
+        {{ store.selecionados().length }}
+        {{ store.selecionados().length === 1 ? 'item' : 'itens' }} para repor · total estimado
+        <strong>{{ store.totais().comoDaUltimaVez | currency }}</strong> · janela de 12 meses
+      </p>
+    }
+
+    <div class="sug-controles">
+      <div class="sug-controle">
+        <span class="cp-label" id="sug-horizonte">Para comprar</span>
+        <div class="cp-segmented" role="group" aria-labelledby="sug-horizonte">
+          @for (h of horizontes; track h.valor) {
+            <button
+              type="button"
+              [attr.aria-pressed]="horizonteAtual() === h.valor"
+              (click)="escolherHorizonte(h.valor)"
+            >
+              {{ h.rotulo }}
+            </button>
+          }
+        </div>
+      </div>
+      <div class="sug-controle">
+        <span class="cp-label" id="sug-visao">Ver como</span>
+        <div class="cp-segmented" role="group" aria-labelledby="sug-visao">
+          @for (v of visoes; track v.valor) {
+            <button
+              type="button"
+              [attr.aria-pressed]="visaoAtual() === v.valor"
+              (click)="escolherVisao(v.valor)"
+            >
+              {{ v.rotulo }}
+            </button>
+          }
+        </div>
+      </div>
+    </div>
+
+    @if (vazio()) {
+      <div class="cp-empty-inline sug-vazio">
+        <p>Nada para repor {{ rotuloVazio() }}.</p>
+        @if (store.noProximoMes(); as n) {
+          <button type="button" class="cp-btn-secondary" (click)="escolherHorizonte('mes')">
+            Ver o próximo mês ({{ n }} {{ n === 1 ? 'item' : 'itens' }})
+          </button>
+        }
+      </div>
+    }
+    @if (!vazio() || store.parou().length || store.ocultos().length) {
+      @switch (visaoAtual()) {
+        @case ('mercado') {
+          <cp-por-mercado [grupos]="store.porMercado()" [cestas]="store.cestas()" />
+        }
+        @default {
+          <cp-lista-completa
+            [repor]="store.repor()"
+            [emBreve]="store.emBreve()"
+            [parou]="store.parou()"
+            [ocultos]="store.ocultos()"
+            [selecao]="store.selecao()"
+            [quantidades]="store.quantidades()"
+            [totais]="store.totais()"
+            (alternar)="store.alternar($event)"
+            (quantidade)="store.definirQuantidade($event.grupo, $event.valor)"
+            (jaTenho)="store.marcarJaTenho($event)"
+            (naoSugerir)="store.naoSugerir($event)"
+            (voltarASugerir)="store.voltarASugerir($event)"
+          />
+        }
+      }
+
+      <div class="sug-acoes">
+        <button
+          type="button"
+          class="cp-btn-primary"
+          [disabled]="!store.selecionados().length"
+          (click)="copiar()"
+        >
+          <mat-icon aria-hidden="true">content_copy</mat-icon>
+          Copiar lista
+        </button>
+        @if (podeCompartilhar) {
+          <button
+            type="button"
+            class="cp-btn-secondary"
+            [disabled]="!store.selecionados().length"
+            (click)="compartilhar()"
+          >
+            <mat-icon aria-hidden="true">share</mat-icon>
+            Compartilhar
+          </button>
+        }
+      </div>
+    }
+  }
+</main>
