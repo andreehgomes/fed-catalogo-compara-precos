@@ -1,7 +1,13 @@
 import { logger } from 'firebase-functions';
 
 export type EtapaImportacao =
-  'preview' | 'confirmacao' | 'enfileiramento' | 'reprocessamento' | 'vinculo';
+  | 'preview'
+  | 'confirmacao'
+  | 'enfileiramento'
+  | 'reprocessamento'
+  | 'vinculo'
+  | 'cnpj'
+  | 'apelido';
 
 export interface RegistroImportacao {
   etapa: EtapaImportacao;

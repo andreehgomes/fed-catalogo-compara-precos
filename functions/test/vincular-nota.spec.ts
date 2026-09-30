@@ -156,7 +156,7 @@ describe('vínculo na gravação da nota (etiquetas + IA)', () => {
     ctx.classificarVinculos.mockRejectedValue(new Error('timeout'));
     const r = await gravarNota(ctx, 'u', nota(['REFR COCA COLA 2L']), { veioDaFila: false });
 
-    expect(r).toEqual({ jaExistia: false, publicou: true });
+    expect(r).toEqual({ jaExistia: false, publicou: true, apelidoNovo: false });
     expect(await ctx.repo.obter(`usuarios/u/notas/${CHAVE}`)).not.toBeNull();
     expect(await ctx.repo.obter(`precos/${CHAVE}_1`)).not.toBeNull();
     expect((await produto(ctx, novo(1)))?.vinculadoA).toBeNull();

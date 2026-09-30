@@ -274,6 +274,24 @@ describe('resumirPrecos (seed 3 estabelecimentos × 6 datas)', () => {
     expect(resumirPrecos([], estab)).toBeNull();
   });
 
+  it('apelidos do usuário vencem o nome fantasia e a razão social', () => {
+    const r = resumirPrecos(
+      precos,
+      estab,
+      new Set(),
+      new Map([
+        ['B', 'Bom Preço da Esquina'],
+        ['C', 'Mercadinho C'],
+      ]),
+    )!;
+    expect(r.porEstabelecimento.map((e) => e.nome)).toEqual([
+      'Bom Preço da Esquina',
+      'Mercado A',
+      'Mercadinho C',
+    ]);
+    expect(r.series.map((s) => s.nome)).toContain('Mercadinho C');
+  });
+
   it('sem unidade base comum, não mostra o preço por unidade', () => {
     const mistos = precos.map((p, i) => (i % 2 ? { ...p, precoPorUnidadeBase: null } : p));
     const r = resumirPrecos(mistos, estab)!;

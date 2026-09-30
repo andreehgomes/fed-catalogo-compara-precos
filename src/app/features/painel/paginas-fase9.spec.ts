@@ -3,14 +3,17 @@ import { TestBed } from '@angular/core/testing';
 import { MAT_DIALOG_DATA, MatDialog, MatDialogRef } from '@angular/material/dialog';
 import { MatSnackBar } from '@angular/material/snack-bar';
 import { provideRouter } from '@angular/router';
+import { nomeExibido } from '@shared/apelido';
 import type { Estabelecimento, Nota, Produto, ProdutoId } from '@shared/model';
 import { of } from 'rxjs';
 import { vi } from 'vitest';
-import { botao, texto } from '../../../testing/dom';
+import { botao, digitar, porRotulo, texto } from '../../../testing/dom';
 import { AuthStore } from '../../core/auth/auth.store';
+import { ApelidosService } from '../estabelecimentos/data-access/apelidos.service';
 import { EstabelecimentosService } from '../estabelecimentos/data-access/estabelecimentos.service';
 import EstabelecimentoDetalhePage from '../estabelecimentos/detalhe/estabelecimento-detalhe.page';
 import EstabelecimentosListaPage from '../estabelecimentos/lista/estabelecimentos-lista.page';
+import { RenomearDialog } from '../estabelecimentos/renomear/renomear-dialog';
 import { NotasService } from '../notas/data-access/notas.service';
 import { PendentesService } from '../notas/data-access/pendentes.service';
 import { ProdutosService } from '../produtos/data-access/produtos.service';
@@ -51,7 +54,12 @@ function nota(chave: string, total: number): Nota {
   };
 }
 
+let apelidos = signal<ReadonlyMap<string, string>>(new Map());
+let definir = vi.fn();
+
 function base(providers: unknown[]) {
+  apelidos = signal(new Map());
+  definir = vi.fn();
   TestBed.configureTestingModule({
     providers: [
       provideRouter([]),
@@ -61,6 +69,14 @@ function base(providers: unknown[]) {
       },
       { provide: PendentesService, useValue: { pendentes: signal([]) } },
       { provide: MatSnackBar, useValue: { open: vi.fn() } },
+      {
+        provide: ApelidosService,
+        useValue: {
+          apelidos: () => apelidos(),
+          nome: (e: Estabelecimento) => nomeExibido(e, apelidos().get(e.cnpj)),
+          definir: (...a: unknown[]) => definir(...a),
+        },
+      },
       ...(providers as never[]),
     ],
   });
@@ -297,6 +313,34 @@ describe('Estabelecimentos', () => {
     atualizadoEm: hoje,
   });
 
+  it('lista mostra o apelido e a busca acha por ele', async () => {
+    base([
+      {
+        provide: EstabelecimentosService,
+        useValue: {
+          listar: vi.fn(async () => ({
+            itens: [estab('A', 'CONDOR SUPER CENTER LTDA'), estab('B', 'Muffato')],
+            cursor: null,
+            temMais: false,
+          })),
+        },
+      },
+    ]);
+    apelidos.set(new Map([['A', 'Condor Pinheirinho']]));
+    const { el, fixture } = await renderizar(EstabelecimentosListaPage);
+    expect(texto(el.querySelector('ul'))).toContain('Condor Pinheirinho');
+    expect(texto(el.querySelector('ul'))).not.toContain('CONDOR SUPER CENTER');
+    const campo = el.querySelector('input')!;
+    campo.value = 'pinheir';
+    campo.dispatchEvent(new Event('input'));
+    fixture.detectChanges();
+    expect(el.querySelectorAll('ul li')).toHaveLength(1);
+    campo.value = 'super center';
+    campo.dispatchEvent(new Event('input'));
+    fixture.detectChanges();
+    expect(el.querySelectorAll('ul li')).toHaveLength(1);
+  });
+
   it('lista com busca por nome no cliente', async () => {
     base([
       {
@@ -348,5 +392,148 @@ describe('Estabelecimentos', () => {
     expect(texto(el)).toContain('CNPJ 03.644.587/0008-36');
     expect(el.querySelector('a[href="/produtos/ean:7891000100103"]')).not.toBeNull();
     expect(texto(el)).toContain('R$ 4,49/L');
+  });
+
+  async function renderizarDetalhe(e: Estabelecimento) {
+    base([
+      {
+        provide: EstabelecimentosService,
+        useValue: { obter: vi.fn(async () => e), produtosRecentes: vi.fn(async () => []) },
+      },
+    ]);
+    return (await renderizar(EstabelecimentoDetalhePage, { cnpj: e.cnpj })).el;
+  }
+
+  it('detalhe com nome fantasia mostra a razão social abaixo do título', async () => {
+    const el = await renderizarDetalhe({
+      ...estab('03644587000836', 'Sanches e Vecchiate Ltda'),
+      fantasia: 'BOX ATACADISTA',
+    });
+    expect(texto(el.querySelector('h1'))).toBe('BOX ATACADISTA');
+    expect(texto(el)).toContain('Razão social: Sanches e Vecchiate Ltda');
+  });
+
+  it('detalhe sem nome fantasia mostra só a razão social', async () => {
+    const el = await renderizarDetalhe(estab('03644587000836', 'Sanches e Vecchiate Ltda'));
+    expect(texto(el.querySelector('h1'))).toBe('Sanches e Vecchiate Ltda');
+    expect(texto(el)).not.toContain('Razão social');
+  });
+
+  it('detalhe com apelido: título, "Nome na Receita" e "Razão social"; botão Renomear', async () => {
+    base([
+      {
+        provide: EstabelecimentosService,
+        useValue: {
+          obter: vi.fn(async () => ({
+            ...estab('03644587000836', 'SANCHES E VECCHIATE LTDA'),
+            fantasia: 'BOX ATACADISTA',
+          })),
+          produtosRecentes: vi.fn(async () => []),
+        },
+      },
+    ]);
+    apelidos.set(new Map([['03644587000836', 'Box da Av. Brasil']]));
+    const { el } = await renderizar(EstabelecimentoDetalhePage, { cnpj: '03644587000836' });
+    expect(texto(el.querySelector('h1'))).toBe('Box da Av. Brasil');
+    expect(texto(el)).toContain('Nome na Receita: BOX ATACADISTA');
+    expect(texto(el)).toContain('Razão social: SANCHES E VECCHIATE LTDA');
+    expect(texto(botao(el, 'Renomear estabelecimento').querySelector('mat-icon'))).toBe('edit');
+  });
+
+  it('Renomear abre o diálogo e mostra o snackbar no sucesso', async () => {
+    const dialog = {
+      open: vi.fn(() => ({ afterClosed: () => of({ apelido: 'Condor', notasAtualizadas: 3 }) })),
+    };
+    const snack = { open: vi.fn() };
+    base([
+      {
+        provide: EstabelecimentosService,
+        useValue: {
+          obter: vi.fn(async () => estab('76189406000126', 'CONDOR SUPER CENTER LTDA')),
+          produtosRecentes: vi.fn(async () => []),
+        },
+      },
+      { provide: MatDialog, useValue: dialog },
+      { provide: MatSnackBar, useValue: snack },
+    ]);
+    const { el } = await renderizar(EstabelecimentoDetalhePage, { cnpj: '76189406000126' });
+    botao(el, 'Renomear estabelecimento').click();
+    await vi.waitFor(() =>
+      expect(snack.open).toHaveBeenCalledWith(
+        'Nome salvo. 3 notas atualizadas.',
+        'OK',
+        expect.anything(),
+      ),
+    );
+    expect(dialog.open).toHaveBeenCalledWith(RenomearDialog, {
+      data: { cnpj: '76189406000126', nome: 'CONDOR SUPER CENTER LTDA' },
+      maxWidth: '480px',
+      width: '95vw',
+    });
+  });
+});
+
+describe('RenomearDialog', () => {
+  const CNPJ = '76189406000126';
+  const CAMPO = 'Como você chama esta loja?';
+
+  function montar(dados: Record<string, unknown>) {
+    const fechar = vi.fn();
+    base([
+      {
+        provide: MAT_DIALOG_DATA,
+        useValue: { cnpj: CNPJ, nome: 'CONDOR SUPER CENTER LTDA', ...dados },
+      },
+      { provide: MatDialogRef, useValue: { close: fechar } },
+    ]);
+    return fechar;
+  }
+
+  it('sem apelido: começa com a sugestão, salva e fecha', async () => {
+    const fechar = montar({});
+    definir.mockResolvedValue({
+      ok: true,
+      valor: { apelido: 'Condor Pinheirinho', notasAtualizadas: 2 },
+    });
+    const { el, fixture } = await renderizar(RenomearDialog);
+    const campo = porRotulo(el, CAMPO);
+    expect(campo.value).toBe('Condor Super Center');
+    expect(() => botao(el, 'Usar o nome oficial')).toThrow();
+    digitar(campo, 'Condor Pinheirinho');
+    fixture.detectChanges();
+    botao(el, 'Salvar').click();
+    await fixture.whenStable();
+    expect(definir).toHaveBeenCalledWith(CNPJ, 'Condor Pinheirinho');
+    expect(fechar).toHaveBeenCalledWith({ apelido: 'Condor Pinheirinho', notasAtualizadas: 2 });
+  });
+
+  it('com apelido: "Usar o nome oficial" chama com null', async () => {
+    const fechar = montar({ apelido: 'Condor Pinheirinho', fantasia: 'CONDOR' });
+    definir.mockResolvedValue({ ok: true, valor: { apelido: null, notasAtualizadas: 1 } });
+    const { el, fixture } = await renderizar(RenomearDialog);
+    expect(porRotulo(el, CAMPO).value).toBe('Condor Pinheirinho');
+    botao(el, 'Usar o nome oficial').click();
+    await fixture.whenStable();
+    expect(definir).toHaveBeenCalledWith(CNPJ, null);
+    expect(fechar).toHaveBeenCalledWith({ apelido: null, notasAtualizadas: 1 });
+  });
+
+  it('erro do servidor fica no campo e o diálogo continua aberto', async () => {
+    const fechar = montar({});
+    definir.mockResolvedValue({ ok: false, erro: { codigo: 'rate-limit' } });
+    const { el, fixture } = await renderizar(RenomearDialog);
+    botao(el, 'Salvar').click();
+    await fixture.whenStable();
+    fixture.detectChanges();
+    expect(texto(el.querySelector('.cp-field-error'))).toContain('Muitas importações seguidas');
+    expect(fechar).not.toHaveBeenCalled();
+  });
+
+  it('campo inválido desabilita Salvar', async () => {
+    montar({});
+    const { el, fixture } = await renderizar(RenomearDialog);
+    digitar(porRotulo(el, CAMPO), '*');
+    fixture.detectChanges();
+    expect(botao(el, 'Salvar').disabled).toBe(true);
   });
 });

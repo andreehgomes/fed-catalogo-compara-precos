@@ -53,3 +53,32 @@ depois `npm run deploy:functions:dev`. O deploy apaga `vincularProdutosAuto`, `i
 | 14 | Produto com `candidatosVinculo` no app | "Este produto é o mesmo que…" mostra "Possíveis equivalentes" e o vínculo com um deles funciona | [ ] |
 | 15 | "Desfazer vínculo" num produto ligado automaticamente | `vinculoBloqueado: true`; aparecer em outra nota não religa nem apaga o campo | [ ] |
 | 16 | Logs `importacao` da etapa `vinculo` | só contagens e `chavePrefixo`; nenhuma descrição, CNPJ ou uid | [ ] |
+
+## Nome fantasia (BrasilAPI → minhareceita)
+
+Pré-requisito: `npm run deploy:functions:dev`.
+
+| # | Cenário | Esperado | OK |
+|---|---|---|---|
+| 17 | Importar a nota real de 03.644.587/0008-36 | prévia, Minhas notas e detalhe do estabelecimento mostram **BOX ATACADISTA**; o detalhe mostra "Razão social: …" abaixo; `estabelecimentos/{cnpj}` com `fantasia` e `fantasiaConsultadaEm` | [ ] |
+| 18 | Segunda nota do mesmo CNPJ | log `importacao` da etapa `cnpj` com `contagens.cache = 1` | [ ] |
+| 19 | Reimportar uma nota de uma loja sem `fantasiaConsultadaEm` | "Aproveitamos para atualizar os dados do estabelecimento."; todas as notas do usuário dessa loja com o nome fantasia | [ ] |
+| 20 | Logs da etapa `cnpj` | só `uf`, `duracaoMs`, `resultado` e contagens; nenhum CNPJ, nome ou chave | [ ] |
+| 21 | Artifact Registry `gcf-artifacts` (southamerica-east1) com política de limpeza de 1 dia | `npm run artifacts:limpeza:dev` (e `:prod` na produção); conferir no console, em Artifact Registry → gcf-artifacts → Políticas de limpeza | [ ] |
+
+## Apelido do estabelecimento
+
+Pré-requisitos: `npm run deploy:rules:dev` (leitura de `usuarios/{uid}/estabelecimentos`) e
+`npm run deploy:functions:dev` (`definirApelido` e `confirmarNfce` com apelido). Loja de teste:
+CONDOR SUPER CENTER LTDA (76.189.406/0001-26), sem nome fantasia na Receita.
+
+| # | Cenário | Esperado | OK |
+|---|---|---|---|
+| 22 | Prévia de uma nota do Condor sem apelido | campo "Como você chama esta loja?" com **Condor Super Center** e a linha "Razão social: …" | [ ] |
+| 23 | Trocar para "Condor Pinheirinho" e confirmar | `usuarios/{uid}/estabelecimentos/76189406000126` criado; a nota nova e as notas **antigas** do Condor com "Condor Pinheirinho" em Minhas notas, painel, filtro e sugestões | [ ] |
+| 24 | Próxima nota do Condor (prévia ou fila) | prévia sem o campo, título "Condor Pinheirinho"; a nota nasce com o apelido | [ ] |
+| 25 | Outro usuário com nota do Condor | vê a razão social; `estabelecimentos/76189406000126` sem nenhum campo de apelido | [ ] |
+| 26 | Detalhe do estabelecimento → "Renomear" → outro nome → Salvar | snackbar "Nome salvo. N notas atualizadas."; lista de Estabelecimentos e página do produto com o apelido; a busca da lista acha pelo apelido | [ ] |
+| 27 | "Renomear" → "Usar o nome oficial" | documento do apelido apagado; notas voltam para o nome fantasia ou a razão social | [ ] |
+| 28 | "Renomear" numa loja com nome fantasia (ex.: BOX ATACADISTA) | aceita; o detalhe mostra "Nome na Receita: BOX ATACADISTA" | [ ] |
+| 29 | Logs `importacao` das etapas `confirmacao` e `apelido` | só contagens (`notasAtualizadas`, `removido`) e `chavePrefixo`; nenhum apelido, CNPJ ou uid | [ ] |

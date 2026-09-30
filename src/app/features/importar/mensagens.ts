@@ -36,11 +36,25 @@ export const MENSAGENS: Readonly<Record<CodigoErroImportacao, MensagemErro>> = {
   'rate-limit': { texto: 'Muitas importações seguidas. Tente em alguns minutos.', acao: null },
   'preview-expirado': { texto: 'A prévia expirou. Leia o QR de novo.', acao: 'ler-de-novo' },
   'nao-autenticado': { texto: 'Sua sessão expirou. Entre de novo.', acao: 'entrar' },
+  'apelido-invalido': {
+    texto: 'Esse nome não serve. Use de 2 a 60 caracteres, com letras.',
+    acao: null,
+  },
   desconhecido: { texto: 'Algo deu errado. Tente de novo em instantes.', acao: null },
 };
 
 export function mensagemDe(erro: ErroImportacao): MensagemErro {
+  if (estabelecimentoAtualizado(erro)) {
+    return {
+      texto: 'Você já importou essa nota. Aproveitamos para atualizar os dados do estabelecimento.',
+      acao: 'abrir-nota',
+    };
+  }
   return MENSAGENS[erro.codigo] ?? MENSAGENS.desconhecido;
+}
+
+export function estabelecimentoAtualizado(erro: ErroImportacao): boolean {
+  return erro.codigo === 'ja-importada' && !!erro.estabelecimentoAtualizado;
 }
 
 export type Interpretacao =

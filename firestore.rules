@@ -9,6 +9,7 @@ service cloud.firestore {
       allow write: if false;
       match /notas/{chave}     { allow read, delete: if dono(uid); allow create, update: if false; }
       match /pendentes/{chave} { allow read, delete: if dono(uid); allow create, update: if false; }
+      match /estabelecimentos/{cnpj} { allow read: if dono(uid); allow write: if false; }
     }
     match /produtos/{id}         { allow read: if logado(); allow write: if false; }
     match /estabelecimentos/{id} { allow read: if logado(); allow write: if false; }

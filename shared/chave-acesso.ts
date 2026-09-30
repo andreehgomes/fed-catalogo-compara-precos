@@ -98,6 +98,15 @@ export function formatarChave(chave: string): string {
   return chave.replace(/(\d{4})(?=\d)/g, '$1 ');
 }
 
+/** Os pesos 5..2,9..2 e 6..2,9..2 do CNPJ são os mesmos 2..9 cíclicos da chave, lidos da direita. */
+export function validarCnpj(cnpj: string): boolean {
+  const d = cnpj.replace(/\D/g, '');
+  if (d.length !== 14 || /^(\d)\1{13}$/.test(d)) return false;
+  return (
+    digitoChave(d.slice(0, 12)) === Number(d[12]) && digitoChave(d.slice(0, 13)) === Number(d[13])
+  );
+}
+
 export function formatarCnpj(cnpj: string): string {
   const d = cnpj.replace(/\D/g, '');
   if (d.length !== 14) return cnpj;

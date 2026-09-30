@@ -43,6 +43,8 @@ export interface Emitente {
   endereco: string;
   cidade: string;
   uf: string;
+  /** Só entre a prévia e a gravação: presente quando o CNPJ foi consultado agora. */
+  fantasiaConsultadaEm?: DataIso;
 }
 
 /** Datas sempre em ISO 8601 UTC (`toISOString()`), para ordenar como texto. */
@@ -120,6 +122,15 @@ export interface Estabelecimento {
   cidade: string;
   uf: string;
   atualizadoEm: DataIso;
+  /** Última consulta do CNPJ na Receita (cache do nome fantasia, revalidado a cada 180 dias). */
+  fantasiaConsultadaEm?: DataIso;
+}
+
+/** `usuarios/{uid}/estabelecimentos/{cnpj}` — privado, gravado só pelas Functions. */
+export interface ApelidoEstabelecimento {
+  cnpj: string;
+  apelido: string;
+  atualizadoEm: DataIso;
 }
 
 export interface Observacao {
@@ -184,10 +195,11 @@ export type CodigoErroImportacao =
   | 'ja-importada'
   | 'preview-expirado'
   | 'nao-autenticado'
+  | 'apelido-invalido'
   | 'desconhecido';
 
 export type ErroImportacao =
-  | { codigo: 'ja-importada'; chave: string }
+  | { codigo: 'ja-importada'; chave: string; estabelecimentoAtualizado?: true }
   | { codigo: Exclude<CodigoErroImportacao, 'ja-importada'>; chave?: string };
 
 export interface PreviewEntrada {
@@ -195,10 +207,19 @@ export interface PreviewEntrada {
   chave?: string;
 }
 
-export type PreviewResposta = { ok: true; nota: NfceParsed } | { ok: false; erro: ErroImportacao };
+export type PreviewResposta =
+  { ok: true; nota: NfceParsed; apelido?: string } | { ok: false; erro: ErroImportacao };
 
 export type ConfirmarResposta = { ok: true; chave: string } | { ok: false; erro: ErroImportacao };
 
 export type EnfileirarResposta =
-  | { ok: true; chave: string; proximaTentativa: DataIso }
+  { ok: true; chave: string; proximaTentativa: DataIso } | { ok: false; erro: ErroImportacao };
+
+export interface DefinirApelidoEntrada {
+  cnpj?: string;
+  apelido?: string | null;
+}
+
+export type DefinirApelidoResposta =
+  | { ok: true; apelido: string | null; notasAtualizadas: number }
   | { ok: false; erro: ErroImportacao };

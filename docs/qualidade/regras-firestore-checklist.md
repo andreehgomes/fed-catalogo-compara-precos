@@ -36,6 +36,14 @@ Marque cada linha quando o resultado bater com a coluna **Esperado**.
 | 14 | get / delete | `/usuarios/uidA/pendentes/4126…8547` | `uidB` | ⛔ negado | [ ] |
 | 15 | create / update | `/usuarios/uidA/pendentes/4126…8547` | `uidA` | ⛔ negado | [ ] |
 
+## Apelido do estabelecimento (privado)
+
+| # | Operação | Caminho | Auth (`uid`) | Esperado | OK |
+|---|---|---|---|---|---|
+| 31 | get / list | `/usuarios/uidA/estabelecimentos/76189406000126` | `uidA` | ✅ permitido | [ ] |
+| 32 | get / list | `/usuarios/uidA/estabelecimentos/76189406000126` | `uidB` | ⛔ negado | [ ] |
+| 33 | create / update / delete | `/usuarios/uidA/estabelecimentos/76189406000126` | `uidA` | ⛔ negado (apelido só pela callable) | [ ] |
+
 ## Base compartilhada (somente leitura)
 
 | # | Operação | Caminho | Auth | Esperado | OK |
@@ -71,4 +79,4 @@ Marque cada linha quando o resultado bater com a coluna **Esperado**.
 |---|---|---|---|---|---|
 | 30 | list (collection group) | `pendentes` | `uidA` | ⛔ negado (só a Function agendada consulta o grupo, pelo Admin SDK) | [ ] |
 
-Resultado: ____ de 30 cenários conferidos em ___/___/2026.
+Resultado: ____ de 33 cenários conferidos em ___/___/2026.

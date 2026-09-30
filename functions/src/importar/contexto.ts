@@ -1,3 +1,4 @@
+import { criarConsultaCnpj, type ConsultarCnpj } from '../cnpj/consultar-cnpj';
 import type { Repositorio } from '../dados/repositorio';
 import { adaptadorPara, type AdaptadorUf } from '../parsers';
 import type { ClassificarVinculos } from '../vinculo/ia';
@@ -14,6 +15,8 @@ export interface Contexto {
   esperar: (ms: number) => Promise<void>;
   /** IA que decide os vínculos em dúvida; lança em qualquer falha. */
   classificarVinculos: ClassificarVinculos;
+  /** Nome fantasia pelo CNPJ (BrasilAPI → minhareceita); lança se as duas falharem. */
+  consultarCnpj: ConsultarCnpj;
   /** Em dev, guarda o HTML de layout inesperado no log para diagnóstico (RF-10). */
   registrarHtml?: (html: string, motivo: string) => void;
 }
@@ -31,6 +34,7 @@ export function contextoPadrao(
     log: (r) => logImportacao(r),
     esperar: (ms) => new Promise((res) => setTimeout(res, ms)),
     classificarVinculos,
+    consultarCnpj: criarConsultaCnpj({ fetch: (...a) => fetch(...a), agora: Date.now }),
     registrarHtml,
   };
 }

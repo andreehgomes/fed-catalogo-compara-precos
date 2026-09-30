@@ -5,13 +5,19 @@ export class ErroNegocio extends Error {
     readonly codigo: CodigoErroImportacao,
     mensagem?: string,
     readonly chave?: string,
+    readonly estabelecimentoAtualizado?: boolean,
   ) {
     super(mensagem ?? codigo);
     this.name = 'ErroNegocio';
   }
 
   paraResposta(): ErroImportacao {
-    if (this.codigo === 'ja-importada') return { codigo: 'ja-importada', chave: this.chave ?? '' };
+    if (this.codigo === 'ja-importada')
+      return {
+        codigo: 'ja-importada',
+        chave: this.chave ?? '',
+        ...(this.estabelecimentoAtualizado ? { estabelecimentoAtualizado: true as const } : {}),
+      };
     return this.chave ? { codigo: this.codigo, chave: this.chave } : { codigo: this.codigo };
   }
 }

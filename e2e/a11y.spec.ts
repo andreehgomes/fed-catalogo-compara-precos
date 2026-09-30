@@ -2,7 +2,7 @@ import AxeBuilder from '@axe-core/playwright';
 import { expect, test, type Page } from '@playwright/test';
 import { MOTIVO_SEM_USUARIO, TEM_USUARIO_E2E } from './support/env';
 import { entrar } from './support/login';
-import { bloquearServicosReais, mockMenorPreco } from './support/mocks';
+import { bloquearServicosReais, mockCallables, mockMenorPreco } from './support/mocks';
 
 async function violacoesGraves(page: Page) {
   const r = await new AxeBuilder({ page })
@@ -62,6 +62,45 @@ test.describe('acessibilidade com login (usuário de teste no dv)', () => {
       expect(await violacoesGraves(page)).toEqual([]);
     });
   }
+
+  test('axe sem violações graves na prévia com o campo do apelido', async ({ page }) => {
+    const chave = '41260903644587000836652100000168701620438547';
+    await mockCallables(page, {
+      previewNfce: {
+        ok: true,
+        nota: {
+          chave,
+          emitente: {
+            cnpj: '03644587000836',
+            nome: 'SUPERMERCADO EXEMPLO LTDA',
+            endereco: 'RUA DAS FLORES, 123, CURITIBA, PR',
+            cidade: 'CURITIBA',
+            uf: 'PR',
+          },
+          emissao: '2026-09-27T13:05:12.000Z',
+          itens: [
+            {
+              n: 1,
+              descricao: 'LEITE UHT INT 1L',
+              codigo: '1001',
+              ean: null,
+              qtd: 2,
+              unidade: 'UN',
+              vlUnit: 4.49,
+              vlTotal: 8.98,
+            },
+          ],
+          total: 8.98,
+          desconto: 0,
+        },
+      },
+    });
+    await page.goto('/importar');
+    await page.getByLabel('Digitar a chave de 44 dígitos').fill(chave);
+    await page.getByRole('button', { name: 'Importar chave' }).click();
+    await expect(page.getByLabel('Como você chama esta loja?')).toBeVisible();
+    expect(await violacoesGraves(page)).toEqual([]);
+  });
 
   test('axe sem violações graves no detalhe da nota', async ({ page }) => {
     await page.goto('/notas');

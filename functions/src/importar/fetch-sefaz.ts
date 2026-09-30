@@ -47,9 +47,12 @@ export function decodificar(bytes: Uint8Array, contentType: string | null): stri
   return utf8.includes('�') ? new TextDecoder('latin1').decode(bytes) : utf8;
 }
 
-async function lerCorpo(resposta: Response): Promise<Uint8Array> {
+export async function lerCorpo(
+  resposta: Response,
+  limite: number = LIMITE_BYTES,
+): Promise<Uint8Array> {
   const tamanho = Number(resposta.headers.get('content-length') ?? 0);
-  if (tamanho > LIMITE_BYTES) throw new SefazIndisponivelError('Resposta grande demais');
+  if (tamanho > limite) throw new SefazIndisponivelError('Resposta grande demais');
   if (!resposta.body) return new Uint8Array();
   const leitor = resposta.body.getReader();
   const partes: Uint8Array[] = [];
@@ -58,7 +61,7 @@ async function lerCorpo(resposta: Response): Promise<Uint8Array> {
     const { done, value } = await leitor.read();
     if (done) break;
     total += value.byteLength;
-    if (total > LIMITE_BYTES) {
+    if (total > limite) {
       await leitor.cancel();
       throw new SefazIndisponivelError('Resposta grande demais');
     }

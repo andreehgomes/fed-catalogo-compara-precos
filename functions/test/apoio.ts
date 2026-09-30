@@ -2,6 +2,7 @@ import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { vi } from 'vitest';
 import type { NfceParsed } from '@shared/model';
+import type { ConsultarCnpj } from '../src/cnpj/consultar-cnpj';
 import type { Contexto } from '../src/importar/contexto';
 import type { RespostaSefaz } from '../src/importar/fetch-sefaz';
 import type { RegistroImportacao } from '../src/importar/log';
@@ -79,6 +80,7 @@ export interface ContextoTeste extends Contexto {
   htmlRegistrado: string[];
   buscar: ReturnType<typeof vi.fn<(url: string) => Promise<RespostaSefaz>>>;
   classificarVinculos: ReturnType<typeof vi.fn<ClassificarVinculos>>;
+  consultarCnpj: ReturnType<typeof vi.fn<ConsultarCnpj>>;
 }
 
 export function criarContexto(
@@ -115,6 +117,11 @@ export function criarContexto(
     logs,
     esperar: async () => undefined,
     classificarVinculos: vi.fn<ClassificarVinculos>(async () => ({ decisoes: [], custoUsd: 0 })),
+    consultarCnpj: vi.fn<ConsultarCnpj>(async () => ({
+      status: 'ok',
+      fonte: 'brasilapi',
+      nomeFantasia: 'BOX ATACADISTA',
+    })),
     registrarHtml: (html) => htmlRegistrado.push(html),
     htmlRegistrado,
   };

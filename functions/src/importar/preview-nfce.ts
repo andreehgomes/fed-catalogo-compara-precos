@@ -1,8 +1,15 @@
 import { extrairChave, limparChave, montarUrlQrV3, validarChave } from '@shared/chave-acesso';
-import type { NfceParsed, PreviewEntrada, PreviewResposta } from '@shared/model';
+import type {
+  ApelidoEstabelecimento,
+  NfceParsed,
+  PreviewEntrada,
+  PreviewResposta,
+} from '@shared/model';
+import { atualizarNaReimportacao } from '../cnpj/atualizar-na-reimportacao';
 import { urlPermitida, type UrlValidada } from './allowlist';
 import type { Contexto } from './contexto';
 import { ErroNegocio, paraErroImportacao } from './erros';
+import { caminhoApelido } from './gravar-nota';
 import { obterNotaDaSefaz } from './obter-nota';
 import { consumirRateLimit } from './rate-limit';
 
@@ -60,9 +67,13 @@ export async function executarPreview(
     chave = alvo.qr.chave;
     if (!(await consumirRateLimit(ctx.repo, uid, ctx.agora()))) throw new ErroNegocio('rate-limit');
     if (await ctx.repo.obter(`usuarios/${uid}/notas/${chave}`)) {
-      throw new ErroNegocio('ja-importada', undefined, chave);
+      const atualizado = await atualizarNaReimportacao(ctx, uid, alvo);
+      throw new ErroNegocio('ja-importada', undefined, chave, atualizado);
     }
     const nota = await obterNotaDaSefaz(ctx, alvo);
+    const apelido = await ctx.repo.obter<ApelidoEstabelecimento>(
+      caminhoApelido(uid, nota.emitente.cnpj),
+    );
     const agora = ctx.agora();
     const expira = new Date(agora.getTime() + PREVIEW_TTL_MS);
     const doc: DocPreview = {
@@ -83,7 +94,7 @@ export async function executarPreview(
       resultado: 'sucesso',
       qtdItens: nota.itens.length,
     });
-    return { ok: true, nota };
+    return apelido?.apelido ? { ok: true, nota, apelido: apelido.apelido } : { ok: true, nota };
   } catch (e) {
     const erro = paraErroImportacao(e);
     ctx.log({

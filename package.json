@@ -16,7 +16,9 @@
     "e2e": "playwright test",
     "contraste": "node scripts/contraste.mjs",
     "deploy:rules:dev": "firebase deploy --only firestore:rules,firestore:indexes -P dev",
-    "deploy:functions:dev": "firebase deploy --only functions -P dev"
+    "deploy:functions:dev": "firebase deploy --only functions -P dev",
+    "artifacts:limpeza:dev": "firebase functions:artifacts:setpolicy --location southamerica-east1 --days 1 --force -P dev",
+    "artifacts:limpeza:prod": "firebase functions:artifacts:setpolicy --location southamerica-east1 --days 1 --force -P prod"
   },
   "private": true,
   "packageManager": "npm@10.9.3",

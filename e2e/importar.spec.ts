@@ -11,6 +11,7 @@ const NOTA = {
   emitente: {
     cnpj: '03644587000836',
     nome: 'SUPERMERCADO EXEMPLO LTDA',
+    fantasia: 'BOX ATACADISTA',
     endereco: 'RUA DAS FLORES, 123, CURITIBA, PR',
     cidade: 'CURITIBA',
     uf: 'PR',
@@ -49,11 +50,32 @@ test.describe('importar nota (callables interceptadas)', () => {
     await page.getByLabel('Colar link do QR').fill(URL_QR);
     await page.getByRole('button', { name: 'Importar link' }).click();
     await expect(page).toHaveURL(/\/importar\/preview$/);
-    await expect(page.getByRole('heading', { name: 'SUPERMERCADO EXEMPLO LTDA' })).toBeVisible();
+    await expect(page.getByRole('heading', { name: 'BOX ATACADISTA' })).toBeVisible();
     await expect(page.getByText('LEITE UHT INT 1L')).toBeVisible();
     await page.getByRole('button', { name: 'Confirmar importação' }).click();
     await expect(page).toHaveURL(new RegExp(`/notas/${CHAVE}$`));
     expect(chamadas.map((c) => c.nome)).toEqual(['previewNfce', 'confirmarNfce']);
+  });
+
+  test('loja sem nome fantasia: campo do apelido vai na confirmação', async ({ page }) => {
+    const chamadas = await mockCallables(page, {
+      previewNfce: { ok: true, nota: { ...NOTA, emitente: { ...NOTA.emitente, fantasia: '' } } },
+      confirmarNfce: { ok: true, chave: CHAVE },
+    });
+    await entrar(page);
+    await page.goto('/importar');
+    await page.getByLabel('Colar link do QR').fill(URL_QR);
+    await page.getByRole('button', { name: 'Importar link' }).click();
+    await expect(page).toHaveURL(/\/importar\/preview$/);
+    const campo = page.getByLabel('Como você chama esta loja?');
+    await expect(campo).toHaveValue('Supermercado Exemplo');
+    await campo.fill('Mercado da Esquina');
+    await page.getByRole('button', { name: 'Confirmar importação' }).click();
+    await expect(page).toHaveURL(new RegExp(`/notas/${CHAVE}$`));
+    expect(chamadas[1]).toEqual({
+      nome: 'confirmarNfce',
+      dados: { chave: CHAVE, apelido: 'Mercado da Esquina' },
+    });
   });
 
   test('chave com DV inválido mostra erro sem chamar a function', async ({ page }) => {

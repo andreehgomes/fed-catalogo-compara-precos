@@ -1,0 +1,229 @@
+{
+  "uf": "PR",
+  "cep": "81930165",
+  "cnpj": "76189406000126",
+  "pais": null,
+  "email": null,
+  "porte": "DEMAIS",
+  "bairro": "UMBARA",
+  "numero": "690",
+  "ddd_fax": "4132122082",
+  "municipio": "CURITIBA",
+  "logradouro": "DO GANCHINHO",
+  "cnae_fiscal": 4691500,
+  "codigo_pais": null,
+  "complemento": "MARGEM A RODOVIA CONTORNO SUL",
+  "codigo_porte": 5,
+  "razao_social": "CONDOR SUPER CENTER LTDA",
+  "nome_fantasia": "",
+  "capital_social": 100000000,
+  "ddd_telefone_1": "4132122000",
+  "ddd_telefone_2": "",
+  "opcao_pelo_mei": null,
+  "codigo_municipio": 7535,
+  "cnaes_secundarios": [
+    {
+      "codigo": 1013901,
+      "descricao": "Fabricação de produtos de carne"
+    },
+    {
+      "codigo": 1013902,
+      "descricao": "Preparação de subprodutos do abate"
+    },
+    {
+      "codigo": 1033301,
+      "descricao": "Fabricação de sucos concentrados de frutas, hortaliças e legumes"
+    },
+    {
+      "codigo": 1033302,
+      "descricao": "Fabricação de sucos de frutas, hortaliças e legumes, exceto concentrados"
+    },
+    {
+      "codigo": 1052000,
+      "descricao": "Fabricação de laticínios"
+    },
+    {
+      "codigo": 1091101,
+      "descricao": "Fabricação de produtos de panificação industrial"
+    },
+    {
+      "codigo": 1091102,
+      "descricao": "Fabricação de produtos de padaria e confeitaria com predominância de produção própria"
+    },
+    {
+      "codigo": 4612500,
+      "descricao": "Representantes comerciais e agentes do comércio de combustíveis, minerais, produtos siderúrgicos e químicos"
+    },
+    {
+      "codigo": 4621400,
+      "descricao": "Comércio atacadista de café em grão"
+    },
+    {
+      "codigo": 4633801,
+      "descricao": "Comércio atacadista de frutas, verduras, raízes, tubérculos, hortaliças e legumes frescos"
+    },
+    {
+      "codigo": 4634601,
+      "descricao": "Comércio atacadista de carnes bovinas e suínas e derivados"
+    },
+    {
+      "codigo": 4634602,
+      "descricao": "Comércio atacadista de aves abatidas e derivados"
+    },
+    {
+      "codigo": 4634699,
+      "descricao": "Comércio atacadista de carnes e derivados de outros animais"
+    },
+    {
+      "codigo": 4639702,
+      "descricao": "Comércio atacadista de produtos alimentícios em geral, com atividade de fracionamento e acondicionamento associada"
+    },
+    {
+      "codigo": 4711301,
+      "descricao": "Comércio varejista de mercadorias em geral, com predominância de produtos alimentícios - hipermercados"
+    },
+    {
+      "codigo": 4711302,
+      "descricao": "Comércio varejista de mercadorias em geral, com predominância de produtos alimentícios - supermercados"
+    },
+    {
+      "codigo": 4721102,
+      "descricao": "Padaria e confeitaria com predominância de revenda"
+    },
+    {
+      "codigo": 4721103,
+      "descricao": "Comércio varejista de laticínios e frios"
+    },
+    {
+      "codigo": 4722901,
+      "descricao": "Comércio varejista de carnes - açougues"
+    },
+    {
+      "codigo": 4731800,
+      "descricao": "Comércio varejista de combustíveis para veículos automotores"
+    },
+    {
+      "codigo": 4753900,
+      "descricao": "Comércio varejista especializado de eletrodomésticos e equipamentos de áudio e vídeo"
+    },
+    {
+      "codigo": 4771701,
+      "descricao": "Comércio varejista de produtos farmacêuticos, sem manipulação de fórmulas"
+    },
+    {
+      "codigo": 4771704,
+      "descricao": "Comércio varejista de medicamentos veterinários"
+    },
+    {
+      "codigo": 5211799,
+      "descricao": "Depósitos de mercadorias para terceiros, exceto armazéns gerais e guarda-móveis"
+    },
+    {
+      "codigo": 5223100,
+      "descricao": "Estacionamento de veículos"
+    },
+    {
+      "codigo": 5611201,
+      "descricao": "Restaurantes e similares"
+    },
+    {
+      "codigo": 5620101,
+      "descricao": "Fornecimento de alimentos preparados preponderantemente para empresas"
+    },
+    {
+      "codigo": 6190699,
+      "descricao": "Outras atividades de telecomunicações não especificadas anteriormente"
+    },
+    {
+      "codigo": 6619302,
+      "descricao": "Correspondentes de instituições financeiras"
+    },
+    {
+      "codigo": 7490104,
+      "descricao": "Atividades de intermediação e agenciamento de serviços e negócios em geral, exceto imobiliários"
+    },
+    {
+      "codigo": 8292000,
+      "descricao": "Envasamento e empacotamento sob contrato"
+    }
+  ],
+  "natureza_juridica": "Sociedade Empresária Limitada",
+  "regime_tributario": [
+    {
+      "ano": 2016,
+      "cnpj_da_scp": null,
+      "forma_de_tributacao": "LUCRO REAL",
+      "quantidade_de_escrituracoes": 1
+    },
+    {
+      "ano": 2017,
+      "cnpj_da_scp": null,
+      "forma_de_tributacao": "LUCRO REAL",
+      "quantidade_de_escrituracoes": 1
+    },
+    {
+      "ano": 2018,
+      "cnpj_da_scp": null,
+      "forma_de_tributacao": "LUCRO REAL",
+      "quantidade_de_escrituracoes": 1
+    },
+    {
+      "ano": 2019,
+      "cnpj_da_scp": null,
+      "forma_de_tributacao": "LUCRO REAL",
+      "quantidade_de_escrituracoes": 1
+    },
+    {
+      "ano": 2020,
+      "cnpj_da_scp": null,
+      "forma_de_tributacao": "LUCRO REAL",
+      "quantidade_de_escrituracoes": 1
+    },
+    {
+      "ano": 2021,
+      "cnpj_da_scp": null,
+      "forma_de_tributacao": "LUCRO REAL",
+      "quantidade_de_escrituracoes": 1
+    },
+    {
+      "ano": 2022,
+      "cnpj_da_scp": null,
+      "forma_de_tributacao": "LUCRO REAL",
+      "quantidade_de_escrituracoes": 1
+    },
+    {
+      "ano": 2023,
+      "cnpj_da_scp": null,
+      "forma_de_tributacao": "LUCRO REAL",
+      "quantidade_de_escrituracoes": 1
+    },
+    {
+      "ano": 2024,
+      "cnpj_da_scp": null,
+      "forma_de_tributacao": "LUCRO REAL",
+      "quantidade_de_escrituracoes": 1
+    }
+  ],
+  "situacao_especial": "",
+  "opcao_pelo_simples": null,
+  "situacao_cadastral": 2,
+  "data_opcao_pelo_mei": null,
+  "data_exclusao_do_mei": null,
+  "cnae_fiscal_descricao": "Comércio atacadista de mercadorias em geral, com predominância de produtos alimentícios",
+  "codigo_municipio_ibge": 4106902,
+  "data_inicio_atividade": "1974-04-17",
+  "data_situacao_especial": null,
+  "data_opcao_pelo_simples": null,
+  "data_situacao_cadastral": "2005-11-03",
+  "nome_cidade_no_exterior": "",
+  "codigo_natureza_juridica": 2062,
+  "data_exclusao_do_simples": null,
+  "motivo_situacao_cadastral": 0,
+  "ente_federativo_responsavel": "",
+  "identificador_matriz_filial": 1,
+  "qualificacao_do_responsavel": 5,
+  "descricao_situacao_cadastral": "ATIVA",
+  "descricao_tipo_de_logradouro": "ESTRADA",
+  "descricao_motivo_situacao_cadastral": "SEM MOTIVO",
+  "descricao_identificador_matriz_filial": "MATRIZ"
+}

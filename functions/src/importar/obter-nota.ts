@@ -1,4 +1,5 @@
 import type { NfceParsed } from '@shared/model';
+import { completarEmitente } from '../cnpj/completar-emitente';
 import type { UrlValidada } from './allowlist';
 import { classificarResposta } from './classificar-resposta';
 import type { Contexto } from './contexto';
@@ -28,5 +29,5 @@ export async function obterNotaDaSefaz(ctx: Contexto, alvo: UrlValidada): Promis
   }
   if (nota.chave !== alvo.qr.chave)
     throw new LayoutInesperadoError('Chave da página difere da URL');
-  return nota;
+  return { ...nota, emitente: await completarEmitente(ctx, nota.emitente) };
 }

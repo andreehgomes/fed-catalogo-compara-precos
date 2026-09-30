@@ -47,7 +47,9 @@ Scripts auxiliares (rodar uma vez, resultado versionado): `scripts/gerar-municip
 do sistema. Quando o Node do sistema for atualizado, o pacote `node` pode sair.
 
 **Deploy (rodado pelo usuário, nunca pelo agente):** `npm run deploy:rules:dev` e
-`npm run deploy:functions:dev`; o CI publica pelo `deploy.yml`. **Não há Firebase Emulator
+`npm run deploy:functions:dev`; o CI publica pelo `deploy.yml`. Uma vez por projeto,
+`npm run artifacts:limpeza:dev|prod` (política de 1 dia nas imagens das Functions no
+Artifact Registry `gcf-artifacts`). **Não há Firebase Emulator
 Suite**: o `npm start` usa o projeto `fed-catalogo-compara-precos-dv`.
 
 ## Architecture Overview
@@ -150,6 +152,8 @@ no target `test`, relativo a `src/`).
 - **Claude API (Anthropic)** — só nas Functions, no vínculo automático, com o secret
   `ANTHROPIC_API_KEY` (Secret Manager, em `confirmarNfce` e `reprocessarPendentes`). Recebe
   só descrições de produto.
+- **BrasilAPI → minhareceita.org (cadastro da Receita)** — só nas Functions, só pelo CNPJ
+  do emitente, para o nome fantasia. Do payload só sai `nome_fantasia` (o QSA é descartado).
 
 Detalhes: [docs/analise/compara-precos-nfce-analise.md](docs/analise/compara-precos-nfce-analise.md).
 
@@ -186,8 +190,9 @@ Detalhes: [docs/analise/compara-precos-nfce-analise.md](docs/analise/compara-pre
   specs rodam juntos.
 - **Guards** `authGuard`/`guestGuard` esperam `pronto()` antes de decidir (refresh
   não pisca o login). O `authGuard` manda para `/login?voltar=<url>`.
-- **Regras:** `firestore.rules` (dono lê/exclui as próprias notas e pendentes;
-  base compartilhada só leitura; nada escrito pelo cliente). Sem teste automatizado:
+- **Regras:** `firestore.rules` (dono lê/exclui as próprias notas e pendentes; dono só lê
+  os apelidos em `usuarios/{uid}/estabelecimentos`; base compartilhada só leitura; nada
+  escrito pelo cliente). Sem teste automatizado:
   checklist do Rules Playground em `docs/qualidade/regras-firestore-checklist.md`,
   rodado pelo usuário após `npm run deploy:rules:dev`.
 - **e2e:** usuário de teste em `.env.e2e` (`E2E_EMAIL`, `E2E_SENHA`; ver
@@ -231,9 +236,9 @@ Instale as dependências **de dentro da pasta** (`cd functions && npm install`):
   antes do deploy. Região
   `southamerica-east1`, `maxInstances: 5` (`src/config.ts`). Callables com
   `enforceAppCheck: true`.
-- **Callables:** `previewNfce({url}|{chave})`, `confirmarNfce({chave})`,
+- **Callables:** `previewNfce({url}|{chave})`, `confirmarNfce({chave, apelido?})`,
   `enfileirarNfce({url}|{chave})`, `retentarPendente({chave})`, `vincularProduto`,
-  `vincularProduto` e `desvincularProduto` (`confirmarNfce` com `timeoutSeconds: 120`, por
+  `desvincularProduto` e `definirApelido({cnpj, apelido})` (`confirmarNfce` com `timeoutSeconds: 120`, por
   causa da IA). **Agendada:** `reprocessarPendentes` (a cada 15 min, até 20 por execução,
   1 s entre fetches, timeout 540 s). Callables respondem `{ ok: true, … }` ou
   `{ ok: false, erro: ErroImportacao }`; só erro inesperado vira exceção.
@@ -257,6 +262,32 @@ Instale as dependências **de dentro da pasta** (`cd functions && npm install`):
 - **Gravação** (`gravar-nota.ts`, comum à confirmação e à fila): transação com nota,
   perfil, estabelecimento e `nfceImportadas/{chave}`; preços publicados só na 1ª
   importação da chave, em lotes ≤ 500 (`publicar-precos.ts`), **sem uid**.
+- **Nome fantasia** (plano `docs/plano/nome-fantasia-estabelecimento-plano.md`): a SEFAZ só
+  traz a razão social. `completarEmitente` (`functions/src/cnpj/`), no fim de
+  `obterNotaDaSefaz` (prévia e fila; a confirmação reaproveita a prévia), consulta
+  `consultarCnpj` do `Contexto` (`consultar-cnpj.ts`: BrasilAPI → minhareceita, CNPJ validado
+  com DV, hosts fixos, `redirect: 'error'`, 3 s por fonte / 5 s no total, 256 kB, zod; 404 é
+  definitivo). Cache em `estabelecimentos/{cnpj}.fantasiaConsultadaEm` por 180 dias; regra pura
+  em `shared/nome-fantasia.ts` (`limparFantasia`, `precisaConsultar`, `avaliarEstabelecimento`).
+  Falha nunca derruba a importação (log `etapa: 'cnpj'`, só contagens). Reimportação: no ramo
+  `ja-importada` da prévia, `atualizarNaReimportacao` completa o estabelecimento incompleto
+  (relê a SEFAZ ou só o CNPJ) e o nome nas notas **do uid**, e a resposta ganha
+  `estabelecimentoAtualizado: true` (o front mostra o aviso e invalida o histórico).
+  Retroativo manual: `functions/scripts/preencher-fantasia.ts` (`--simular` padrão, `--gravar`).
+- **Apelido do estabelecimento** (plano `docs/plano/apelido-estabelecimento-plano.md`): nome
+  próprio que o usuário dá a uma loja, só dele, em `usuarios/{uid}/estabelecimentos/{cnpj}`
+  (`{ cnpj, apelido, atualizadoEm }`, gravado só pelas Functions; `estabelecimentos/{cnpj}` não
+  muda). Regra pura em `shared/apelido.ts`: `limparApelido` (2 a 60 caracteres, com letra, sem
+  controle; igual ao nome oficial = sem apelido), `nomeExibido` (apelido → fantasia → razão
+  social) e `sugerirApelido` (razão social sem LTDA/ME/EIRELI… em "Primeira Maiúscula").
+  A prévia devolve o `apelido` existente; `confirmarNfce({ chave, apelido })` valida
+  (`apelido-invalido` antes de gravar) e `gravarNota` lê/grava o apelido na transação — toda
+  nota nova (confirmação ou fila) nasce com `nomeExibido`. Apelido novo é propagado para as
+  outras notas **do uid** daquela loja (`operacoesDeNome`, `functions/src/estabelecimentos/`),
+  e uma falha aí só loga (`apelidoPropagacaoFalhou`). `apelido: null` na confirmação não apaga
+  apelido; apagar é pelo `definirApelido` (`null` → volta para fantasia ou razão social, log
+  `etapa: 'apelido'` só com contagens). A reimportação e o `preencher-fantasia.ts` respeitam
+  o apelido. O apelido nunca vai para o log.
 - **Fila:** backoff 15 min → 1 h → 6 h → 24 h; `falhou` após 7 dias (ou erro definitivo);
   `retentarPendente` reabre a janela (`retentadaEm`).
 - Log (`importar/log.ts`): só `chavePrefixo` (UF + AAMM).
@@ -383,7 +414,17 @@ Tudo no cliente, nada gravado no Firestore.
 - `produtos/{id}.cnpjs` (até 50) é mantido pela publicação de preços, para contar
   estabelecimentos sem consulta extra.
 - Estabelecimentos: lista por `atualizadoEm desc` (30 por página, busca por nome no
-  cliente) e detalhe com os produtos de preço mais recente (`precos where cnpj`).
+  cliente, inclusive pelo apelido) e detalhe com os produtos de preço mais recente (`precos where
+  cnpj`). O detalhe tem "Renomear" (`renomear/renomear-dialog.ts`, carregado por `import()`),
+  que vale para qualquer loja e chama `definirApelido`; o título é o nome exibido, com "Nome na
+  Receita" e "Razão social" abaixo quando diferem.
+- `ApelidosService` (`estabelecimentos/data-access/`): `apelidos` (mapa CNPJ → apelido,
+  `onSnapshot` de `usuarios/{uid}/estabelecimentos` → `toSignal`), `nome(estab)` e `definir`
+  (callable; invalida o `HistoricoPessoalStore`). Sobrepõe o apelido nas telas que leem a base
+  compartilhada (lista e detalhe de Estabelecimentos, `resumirPrecos` da página do produto). As
+  telas que leem `nota.estabelecimentoNome` já recebem o apelido gravado. Na prévia da importação,
+  loja sem nome fantasia e sem apelido mostra `<cp-campo-apelido>` (`shared/ui/campo-apelido/`,
+  Signal Forms) com `sugerirApelido`.
 - Painel (`/`): total do mês e variação, notas do mês, economia potencial pela base
   comunitária (`menorPreco` dos produtos; **não** chama o Menor Preço), últimas 5 notas,
   pendentes, atalhos e estado inicial em 3 passos.

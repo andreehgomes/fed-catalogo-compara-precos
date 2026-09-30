@@ -7,11 +7,16 @@ import {
   input,
   resource,
 } from '@angular/core';
+import { MatDialog } from '@angular/material/dialog';
 import { MatIconModule } from '@angular/material/icon';
+import { MatSnackBar } from '@angular/material/snack-bar';
 import { RouterLink } from '@angular/router';
 import { formatarCnpj } from '@shared/chave-acesso';
+import type { Estabelecimento } from '@shared/model';
+import { firstValueFrom } from 'rxjs';
 import { EmptyState } from '../../../shared/ui/empty-state/empty-state';
 import { FontePrecoInfo } from '../../../shared/ui/fonte-preco/fonte-preco';
+import { ApelidosService } from '../data-access/apelidos.service';
 import { EstabelecimentosService } from '../data-access/estabelecimentos.service';
 
 @Component({
@@ -34,9 +39,23 @@ import { EstabelecimentosService } from '../data-access/estabelecimentos.service
             <mat-icon aria-hidden="true">arrow_back</mat-icon>
           </a>
           <div>
-            <h1>{{ v.estabelecimento.fantasia || v.estabelecimento.nome }}</h1>
+            <h1>{{ titulo() }}</h1>
+            @if (apelido() && v.estabelecimento.fantasia) {
+              <p>Nome na Receita: {{ v.estabelecimento.fantasia }}</p>
+            }
+            @if (titulo() !== v.estabelecimento.nome) {
+              <p>Razão social: {{ v.estabelecimento.nome }}</p>
+            }
             <p>CNPJ {{ cnpjFormatado() }} · {{ v.estabelecimento.endereco }}</p>
           </div>
+          <button
+            type="button"
+            class="cp-btn-icon cp-detail-header-acao"
+            aria-label="Renomear estabelecimento"
+            (click)="renomear(v.estabelecimento)"
+          >
+            <mat-icon aria-hidden="true">edit</mat-icon>
+          </button>
         </header>
         <section class="cp-block">
           <h2 class="cp-section-title">Produtos com preço mais recente</h2>
@@ -76,6 +95,9 @@ import { EstabelecimentosService } from '../data-access/estabelecimentos.service
 })
 export default class EstabelecimentoDetalhePage {
   private readonly service = inject(EstabelecimentosService);
+  private readonly apelidos = inject(ApelidosService);
+  private readonly dialog = inject(MatDialog);
+  private readonly snack = inject(MatSnackBar);
 
   readonly cnpj = input.required<string>();
 
@@ -91,4 +113,31 @@ export default class EstabelecimentoDetalhePage {
   });
   protected readonly valor = computed(() => (this.dados.hasValue() ? this.dados.value() : null));
   protected readonly cnpjFormatado = computed(() => formatarCnpj(this.cnpj()));
+  protected readonly apelido = computed(() => this.apelidos.apelidos().get(this.cnpj()));
+  protected readonly titulo = computed(() => {
+    const v = this.valor();
+    return v ? this.apelidos.nome(v.estabelecimento) : '';
+  });
+
+  protected async renomear(estab: Estabelecimento): Promise<void> {
+    const { RenomearDialog } = await import('../renomear/renomear-dialog');
+    const apelido = this.apelido();
+    const ref = this.dialog.open(RenomearDialog, {
+      data: {
+        cnpj: estab.cnpj,
+        nome: estab.nome,
+        ...(estab.fantasia ? { fantasia: estab.fantasia } : {}),
+        ...(apelido ? { apelido } : {}),
+      },
+      maxWidth: '480px',
+      width: '95vw',
+    });
+    const r = await firstValueFrom(ref.afterClosed());
+    if (!r) return;
+    const notas =
+      r.notasAtualizadas === 1 ? '1 nota atualizada' : `${r.notasAtualizadas} notas atualizadas`;
+    this.snack.open(r.apelido ? `Nome salvo. ${notas}.` : 'Nome oficial restaurado.', 'OK', {
+      duration: 4000,
+    });
+  }
 }

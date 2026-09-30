@@ -7,11 +7,11 @@ import { vi } from 'vitest';
 import { CHAMAR_FUNCTION } from '../../core/firebase/callable';
 import { HistoricoPessoalStore } from '../notas/data-access/historico-pessoal.store';
 import { PendentesService } from '../notas/data-access/pendentes.service';
-import { botao, texto } from '../../../testing/dom';
+import { botao, digitar, porRotulo, texto } from '../../../testing/dom';
 import { ImportarService, erroDeFunctions } from './data-access/importar.service';
 import ImportarPage from './importar.page';
 import { ImportarStore } from './importar.store';
-import { MENSAGENS, interpretarEntrada } from './mensagens';
+import { MENSAGENS, interpretarEntrada, mensagemDe } from './mensagens';
 import PreviewNotaPage from './preview-nota/preview-nota.page';
 
 const CHAVE = '41260903644587000836652100000168701620438547';
@@ -85,7 +85,10 @@ describe('ImportarService', () => {
       ],
     });
     const s = TestBed.inject(ImportarService);
-    expect(await s.preview({ url: URL_QR })).toEqual({ ok: true, valor: NOTA });
+    expect(await s.preview({ url: URL_QR })).toEqual({
+      ok: true,
+      valor: { nota: NOTA, apelido: null },
+    });
     for (const codigo of codigos) {
       expect(await s.preview({ url: URL_QR })).toEqual({ ok: false, erro: { codigo } });
     }
@@ -177,7 +180,12 @@ describe('ImportarStore', () => {
     const { navegar } = montar({ previewNfce: [{ ok: true, nota: NOTA }] });
     const store = TestBed.inject(ImportarStore);
     await store.importarTexto(URL_QR);
-    expect(store.estado()).toEqual({ tipo: 'preview', entrada: { url: URL_QR }, nota: NOTA });
+    expect(store.estado()).toEqual({
+      tipo: 'preview',
+      entrada: { url: URL_QR },
+      nota: NOTA,
+      apelido: null,
+    });
     expect(navegar).toHaveBeenCalledWith(['/importar/preview']);
   });
 
@@ -247,6 +255,42 @@ describe('ImportarStore', () => {
       proximaTentativa: '2026-09-27T15:15:00.000Z',
     });
     expect(snack.open).toHaveBeenCalled();
+  });
+
+  it('ja-importada com o estabelecimento atualizado invalida o histórico; sem o flag, não', async () => {
+    const { historico } = montar({
+      previewNfce: [
+        { ok: false, erro: { codigo: 'ja-importada', chave: CHAVE } },
+        {
+          ok: false,
+          erro: { codigo: 'ja-importada', chave: CHAVE, estabelecimentoAtualizado: true },
+        },
+      ],
+    });
+    const store = TestBed.inject(ImportarStore);
+    await store.importarTexto(URL_QR);
+    expect(historico.invalidar).not.toHaveBeenCalled();
+    await store.importarTexto(URL_QR);
+    expect(historico.invalidar).toHaveBeenCalledOnce();
+    expect(store.estado()).toMatchObject({
+      tipo: 'erro',
+      erro: { codigo: 'ja-importada', estabelecimentoAtualizado: true },
+    });
+  });
+});
+
+describe('mensagemDe', () => {
+  it('ja-importada sem e com o estabelecimento atualizado', () => {
+    expect(mensagemDe({ codigo: 'ja-importada', chave: CHAVE })).toEqual({
+      texto: 'Você já importou essa nota.',
+      acao: 'abrir-nota',
+    });
+    expect(
+      mensagemDe({ codigo: 'ja-importada', chave: CHAVE, estabelecimentoAtualizado: true }),
+    ).toEqual({
+      texto: 'Você já importou essa nota. Aproveitamos para atualizar os dados do estabelecimento.',
+      acao: 'abrir-nota',
+    });
   });
 });
 
@@ -349,6 +393,109 @@ describe('PreviewNotaPage', () => {
     botao(el, 'Confirmar importação').click();
     await fixture.whenStable();
     expect(navegar).toHaveBeenLastCalledWith(['/notas', CHAVE]);
+  });
+
+  async function previa(respostas: Record<string, unknown[]>) {
+    const ctx = montar(respostas);
+    await TestBed.inject(ImportarStore).importarTexto(URL_QR);
+    const fixture = TestBed.createComponent(PreviewNotaPage);
+    fixture.detectChanges();
+    const el = fixture.nativeElement as HTMLElement;
+    const confirmar = async () => {
+      botao(el, 'Confirmar importação').click();
+      await fixture.whenStable();
+      fixture.detectChanges();
+    };
+    return { ...ctx, fixture, el, confirmar };
+  }
+
+  const CAMPO = 'Como você chama esta loja?';
+
+  it('loja sem nome fantasia: campo com a sugestão, enviada na confirmação', async () => {
+    const { el, chamar, confirmar } = await previa({
+      previewNfce: [{ ok: true, nota: NOTA }],
+      confirmarNfce: [{ ok: true, chave: CHAVE }],
+    });
+    expect(porRotulo(el, CAMPO).value).toBe('Supermercado Exemplo');
+    expect(texto(el)).toContain('Razão social: SUPERMERCADO EXEMPLO LTDA');
+    await confirmar();
+    expect(chamar).toHaveBeenLastCalledWith('confirmarNfce', {
+      chave: CHAVE,
+      apelido: 'Supermercado Exemplo',
+    });
+  });
+
+  it('campo apagado → apelido null', async () => {
+    const { el, fixture, chamar, confirmar } = await previa({
+      previewNfce: [{ ok: true, nota: NOTA }],
+      confirmarNfce: [{ ok: true, chave: CHAVE }],
+    });
+    digitar(porRotulo(el, CAMPO), '   ');
+    fixture.detectChanges();
+    await confirmar();
+    expect(chamar).toHaveBeenLastCalledWith('confirmarNfce', { chave: CHAVE, apelido: null });
+  });
+
+  it('campo inválido desabilita a confirmação', async () => {
+    const { el, fixture } = await previa({ previewNfce: [{ ok: true, nota: NOTA }] });
+    digitar(porRotulo(el, CAMPO), 'x');
+    fixture.detectChanges();
+    expect(botao(el, 'Confirmar importação').disabled).toBe(true);
+  });
+
+  it.each([
+    [
+      'com nome fantasia',
+      { ok: true, nota: { ...NOTA, emitente: { ...NOTA.emitente, fantasia: 'BOX' } } },
+      'BOX',
+    ],
+    [
+      'com apelido já dado',
+      { ok: true, nota: NOTA, apelido: 'Mercado da Esquina' },
+      'Mercado da Esquina',
+    ],
+  ])('loja %s: sem campo e confirmarNfce só com a chave', async (_caso, resposta, titulo) => {
+    const { el, chamar, confirmar } = await previa({
+      previewNfce: [resposta],
+      confirmarNfce: [{ ok: true, chave: CHAVE }],
+    });
+    expect(texto(el.querySelector('h1'))).toBe(titulo);
+    expect(() => porRotulo(el, CAMPO)).toThrow();
+    await confirmar();
+    expect(chamar).toHaveBeenLastCalledWith('confirmarNfce', { chave: CHAVE });
+  });
+
+  it('apelido-invalido mantém a prévia e mostra o erro no campo', async () => {
+    const { el, confirmar } = await previa({
+      previewNfce: [{ ok: true, nota: NOTA }],
+      confirmarNfce: [{ ok: false, erro: { codigo: 'apelido-invalido', chave: CHAVE } }],
+    });
+    await confirmar();
+    const store = TestBed.inject(ImportarStore);
+    expect(store.estado()).toMatchObject({ tipo: 'preview', erro: { codigo: 'apelido-invalido' } });
+    expect(texto(el.querySelector('.cp-field-error'))).toBe(MENSAGENS['apelido-invalido'].texto);
+    expect(porRotulo(el, CAMPO).value).toBe('Supermercado Exemplo');
+  });
+
+  it('preview-expirado refaz a prévia mantendo o apelido digitado', async () => {
+    const { el, fixture, chamar, confirmar } = await previa({
+      previewNfce: [
+        { ok: true, nota: NOTA },
+        { ok: true, nota: NOTA },
+      ],
+      confirmarNfce: [
+        { ok: false, erro: { codigo: 'preview-expirado' } },
+        { ok: true, chave: CHAVE },
+      ],
+    });
+    digitar(porRotulo(el, CAMPO), 'Mercado da Esquina');
+    fixture.detectChanges();
+    await confirmar();
+    const confirmacoes = chamar.mock.calls.filter((c) => c[0] === 'confirmarNfce');
+    expect(confirmacoes.map((c) => (c as unknown[])[1])).toEqual([
+      { chave: CHAVE, apelido: 'Mercado da Esquina' },
+      { chave: CHAVE, apelido: 'Mercado da Esquina' },
+    ]);
   });
 
   it('cancelar volta para Importar', () => {

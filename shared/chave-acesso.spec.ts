@@ -8,6 +8,7 @@ import {
   montarUrlQr,
   montarUrlQrV3,
   validarChave,
+  validarCnpj,
 } from './chave-acesso';
 
 const CHAVE_SET = '41260903644587000836652100000168701620438547';
@@ -41,6 +42,26 @@ describe('validarChave', () => {
       expect(dv).toBeLessThanOrEqual(9);
       expect(validarChave(b + dv)).toBe(true);
     }
+  });
+});
+
+describe('validarCnpj', () => {
+  it('aceita CNPJs reais, com ou sem máscara', () => {
+    expect(validarCnpj('03644587000836')).toBe(true);
+    expect(validarCnpj('76189406000126')).toBe(true);
+    expect(validarCnpj('03.644.587/0008-36')).toBe(true);
+  });
+
+  it.each([
+    ['1º DV errado', '03644587000846'],
+    ['2º DV errado', '03644587000837'],
+    ['todos iguais', '00000000000000'],
+    ['todos iguais (1)', '11111111111111'],
+    ['13 dígitos', '0364458700083'],
+    ['15 dígitos', '036445870008360'],
+    ['vazio', ''],
+  ])('recusa %s', (_, cnpj) => {
+    expect(validarCnpj(cnpj)).toBe(false);
   });
 });
 

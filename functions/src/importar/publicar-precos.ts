@@ -9,11 +9,16 @@ export const VALIDADE_MENOR_PRECO_MS = 90 * 24 * 60 * 60 * 1000;
 export const LIMITE_CNPJS = 50;
 
 /** Nota do usuário (modelo 5.3), com `produtoId` e preço por unidade base por item. */
-export function montarNota(nota: NfceParsed, importadaEm: Date, veioDaFila: boolean): Nota {
+export function montarNota(
+  nota: NfceParsed,
+  importadaEm: Date,
+  veioDaFila: boolean,
+  nome = nota.emitente.fantasia || nota.emitente.nome,
+): Nota {
   return {
     chave: nota.chave,
     cnpj: nota.emitente.cnpj,
-    estabelecimentoNome: nota.emitente.fantasia || nota.emitente.nome,
+    estabelecimentoNome: nome,
     estabelecimentoCidade: nota.emitente.cidade,
     emissao: nota.emissao,
     total: nota.total,

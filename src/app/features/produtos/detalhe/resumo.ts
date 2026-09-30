@@ -1,3 +1,4 @@
+import { nomeExibido } from '@shared/apelido';
 import type { Estabelecimento, FontePreco, UnidadeBase } from '@shared/model';
 import type { PrecoComId } from '../data-access/produtos.service';
 
@@ -47,6 +48,7 @@ export function resumirPrecos(
   precos: readonly PrecoComId[],
   estabelecimentos: ReadonlyMap<string, Estabelecimento>,
   chavesDoUsuario: ReadonlySet<string> = new Set(),
+  apelidos?: ReadonlyMap<string, string>,
 ): ResumoPrecos | null {
   if (!precos.length) return null;
   const unidades = new Set(precos.map((p) => p.precoPorUnidadeBase?.unidade ?? null));
@@ -54,7 +56,8 @@ export function resumirPrecos(
   const valor = (p: PrecoComId) => p.vlUnit;
   const nome = (cnpj: string) => {
     const e = estabelecimentos.get(cnpj);
-    return e?.fantasia || e?.nome || cnpj;
+    const apelido = apelidos?.get(cnpj);
+    return (e ? nomeExibido(e, apelido) : apelido) || cnpj;
   };
 
   const fonte = (p: PrecoComId): FontePreco =>

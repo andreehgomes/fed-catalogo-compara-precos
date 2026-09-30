@@ -13,6 +13,7 @@ import { semAcento } from '@shared/normalizar';
 import type { Estabelecimento } from '@shared/model';
 import type { DocumentSnapshot } from 'firebase/firestore';
 import { EmptyState } from '../../../shared/ui/empty-state/empty-state';
+import { ApelidosService } from '../data-access/apelidos.service';
 import { EstabelecimentosService } from '../data-access/estabelecimentos.service';
 
 const normalizar = (s: string) => semAcento(s).toLowerCase();
@@ -47,7 +48,7 @@ const normalizar = (s: string) => semAcento(s).toLowerCase();
               <li>
                 <a class="cp-list-row" [routerLink]="['/estabelecimentos', e.cnpj]">
                   <span class="item-principal">
-                    <span class="item-nome">{{ e.fantasia || e.nome }}</span>
+                    <span class="item-nome">{{ apelidos.nome(e) }}</span>
                     <span class="item-detalhe"
                       >{{ e.cidade }} · última nota em
                       {{ e.atualizadoEm | date: 'dd/MM/yyyy' }}</span
@@ -84,6 +85,7 @@ const normalizar = (s: string) => semAcento(s).toLowerCase();
 })
 export default class EstabelecimentosListaPage {
   private readonly service = inject(EstabelecimentosService);
+  protected readonly apelidos = inject(ApelidosService);
 
   protected readonly filtro = signal('');
   protected readonly pagina = resource({ loader: () => this.service.listar() });
@@ -99,7 +101,11 @@ export default class EstabelecimentosListaPage {
   protected readonly visiveis = computed(() => {
     const f = normalizar(this.filtro().trim());
     return f
-      ? this.itens().filter((e) => normalizar(`${e.fantasia ?? ''} ${e.nome}`).includes(f))
+      ? this.itens().filter((e) =>
+          normalizar(
+            `${this.apelidos.apelidos().get(e.cnpj) ?? ''} ${e.fantasia ?? ''} ${e.nome}`,
+          ).includes(f),
+        )
       : this.itens();
   });
   protected readonly temMais = computed(

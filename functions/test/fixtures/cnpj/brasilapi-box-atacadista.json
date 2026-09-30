@@ -1,0 +1,74 @@
+{
+  "uf": "PR",
+  "cep": "86430000",
+  "cnpj": "03644587000836",
+  "pais": null,
+  "email": null,
+  "porte": "DEMAIS",
+  "bairro": "VILA CLARO",
+  "numero": "248",
+  "ddd_fax": "",
+  "municipio": "SANTO ANTONIO DA PLATINA",
+  "logradouro": "DAS ACACIAS",
+  "cnae_fiscal": 4639701,
+  "codigo_pais": null,
+  "complemento": "",
+  "codigo_porte": 5,
+  "razao_social": "SANCHES E VECCHIATE LTDA",
+  "nome_fantasia": "BOX ATACADISTA",
+  "capital_social": 70000000,
+  "ddd_telefone_1": "4331721100",
+  "ddd_telefone_2": "",
+  "opcao_pelo_mei": null,
+  "codigo_municipio": 7859,
+  "cnaes_secundarios": [
+    {
+      "codigo": 1091102,
+      "descricao": "Fabricação de produtos de padaria e confeitaria com predominância de produção própria"
+    },
+    {
+      "codigo": 4711302,
+      "descricao": "Comércio varejista de mercadorias em geral, com predominância de produtos alimentícios - supermercados"
+    },
+    {
+      "codigo": 4721103,
+      "descricao": "Comércio varejista de laticínios e frios"
+    },
+    {
+      "codigo": 4722901,
+      "descricao": "Comércio varejista de carnes - açougues"
+    },
+    {
+      "codigo": 4753900,
+      "descricao": "Comércio varejista especializado de eletrodomésticos e equipamentos de áudio e vídeo"
+    },
+    {
+      "codigo": 5611201,
+      "descricao": "Restaurantes e similares"
+    }
+  ],
+  "natureza_juridica": "Sociedade Empresária Limitada",
+  "regime_tributario": [],
+  "situacao_especial": "",
+  "opcao_pelo_simples": null,
+  "situacao_cadastral": 2,
+  "data_opcao_pelo_mei": null,
+  "data_exclusao_do_mei": null,
+  "cnae_fiscal_descricao": "Comércio atacadista de produtos alimentícios em geral",
+  "codigo_municipio_ibge": 4124103,
+  "data_inicio_atividade": "2010-09-10",
+  "data_situacao_especial": null,
+  "data_opcao_pelo_simples": null,
+  "data_situacao_cadastral": "2010-09-10",
+  "nome_cidade_no_exterior": "",
+  "codigo_natureza_juridica": 2062,
+  "data_exclusao_do_simples": null,
+  "motivo_situacao_cadastral": 0,
+  "ente_federativo_responsavel": "",
+  "identificador_matriz_filial": 2,
+  "qualificacao_do_responsavel": 49,
+  "descricao_situacao_cadastral": "ATIVA",
+  "descricao_tipo_de_logradouro": "RUA",
+  "descricao_motivo_situacao_cadastral": "SEM MOTIVO",
+  "descricao_identificador_matriz_filial": "FILIAL"
+}

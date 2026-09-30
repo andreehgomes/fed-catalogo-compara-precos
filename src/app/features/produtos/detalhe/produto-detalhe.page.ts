@@ -12,15 +12,16 @@ import { MatDialog } from '@angular/material/dialog';
 import { MatIconModule } from '@angular/material/icon';
 import { MatSnackBar } from '@angular/material/snack-bar';
 import { RouterLink } from '@angular/router';
-import type { Produto } from '@shared/model';
+import type { Estabelecimento, Produto } from '@shared/model';
 import { firstValueFrom } from 'rxjs';
 import { BadgePreco } from '../../../shared/ui/badge-preco/badge-preco';
 import { EmptyState } from '../../../shared/ui/empty-state/empty-state';
 import { FontePrecoInfo } from '../../../shared/ui/fonte-preco/fonte-preco';
 import { GraficoHistorico } from '../../../shared/ui/grafico-historico/grafico-historico';
 import { BreakpointService } from '../../../core/layout/breakpoint.service';
+import { ApelidosService } from '../../estabelecimentos/data-access/apelidos.service';
 import { NotasService } from '../../notas/data-access/notas.service';
-import { ProdutosService } from '../data-access/produtos.service';
+import { ProdutosService, type PrecoComId } from '../data-access/produtos.service';
 import { DadosVinculo, VincularDialog } from '../vincular/vincular-dialog';
 import { PrecosPerto } from './precos-perto';
 import { limitarSeries, resumirPrecos } from './resumo';
@@ -30,7 +31,9 @@ export const OBSERVACOES_VISIVEIS = 10;
 interface DadosProduto {
   produto: Produto;
   equivalentes: Produto[];
-  resumo: ReturnType<typeof resumirPrecos>;
+  precos: PrecoComId[];
+  estabelecimentos: ReadonlyMap<string, Estabelecimento>;
+  chaves: ReadonlySet<string>;
 }
 
 @Component({
@@ -52,6 +55,7 @@ interface DadosProduto {
 export default class ProdutoDetalhePage {
   private readonly service = inject(ProdutosService);
   private readonly notas = inject(NotasService);
+  private readonly apelidos = inject(ApelidosService);
   protected readonly estreito = inject(BreakpointService).estreito;
   private readonly dialog = inject(MatDialog);
   private readonly snack = inject(MatSnackBar);
@@ -71,11 +75,17 @@ export default class ProdutoDetalhePage {
       const estabelecimentos = await this.service.estabelecimentosPorCnpj(
         precos.map((p) => p.cnpj),
       );
-      return { produto, equivalentes, resumo: resumirPrecos(precos, estabelecimentos, chaves) };
+      return { produto, equivalentes, precos, estabelecimentos, chaves };
     },
   });
 
-  protected readonly valor = computed(() => (this.dados.hasValue() ? this.dados.value() : null));
+  protected readonly valor = computed(() => {
+    const d = this.dados.hasValue() ? this.dados.value() : null;
+    if (!d) return null;
+    const { produto, equivalentes, precos, estabelecimentos, chaves } = d;
+    const resumo = resumirPrecos(precos, estabelecimentos, chaves, this.apelidos.apelidos());
+    return { produto, equivalentes, resumo };
+  });
   protected readonly todasObservacoes = signal(false);
   protected readonly observacoes = computed(() => {
     const lista = this.valor()?.resumo?.observacoes ?? [];

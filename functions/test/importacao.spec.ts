@@ -40,7 +40,13 @@ describe('previewNfce', () => {
   it('sucesso: devolve a nota e guarda o preview por 30 min, sem dados do consumidor', async () => {
     const ctx = criarContexto({ resposta: PAGINA_NOTA_OK });
     const r = await executarPreview(UID_A, { url: URL_QR }, ctx);
-    expect(r).toEqual({ ok: true, nota: notaExemplo() });
+    const esperada = notaExemplo();
+    esperada.emitente = {
+      ...esperada.emitente,
+      fantasia: 'BOX ATACADISTA',
+      fantasiaConsultadaEm: ctx.relogio.agora.toISOString(),
+    };
+    expect(r).toEqual({ ok: true, nota: esperada });
     const doc = ctx.repo.docs.get(caminhoPreview(UID_A, CHAVE))!;
     expect(doc['expiraEmIso']).toBe(
       new Date(ctx.relogio.agora.getTime() + PREVIEW_TTL_MS).toISOString(),
@@ -84,6 +90,10 @@ describe('previewNfce', () => {
   it('ja-importada devolve a chave para abrir a nota', async () => {
     const ctx = criarContexto({ resposta: PAGINA_NOTA_OK });
     await ctx.repo.gravar(`usuarios/${UID_A}/notas/${CHAVE}`, { chave: CHAVE });
+    await ctx.repo.gravar('estabelecimentos/03644587000836', {
+      ...notaExemplo().emitente,
+      fantasiaConsultadaEm: ctx.relogio.agora.toISOString(),
+    });
     expect(await executarPreview(UID_A, { url: URL_QR }, ctx)).toEqual({
       ok: false,
       erro: { codigo: 'ja-importada', chave: CHAVE },
@@ -426,8 +436,9 @@ describe('log estruturado (RNF-30)', () => {
     ctxFora.log = (r) => logImportacao(r, logger);
     await executarPreview(UID_B, { url: URL_QR }, ctxFora);
 
-    expect(logger.info).toHaveBeenCalledTimes(3);
+    expect(logger.info).toHaveBeenCalledTimes(4);
     expect(logger.info.mock.calls.map((c) => c[1].etapa)).toEqual([
+      'cnpj',
       'preview',
       'vinculo',
       'confirmacao',
@@ -443,7 +454,8 @@ describe('log estruturado (RNF-30)', () => {
     expect(tudo).not.toContain(UID_A);
     expect(tudo).not.toContain(UID_B);
     expect(tudo).not.toContain('03644587000836');
-    expect(logger.info.mock.calls[0][1]).toMatchObject({
+    expect(tudo).not.toContain('BOX');
+    expect(logger.info.mock.calls[1][1]).toMatchObject({
       uf: 'PR',
       qtdItens: 3,
       resultado: 'sucesso',

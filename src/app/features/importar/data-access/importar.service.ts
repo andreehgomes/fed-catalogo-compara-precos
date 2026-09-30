@@ -32,15 +32,22 @@ export function erroDeFunctions(e: unknown): ErroImportacao {
 export class ImportarService {
   private readonly chamar = inject(CHAMAR_FUNCTION);
 
-  preview(entrada: PreviewEntrada): Promise<Resultado<NfceParsed>> {
-    return this.executar<PreviewResposta, NfceParsed>('previewNfce', entrada, (r) =>
-      r.ok ? { ok: true, valor: r.nota } : r,
+  preview(
+    entrada: PreviewEntrada,
+  ): Promise<Resultado<{ nota: NfceParsed; apelido: string | null }>> {
+    return this.executar<PreviewResposta, { nota: NfceParsed; apelido: string | null }>(
+      'previewNfce',
+      entrada,
+      (r) => (r.ok ? { ok: true, valor: { nota: r.nota, apelido: r.apelido ?? null } } : r),
     );
   }
 
-  confirmar(chave: string): Promise<Resultado<string>> {
-    return this.executar<ConfirmarResposta, string>('confirmarNfce', { chave }, (r) =>
-      r.ok ? { ok: true, valor: r.chave } : r,
+  /** `apelido` só vai na chamada quando definido (`null` = sem apelido novo). */
+  confirmar(chave: string, apelido?: string | null): Promise<Resultado<string>> {
+    return this.executar<ConfirmarResposta, string>(
+      'confirmarNfce',
+      apelido === undefined ? { chave } : { chave, apelido },
+      (r) => (r.ok ? { ok: true, valor: r.chave } : r),
     );
   }
 

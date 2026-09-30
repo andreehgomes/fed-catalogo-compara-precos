@@ -4,13 +4,19 @@ import { Router } from '@angular/router';
 import type { ErroImportacao, NfceParsed, PreviewEntrada } from '@shared/model';
 import { HistoricoPessoalStore } from '../notas/data-access/historico-pessoal.store';
 import { ImportarService } from './data-access/importar.service';
-import { interpretarEntrada } from './mensagens';
+import { estabelecimentoAtualizado, interpretarEntrada } from './mensagens';
 
 export type EstadoImportacao =
   | { tipo: 'ocioso' }
   | { tipo: 'buscando'; entrada: PreviewEntrada }
-  | { tipo: 'preview'; entrada: PreviewEntrada; nota: NfceParsed }
-  | { tipo: 'confirmando'; entrada: PreviewEntrada; nota: NfceParsed }
+  | {
+      tipo: 'preview';
+      entrada: PreviewEntrada;
+      nota: NfceParsed;
+      apelido: string | null;
+      erro?: ErroImportacao;
+    }
+  | { tipo: 'confirmando'; entrada: PreviewEntrada; nota: NfceParsed; apelido: string | null }
   | { tipo: 'guardando'; entrada: PreviewEntrada; erro: ErroImportacao }
   | { tipo: 'guardada'; chave: string; proximaTentativa: string }
   | { tipo: 'erro'; entrada: PreviewEntrada | null; erro: ErroImportacao; nota?: NfceParsed };
@@ -36,6 +42,11 @@ export class ImportarStore {
         ? (e.nota ?? null)
         : null;
   });
+  /** Apelido que o usuário já deu à loja (vem da prévia). */
+  readonly apelido = computed(() => {
+    const e = this._estado();
+    return e.tipo === 'preview' || e.tipo === 'confirmando' ? e.apelido : null;
+  });
 
   /** Valida localmente e, se passar, busca a prévia. Devolve o erro local, se houver. */
   async importarTexto(texto: string): Promise<ErroImportacao | null> {
@@ -53,24 +64,31 @@ export class ImportarStore {
     this._estado.set({ tipo: 'buscando', entrada });
     const r = await this.service.preview(entrada);
     if (!r.ok) {
+      if (estabelecimentoAtualizado(r.erro)) this.historico.invalidar();
       this._estado.set({ tipo: 'erro', entrada, erro: r.erro });
       return;
     }
-    this._estado.set({ tipo: 'preview', entrada, nota: r.valor });
+    this._estado.set({ tipo: 'preview', entrada, ...r.valor });
     await this.router.navigate(['/importar/preview']);
   }
 
-  async confirmar(): Promise<void> {
+  /** `apelido`: `undefined` quando o campo não aparece; `null` quando foi apagado. */
+  async confirmar(apelido?: string | null): Promise<void> {
     const e = this._estado();
     if (e.tipo !== 'preview') return;
-    this._estado.set({ tipo: 'confirmando', entrada: e.entrada, nota: e.nota });
-    let r = await this.service.confirmar(e.nota.chave);
+    const { entrada, nota } = e;
+    this._estado.set({ tipo: 'confirmando', entrada, nota, apelido: e.apelido });
+    let r = await this.service.confirmar(nota.chave, apelido);
     if (!r.ok && r.erro.codigo === 'preview-expirado') {
-      const refeito = await this.service.preview(e.entrada);
-      if (refeito.ok) r = await this.service.confirmar(refeito.valor.chave);
+      const refeito = await this.service.preview(entrada);
+      if (refeito.ok) r = await this.service.confirmar(refeito.valor.nota.chave, apelido);
+    }
+    if (!r.ok && r.erro.codigo === 'apelido-invalido') {
+      this._estado.set({ tipo: 'preview', entrada, nota, apelido: e.apelido, erro: r.erro });
+      return;
     }
     if (!r.ok) {
-      this._estado.set({ tipo: 'erro', entrada: e.entrada, erro: r.erro, nota: e.nota });
+      this._estado.set({ tipo: 'erro', entrada, erro: r.erro, nota });
       return;
     }
     this.historico.invalidar();

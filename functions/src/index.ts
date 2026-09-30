@@ -2,8 +2,9 @@ import { ANTHROPIC_API_KEY, EM_DEV, OPCOES_CALLABLE } from './config';
 import { logger } from 'firebase-functions';
 import { HttpsError, onCall, type CallableRequest } from 'firebase-functions/v2/https';
 import { onSchedule } from 'firebase-functions/v2/scheduler';
-import type { PreviewEntrada } from '@shared/model';
+import type { DefinirApelidoEntrada, PreviewEntrada } from '@shared/model';
 import { RepositorioFirestore } from './dados/repositorio-firestore';
+import { executarDefinirApelido } from './estabelecimentos/definir-apelido';
 import { executarConfirmacao } from './importar/confirmar-nfce';
 import { contextoPadrao, type Contexto } from './importar/contexto';
 import { executarPreview } from './importar/preview-nfce';
@@ -41,7 +42,8 @@ export const previewNfce = onCall(OPCOES_CALLABLE, (req: CallableRequest<Preview
 /** A gravação chama a IA do vínculo (até ~25 s). */
 export const confirmarNfce = onCall(
   { ...OPCOES_CALLABLE, timeoutSeconds: 120, secrets: [ANTHROPIC_API_KEY] },
-  (req: CallableRequest<{ chave?: string }>) => executarConfirmacao(uidDe(req), req.data, contexto()),
+  (req: CallableRequest<{ chave?: string; apelido?: string | null }>) =>
+    executarConfirmacao(uidDe(req), req.data, contexto()),
 );
 
 export const enfileirarNfce = onCall(OPCOES_CALLABLE, (req: CallableRequest<PreviewEntrada>) =>
@@ -65,6 +67,12 @@ export const desvincularProduto = onCall(
     uidDe(req);
     return executarDesvincular(req.data, contexto());
   },
+);
+
+export const definirApelido = onCall(
+  OPCOES_CALLABLE,
+  (req: CallableRequest<DefinirApelidoEntrada>) =>
+    executarDefinirApelido(uidDe(req), req.data, contexto()),
 );
 
 export const reprocessarPendentes = onSchedule(

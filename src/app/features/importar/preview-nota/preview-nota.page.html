@@ -3,10 +3,21 @@
     <header class="cp-detail-header">
       <div>
         <p class="cp-label">Prévia da nota</p>
-        <h1>{{ n.emitente.fantasia || n.emitente.nome }}</h1>
+        <h1>{{ titulo() }}</h1>
         <p>CNPJ {{ cnpj() }} · {{ n.emitente.endereco }}</p>
       </div>
     </header>
+
+    @if (mostrarCampo()) {
+      <section class="cp-block" aria-label="Nome da loja">
+        <cp-campo-apelido
+          [(valor)]="apelido"
+          [nomeOficial]="n.emitente.nome"
+          [erroServidor]="erroApelido()"
+        />
+        <p class="cp-field-hint">Razão social: {{ n.emitente.nome }}</p>
+      </section>
+    }
 
     <section class="cp-summary" aria-label="Resumo">
       <div>
@@ -70,7 +81,7 @@
         <button
           type="button"
           class="cp-btn-primary"
-          [disabled]="confirmando()"
+          [disabled]="confirmando() || apelidoInvalido()"
           (click)="confirmar()"
         >
           {{ confirmando() ? 'Importando…' : 'Confirmar importação' }}
