@@ -39,7 +39,8 @@ npx lighthouse http://localhost:8090/login --form-factor=mobile --chrome-flags="
 
 Scripts auxiliares (rodar uma vez, resultado versionado): `scripts/gerar-municipios-pr.mjs`
 (IBGE), `scripts/gerar-imagens-codigo.mjs` (QR/EAN de teste), `scripts/gerar-icones.mjs`
-(ícones da PWA), `scripts/anonimizar-fixture.mjs` (HTML de NFC-e antes de virar fixture).
+(ícones da PWA, favicon e `public/logo/logo.png`/`simbolo.png`, recortados da arte
+`public/logo/logos.png`), `scripts/anonimizar-fixture.mjs` (HTML de NFC-e antes de virar fixture).
 
 **Node:** o Angular 22.2 exige Node ≥ 22.22.3. O pacote `node` está em
 `devDependencies` como runtime local: os scripts `npm run …` usam esse Node
@@ -78,7 +79,7 @@ com `authGuard`: `/` (painel), `/importar`, `/importar/preview`, `/notas`,
 - `@angular/pwa`: `ngsw-config.json` faz prefetch só do app shell; ícones, JSON e o
   `.wasm` do scanner são `lazy`; fontes do Google em cache lazy. **Menor Preço e
   Functions nunca são cacheados** (não há `dataGroups`). Manifest pt-BR com
-  `theme_color` = `$cp-shell-900` e `background_color` = `$cp-bg`. O Hosting manda
+  `theme_color` branco (`$cp-surface`, como o header) e `background_color` = `$cp-bg`. O Hosting manda
   `no-cache` para `index.html`, `ngsw-worker.js` e `ngsw.json`.
 - A lista de ícones do Material Symbols é um **subset** (`icon_names=` no `index.html`,
   em ordem alfabética): ao usar um ícone novo, acrescente o nome lá, senão aparece o
@@ -204,6 +205,9 @@ Detalhes: [docs/analise/compara-precos-nfce-analise.md](docs/analise/compara-pre
 carregada por `loadComponent`). Login, cadastro, redefinição de senha e a página de
 erro (`**`) ficam fora dele.
 
+- Casca **clara** (tokens `$cp-nav-*`), porque o texto da logo é verde escuro: menu com a
+  logo completa (`logo/logo.png`) e, no rail, só o símbolo (`logo/simbolo.png`); o header
+  mostra a logo quando o menu não a mostra (tela estreita ou rail).
 - `<aside>` irmão do conteúdo: **rail de 76px** ↔ **264px** no desktop (`expandido`)
   e **drawer de 272px sobreposto abaixo de 900px** (`drawerAberto`), com scrim. O
   drawer fecha ao navegar (`NavigationEnd` + `takeUntilDestroyed`), com `Esc` (o
@@ -472,9 +476,13 @@ projetos Firebase e o repositório mantêm o nome antigo (`compara-precos`).
 Design system **"Cupom Esperto"**: a estrutura do DS do `fed-catalogo-confeccoes`
 com prefixo `cp` e paleta verde.
 
+- **Logo** (arte em `public/logo/logos.png`, recortes gerados por `scripts/gerar-icones.mjs`):
+  `logo.png` (símbolo + "Cupom Esperto", fundo transparente) e `simbolo.png` só vão sobre
+  fundo claro; os ícones da PWA usam o símbolo sobre floresta `#0d3320`.
 - **Tokens** em `src/app/shared/style/_tokens.scss` — acento (`$cp-accent` `#1f7a4d`,
-  `$cp-accent-ink` `#16603b`), casca floresta (`$cp-shell-900/800/700`,
-  `$cp-gradient-shell`), superfícies, rampa de texto grafite esverdeado, preço
+  `$cp-accent-ink` `#16603b`), casca clara (`$cp-nav-*`, `$cp-gradient-auth` nas telas de
+  conta), floresta só para fundos escuros pontuais (`$cp-shell-900/700`: câmera do
+  scanner), superfícies, rampa de texto grafite esverdeado, preço
   (`$cp-cheaper` = acento, `$cp-pricier` vermelho), semânticas (`$cp-success` é
   **teal** para não se confundir com o acento), raios, sombras e layout. **Única
   fonte de cor**: o stylelint (`color-no-hex`, `color-named`) só libera este arquivo

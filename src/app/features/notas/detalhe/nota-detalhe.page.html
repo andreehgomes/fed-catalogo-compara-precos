@@ -219,11 +219,13 @@
                         <span class="detalhe-comparacao">
                           <cp-badge-preco tipo="mais-barato" [diferenca]="r.diferenca" />
                           <span class="item-detalhe">
-                            no {{ r.oferta.estabelecimento.nome }} ({{
+                            <strong class="cp-price">{{ r.oferta.valor | currency }}</strong
+                            >/{{ item.unidade.toLowerCase() }} no
+                            {{ r.oferta.estabelecimento.nome }} ({{
                               distancia(r.oferta.distanciaKm)
                             }})
                             @if (r.aproximado) {
-                              · aproximado
+                              · aproximado: {{ r.oferta.descricao }}
                             }
                           </span>
                           <cp-fonte-preco fonte="menor-preco" [data]="r.oferta.dataHora" />

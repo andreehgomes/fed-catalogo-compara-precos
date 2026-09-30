@@ -908,7 +908,7 @@ button.cp-list-row {
   display: grid;
   place-items: center;
   padding: max(24px, env(safe-area-inset-top)) 16px 32px;
-  background: $cp-gradient-shell;
+  background: $cp-gradient-auth;
 }
 
 .cp-auth-inner {
@@ -920,32 +920,19 @@ button.cp-list-row {
 
 .cp-auth-brand {
   display: flex;
+  flex-direction: column;
   align-items: center;
-  gap: 12px;
-  color: $cp-on-shell;
-
-  strong {
-    display: block;
-    font-size: 19px;
-    font-weight: $cp-display-weight;
-    letter-spacing: -0.01em;
-  }
+  gap: 8px;
 
   span {
-    font-size: 13px;
-    color: $cp-on-shell-muted;
+    font-size: 14px;
+    color: $cp-text-muted;
   }
 }
 
 .cp-auth-logo {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  width: 44px;
-  height: 44px;
-  border-radius: $cp-radius-input;
-  background: $cp-accent;
-  color: $cp-on-shell;
+  width: min(260px, 72vw);
+  height: auto;
 }
 
 .cp-auth-card {
@@ -955,7 +942,8 @@ button.cp-list-row {
   padding: clamp(20px, 5vw, 30px);
   border-radius: $cp-radius-panel;
   background: $cp-surface;
-  box-shadow: $cp-shadow-modal;
+  border: 1px solid $cp-border;
+  box-shadow: $cp-shadow-panel;
 
   h1 {
     margin: 0;

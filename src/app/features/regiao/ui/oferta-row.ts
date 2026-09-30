@@ -14,14 +14,14 @@ export function formatarDistancia(km: number): string {
   imports: [BadgePreco, CurrencyPipe, FontePrecoInfo],
   template: `
     <div class="item-principal">
-      <span class="item-nome">{{ oferta().estabelecimento.nome }}</span>
+      <span class="item-nome">{{ oferta().descricao }}</span>
+      <span class="item-detalhe"><strong>{{ oferta().estabelecimento.nome }}</strong></span>
       <span class="item-detalhe">
         {{ oferta().estabelecimento.endereco }}
         @if (oferta().estabelecimento.bairro) {
           · {{ oferta().estabelecimento.bairro }}
         }
       </span>
-      <span class="item-detalhe">{{ oferta().descricao }}</span>
       <cp-fonte-preco fonte="menor-preco" [data]="oferta().dataHora" />
     </div>
     <div class="item-lado">

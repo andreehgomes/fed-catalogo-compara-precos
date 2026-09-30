@@ -1,3 +1,4 @@
+import { NgOptimizedImage } from '@angular/common';
 import { ChangeDetectionStrategy, Component, computed, inject, input, signal } from '@angular/core';
 import { FormField, FormRoot, email, form, minLength, required } from '@angular/forms/signals';
 import { MatIconModule } from '@angular/material/icon';
@@ -8,7 +9,7 @@ import { BotaoGoogle } from '../google/botao-google';
 
 @Component({
   selector: 'cp-login',
-  imports: [BotaoGoogle, FormField, FormRoot, MatIconModule, RouterLink],
+  imports: [BotaoGoogle, FormField, FormRoot, MatIconModule, NgOptimizedImage, RouterLink],
   templateUrl: './login.page.html',
   changeDetection: ChangeDetectionStrategy.OnPush,
 })

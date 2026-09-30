@@ -1,3 +1,4 @@
+import { NgOptimizedImage } from '@angular/common';
 import { ChangeDetectionStrategy, Component, computed, inject, signal } from '@angular/core';
 import { FormField, FormRoot, email, form, required } from '@angular/forms/signals';
 import { MatIconModule } from '@angular/material/icon';
@@ -7,7 +8,7 @@ import { erroDoCampo } from '../../../shared/forms/erro-campo';
 
 @Component({
   selector: 'cp-redefinir-senha',
-  imports: [FormField, FormRoot, MatIconModule, RouterLink],
+  imports: [FormField, FormRoot, MatIconModule, NgOptimizedImage, RouterLink],
   templateUrl: './redefinir-senha.page.html',
   changeDetection: ChangeDetectionStrategy.OnPush,
 })

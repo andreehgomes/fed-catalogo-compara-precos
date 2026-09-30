@@ -13,25 +13,11 @@ $cp-accent-soft: #effaf3; // fundo de chip, opção ativa
 $cp-accent-border: #c6e8d3; // borda de chip, borda de opção ativa
 $cp-accent-hover: #dff3e7; // hover de botão ghost
 
-// ── Casca (floresta) ─────────────────────────────────────────────────────────
-$cp-shell-900: #0a2418; // início do gradiente; theme-color
-$cp-shell-800: #0f3a26; // stop 55% do gradiente do sidebar
-$cp-shell-700: #15502f; // fim do gradiente; ícone de ação secundária
-$cp-on-shell: #fff; // texto e ícone sobre a casca e sobre o acento
-$cp-on-shell-muted: #b9d3c3; // rótulo secundário sobre a casca
-
-$cp-shell-item: #cfe3d6; // texto dos itens de navegação
-$cp-shell-group: #a3c2ae; // rótulo de grupo e rodapé do sidebar
-$cp-shell-item-hover: rgb(255 255 255 / 9%);
-$cp-shell-item-active: rgb(255 255 255 / 16%);
-$cp-shell-divider: rgb(255 255 255 / 10%);
+// ── Floresta (fundos escuros pontuais: câmera do scanner, ícone da PWA) ─────
+$cp-shell-900: #0a2418; // fundo da câmera
+$cp-shell-700: #15502f; // ícone de ação secundária
+$cp-on-shell: #fff; // texto e ícone sobre o acento e sobre a floresta
 $cp-header-bg: rgb(255 255 255 / 88%);
-$cp-gradient-shell: linear-gradient(
-  168deg,
-  $cp-shell-900 0%,
-  $cp-shell-800 55%,
-  $cp-shell-700 100%
-);
 
 // ── Superfícies e bordas ─────────────────────────────────────────────────────
 $cp-bg: #f3f6f3; // tela do app
@@ -54,6 +40,17 @@ $cp-text-muted: #5d6a63; // subtítulos, metadados
 $cp-text-label: #5f6c65; // rótulos uppercase (10px: precisa de AA)
 $cp-text-placeholder: #76837c; // placeholder
 $cp-text-disabled: #8f9b94; // ícone desabilitado (não é texto)
+
+// ── Casca clara (menu lateral e telas de conta) ──────────────────────────────
+// Clara porque o texto da logo (public/logo/logo.png) é verde escuro.
+$cp-nav-bg: $cp-surface;
+$cp-nav-border: $cp-border;
+$cp-nav-item: $cp-text-secondary; // itens de navegação
+$cp-nav-item-hover: $cp-surface-subtle;
+$cp-nav-item-active: $cp-accent-ink; // item ativo
+$cp-nav-item-active-bg: $cp-accent-soft;
+$cp-nav-group: $cp-text-muted; // rótulo de grupo e rodapé do menu
+$cp-gradient-auth: linear-gradient(168deg, $cp-accent-soft 0%, $cp-bg 60%);
 
 // ── Preço (nunca comunicado só por cor: ícone + texto sempre) ────────────────
 $cp-cheaper: $cp-accent-ink; // "mais barato" + trending_down

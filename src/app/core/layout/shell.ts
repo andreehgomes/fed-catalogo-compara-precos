@@ -1,3 +1,4 @@
+import { NgOptimizedImage } from '@angular/common';
 import {
   ChangeDetectionStrategy,
   Component,
@@ -34,7 +35,7 @@ export const ITENS_NAV: readonly ItemNav[] = [
 
 @Component({
   selector: 'cp-shell',
-  imports: [MatIconModule, MatTooltipModule, RouterLink, RouterLinkActive, RouterOutlet],
+  imports: [MatIconModule, MatTooltipModule, NgOptimizedImage, RouterLink, RouterLinkActive, RouterOutlet],
   templateUrl: './shell.html',
   styleUrl: './shell.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,

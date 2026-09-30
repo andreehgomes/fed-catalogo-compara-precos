@@ -23,7 +23,8 @@
   flex-direction: column;
   flex-shrink: 0;
   width: $cp-rail-width;
-  background: $cp-gradient-shell;
+  background: $cp-nav-bg;
+  border-right: 1px solid $cp-nav-border;
   overflow-x: hidden;
   transition:
     width 0.24s $cp-ease,
@@ -39,40 +40,38 @@
   align-items: center;
   gap: 11px;
   flex-shrink: 0;
-  padding: 16px 16px 14px 18px;
-  border-bottom: 1px solid $cp-shell-divider;
+  min-height: 72px;
+  padding: 14px 16px 12px 22px;
+  box-sizing: border-box;
+  border-bottom: 1px solid $cp-nav-border;
 }
 
-.cp-nav-logo {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
+.cp-nav-simbolo {
+  display: none;
   flex-shrink: 0;
   width: 40px;
   height: 40px;
-  border-radius: 12px;
-  background: $cp-accent;
-  color: $cp-on-shell;
 }
 
 .cp-nav-brand {
   display: flex;
   flex-direction: column;
+  gap: 4px;
   white-space: nowrap;
 }
 
-.cp-nav-brand-name {
-  font-size: 15.5px;
-  font-weight: 650;
-  color: $cp-on-shell;
+.cp-nav-logo {
+  width: 172px;
+  height: auto;
 }
 
 .cp-nav-brand-tag {
+  padding-left: 2px;
   font-size: 10px;
   font-weight: 600;
   letter-spacing: 0.14em;
   text-transform: uppercase;
-  color: $cp-shell-group;
+  color: $cp-nav-group;
 }
 
 .cp-nav-list {
@@ -95,7 +94,7 @@
   border: none;
   border-radius: 12px;
   background: transparent;
-  color: $cp-shell-item;
+  color: $cp-nav-item;
   font-family: inherit;
   font-size: 14px;
   font-weight: 500;
@@ -110,17 +109,17 @@
   }
 
   &:hover {
-    background: $cp-shell-item-hover;
+    background: $cp-nav-item-hover;
   }
 
   &.ativo {
-    background: $cp-shell-item-active;
-    color: $cp-on-shell;
+    background: $cp-nav-item-active-bg;
+    color: $cp-nav-item-active;
     font-weight: 650;
   }
 
   &:focus-visible {
-    outline: 2px solid $cp-on-shell;
+    outline: 2px solid $cp-accent;
     outline-offset: -2px;
   }
 
@@ -135,7 +134,7 @@
   gap: 2px;
   flex-shrink: 0;
   padding: 14px 22px 18px;
-  border-top: 1px solid $cp-shell-divider;
+  border-top: 1px solid $cp-nav-border;
   white-space: nowrap;
 }
 
@@ -143,13 +142,13 @@
   font-size: 10px;
   letter-spacing: 0.1em;
   text-transform: uppercase;
-  color: $cp-shell-group;
+  color: $cp-nav-group;
 }
 
 .cp-nav-footer-name {
   font-size: 12.5px;
   font-weight: 600;
-  color: $cp-shell-item;
+  color: $cp-nav-item;
 }
 
 .cp-nav.rail {
@@ -159,9 +158,13 @@
     display: none;
   }
 
+  .cp-nav-simbolo {
+    display: block;
+  }
+
   .cp-nav-header {
     justify-content: center;
-    padding: 16px 0 14px;
+    padding: 14px 0 12px;
   }
 
   .cp-nav-item {
@@ -217,14 +220,10 @@
   border-bottom: 1px solid $cp-border;
 }
 
-.cp-header-title {
-  font-size: 16px;
-  font-weight: 650;
-  letter-spacing: -0.01em;
-  color: $cp-text;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
+.cp-header-logo {
+  display: block;
+  width: 134px;
+  height: auto;
 }
 
 .cp-header-spacer {

@@ -8,9 +8,9 @@
     [attr.inert]="estreito() && !drawerAberto() ? '' : null"
   >
     <div class="cp-nav-header">
-      <span class="cp-nav-logo"><mat-icon aria-hidden="true">shopping_basket</mat-icon></span>
+      <img class="cp-nav-simbolo" ngSrc="logo/simbolo.png" width="40" height="40" alt="Cupom Esperto" />
       <div class="cp-nav-brand">
-        <span class="cp-nav-brand-name">Cupom Esperto</span>
+        <img class="cp-nav-logo" ngSrc="logo/logo.png" width="720" height="151" alt="Cupom Esperto" />
         <span class="cp-nav-brand-tag">Notas do Paraná</span>
       </div>
     </div>
@@ -74,7 +74,9 @@
       >
         <mat-icon aria-hidden="true">menu</mat-icon>
       </button>
-      <span class="cp-header-title">Cupom Esperto</span>
+      @if (estreito() || rail()) {
+        <img class="cp-header-logo" ngSrc="logo/logo.png" width="720" height="151" alt="Cupom Esperto" />
+      }
       <span class="cp-header-spacer"></span>
       @if (nomeUsuario()) {
         <span class="cp-header-user" [title]="nomeUsuario()">
