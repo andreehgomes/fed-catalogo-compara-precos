@@ -96,6 +96,7 @@
             [parou]="store.parou()"
             [ocultos]="store.ocultos()"
             [selecao]="store.selecao()"
+            [naLista]="store.naLista()"
             [quantidades]="store.quantidades()"
             [totais]="store.totais()"
             (alternar)="store.alternar($event)"
@@ -107,10 +108,36 @@
         }
       }
 
+      @if (listas.cheia()) {
+        <p class="cp-field-hint sug-aviso-listas">
+          Você já tem 5 listas. Exclua uma ou use uma lista guardada.
+        </p>
+      }
       <div class="sug-acoes">
         <button
           type="button"
           class="cp-btn-primary"
+          [disabled]="!store.selecionados().length || listas.cheia()"
+          (click)="criarLista()"
+        >
+          <mat-icon aria-hidden="true">checklist</mat-icon>
+          Criar lista com {{ store.selecionados().length }}
+          {{ store.selecionados().length === 1 ? 'item' : 'itens' }}
+        </button>
+        @if (listas.listas().length) {
+          <button
+            type="button"
+            class="cp-btn-secondary"
+            [disabled]="!store.selecionados().length"
+            (click)="adicionarALista()"
+          >
+            <mat-icon aria-hidden="true">playlist_add</mat-icon>
+            Adicionar à lista
+          </button>
+        }
+        <button
+          type="button"
+          class="cp-btn-secondary"
           [disabled]="!store.selecionados().length"
           (click)="copiar()"
         >

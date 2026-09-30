@@ -62,6 +62,11 @@ export class HistoricoPessoalStore {
     return compararNota(nota, indexarCompras(notas, grupos), grupos);
   }
 
+  /** Grupos de equivalência dos produtos de uma nota, sem montar o índice inteiro. */
+  gruposDaNota(nota: Nota): Promise<Grupos> {
+    return this.gruposDe(idsDe([nota]));
+  }
+
   /** Resumo "comparado com a última vez" de várias notas (lista), numa leitura só. */
   async resumir(alvo: readonly Nota[]): Promise<Map<string, ResumoHistorico>> {
     if (!alvo.length) return new Map();

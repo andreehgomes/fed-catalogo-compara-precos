@@ -1,10 +1,19 @@
-import { ChangeDetectionStrategy, Component, computed, inject, signal } from '@angular/core';
+import {
+  ChangeDetectionStrategy,
+  Component,
+  computed,
+  effect,
+  inject,
+  input,
+  signal,
+} from '@angular/core';
 import { FormField, form } from '@angular/forms/signals';
 import { MatIconModule } from '@angular/material/icon';
 import { Router } from '@angular/router';
 import { formatarChave, limparChave } from '@shared/chave-acesso';
 import { ConexaoService } from '../../core/layout/conexao.service';
 import { Scanner } from '../../shared/ui/scanner/scanner';
+import { ListasStore } from '../listas/data-access/listas.store';
 import { PendentesBloco } from '../notas/ui/pendentes-bloco';
 import { ImportarStore } from './importar.store';
 import { AcaoErro, mensagemDe } from './mensagens';
@@ -22,6 +31,19 @@ export default class ImportarPage {
   protected readonly store = inject(ImportarStore);
   protected readonly conexao = inject(ConexaoService);
   private readonly router = inject(Router);
+  private readonly listas = inject(ListasStore);
+
+  /** `?lista=<id>`: a nota vai ser conferida com essa lista de compras (RF-09). */
+  readonly lista = input<string>();
+
+  protected readonly nomeDaLista = computed(() => {
+    const id = this.store.lista();
+    return id ? (this.listas.listas().find((l) => l.id === id)?.nome ?? 'de compras') : null;
+  });
+  protected readonly jaImportadaComLista = computed(() => {
+    const e = this.store.estado();
+    return !!this.store.lista() && e.tipo === 'erro' && e.erro.codigo === 'ja-importada';
+  });
 
   protected readonly lendo = signal(false);
   protected readonly origem = signal<Origem | null>(null);
@@ -45,6 +67,21 @@ export default class ImportarPage {
 
   constructor() {
     this.store.reiniciar();
+    effect(() => this.store.definirLista(this.lista() ?? null));
+  }
+
+  protected naoConferir(): void {
+    void this.router.navigate([], { queryParams: { lista: null }, replaceUrl: true });
+  }
+
+  protected async conferirComLista(): Promise<void> {
+    const e = this.store.estado();
+    const lista = this.store.lista();
+    if (e.tipo === 'erro' && e.erro.codigo === 'ja-importada' && lista) {
+      await this.router.navigate(['/listas', lista, 'conferir'], {
+        queryParams: { chave: e.erro.chave },
+      });
+    }
   }
 
   protected abrirScanner(): void {

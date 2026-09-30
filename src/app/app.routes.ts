@@ -30,6 +30,10 @@ export const routes: Routes = [
           import('./features/sugestoes/sugestoes.routes').then((m) => m.SUGESTOES_ROUTES),
       },
       {
+        path: 'listas',
+        loadChildren: () => import('./features/listas/listas.routes').then((m) => m.LISTAS_ROUTES),
+      },
+      {
         path: 'regiao',
         title: 'Preços perto de mim · Cupom Esperto',
         loadComponent: () => import('./features/regiao/busca-regiao.page'),

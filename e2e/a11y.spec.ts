@@ -1,6 +1,7 @@
 import AxeBuilder from '@axe-core/playwright';
 import { expect, test, type Page } from '@playwright/test';
 import { MOTIVO_SEM_USUARIO, TEM_USUARIO_E2E } from './support/env';
+import { adicionar, apagarListas, marcaDoTeste, novaLista } from './support/listas';
 import { entrar } from './support/login';
 import { bloquearServicosReais, mockCallables, mockMenorPreco } from './support/mocks';
 
@@ -51,6 +52,7 @@ test.describe('acessibilidade com login (usuário de teste no dv)', () => {
     '/importar',
     '/notas',
     '/sugestoes',
+    '/listas',
     '/regiao',
     '/produtos',
     '/estabelecimentos',
@@ -113,5 +115,18 @@ test.describe('acessibilidade com login (usuário de teste no dv)', () => {
       page.getByRole('status').filter({ hasText: 'Comparado com a última vez' }),
     ).not.toContainText('Comparando');
     expect(await violacoesGraves(page)).toEqual([]);
+  });
+
+  test('axe sem violações graves na lista de compras', async ({ page }) => {
+    const marca = marcaDoTeste();
+    await novaLista(page, `${marca} acessibilidade`);
+    try {
+      await adicionar(page, 'e2e leite', 'e2e pão');
+      await page.getByRole('checkbox', { name: 'e2e pão' }).check();
+      await expect(page.getByRole('heading', { name: 'No carrinho (1)' })).toBeVisible();
+      expect(await violacoesGraves(page)).toEqual([]);
+    } finally {
+      await apagarListas(page, marca);
+    }
   });
 });

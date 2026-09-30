@@ -28,6 +28,7 @@ export const ITENS_NAV: readonly ItemNav[] = [
   { rota: '/importar', icone: 'qr_code_scanner', rotulo: 'Importar nota' },
   { rota: '/notas', icone: 'receipt_long', rotulo: 'Minhas notas' },
   { rota: '/sugestoes', icone: 'event_repeat', rotulo: 'Sugestão de compra' },
+  { rota: '/listas', icone: 'checklist', rotulo: 'Lista de compras' },
   { rota: '/regiao', icone: 'near_me', rotulo: 'Preços perto de mim' },
   { rota: '/produtos', icone: 'inventory_2', rotulo: 'Produtos' },
   { rota: '/estabelecimentos', icone: 'storefront', rotulo: 'Estabelecimentos' },
@@ -67,9 +68,10 @@ export class Shell {
   });
 
   private readonly url = signal(this.router.url);
-  /** Some onde há ação fixa no rodapé: importação e sugestão de compra. */
+  /** Some onde há ação fixa no rodapé: importação, sugestão de compra, a lista e a conferência. */
   protected readonly mostrarFab = computed(
-    () => this.estreito() && !/^\/(importar|sugestoes)(\/|\?|$)/.test(this.url()),
+    () =>
+      this.estreito() && !/^\/(importar|sugestoes|listas\/[^/?]+)(\/|\?|$)/.test(this.url()),
   );
 
   constructor() {

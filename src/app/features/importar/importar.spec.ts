@@ -5,6 +5,9 @@ import { Router, provideRouter } from '@angular/router';
 import type { CodigoErroImportacao, NfceParsed } from '@shared/model';
 import { vi } from 'vitest';
 import { CHAMAR_FUNCTION } from '../../core/firebase/callable';
+import { ListasService } from '../listas/data-access/listas.service';
+import { ListasStore } from '../listas/data-access/listas.store';
+import { listaCompras } from '../../../testing/fixtures/lista/lista';
 import { HistoricoPessoalStore } from '../notas/data-access/historico-pessoal.store';
 import { PendentesService } from '../notas/data-access/pendentes.service';
 import { botao, digitar, porRotulo, texto } from '../../../testing/dom';
@@ -62,6 +65,7 @@ function montar(respostas: Record<string, unknown[]> = {}) {
   });
   const snack = { open: vi.fn() };
   const historico = { invalidar: vi.fn() };
+  const listas = { aguardarNota: vi.fn(async () => undefined) };
   TestBed.configureTestingModule({
     providers: [
       provideRouter([]),
@@ -69,10 +73,15 @@ function montar(respostas: Record<string, unknown[]> = {}) {
       { provide: MatSnackBar, useValue: snack },
       { provide: PendentesService, useValue: { pendentes: signal([]) } },
       { provide: HistoricoPessoalStore, useValue: historico },
+      { provide: ListasService, useValue: listas },
+      {
+        provide: ListasStore,
+        useValue: { listas: signal([listaCompras({ nome: 'Compras do mês' }, 'l1')]) },
+      },
     ],
   });
   const navegar = vi.spyOn(TestBed.inject(Router), 'navigate').mockResolvedValue(true);
-  return { chamar, snack, navegar, historico };
+  return { chamar, snack, navegar, historico, listas };
 }
 
 describe('ImportarService', () => {
@@ -372,6 +381,112 @@ describe('ImportarPage', () => {
     botao(el, 'Abrir a nota').click();
     await fixture.whenStable();
     expect(navegar).toHaveBeenCalledWith(['/notas', CHAVE]);
+  });
+});
+
+describe('Importação com a lista em contexto (RF-09)', () => {
+  it('confirmar com lista vai para a conferência; sem lista, para a nota', async () => {
+    const { navegar, snack } = montar({
+      previewNfce: [
+        { ok: true, nota: NOTA },
+        { ok: true, nota: NOTA },
+      ],
+      confirmarNfce: [
+        { ok: true, chave: CHAVE },
+        { ok: true, chave: CHAVE },
+      ],
+    });
+    const store = TestBed.inject(ImportarStore);
+    store.definirLista('l1');
+    store.reiniciar();
+    expect(store.lista()).toBe('l1');
+    await store.importarTexto(URL_QR);
+    await store.confirmar();
+    expect(navegar).toHaveBeenLastCalledWith(['/listas', 'l1', 'conferir'], {
+      queryParams: { chave: CHAVE },
+    });
+    expect(snack.open).toHaveBeenLastCalledWith(
+      'Nota importada — confira com a lista',
+      'OK',
+      expect.anything(),
+    );
+
+    store.definirLista(null);
+    await store.importarTexto(URL_QR);
+    await store.confirmar();
+    expect(navegar).toHaveBeenLastCalledWith(['/notas', CHAVE]);
+  });
+
+  it('guardar na fila com lista deixa a lista aguardando a nota', async () => {
+    const { listas } = montar({
+      previewNfce: [
+        { ok: false, erro: { codigo: 'sefaz-indisponivel' } },
+        { ok: false, erro: { codigo: 'sefaz-indisponivel' } },
+      ],
+      enfileirarNfce: [
+        { ok: true, chave: CHAVE, proximaTentativa: '2026-09-27T15:15:00.000Z' },
+        { ok: true, chave: CHAVE, proximaTentativa: '2026-09-27T15:15:00.000Z' },
+      ],
+    });
+    const store = TestBed.inject(ImportarStore);
+    await store.importarTexto(URL_QR);
+    await store.guardar();
+    expect(listas.aguardarNota).not.toHaveBeenCalled();
+    store.definirLista('l1');
+    await store.importarTexto(URL_QR);
+    await store.guardar();
+    expect(listas.aguardarNota).toHaveBeenCalledWith('l1', CHAVE);
+  });
+
+  it('página: faixa só com o param, "Não conferir" tira o param; ja-importada oferece conferir', async () => {
+    const { navegar } = montar({
+      previewNfce: [{ ok: false, erro: { codigo: 'ja-importada', chave: CHAVE } }],
+    });
+    const fixture = TestBed.createComponent(ImportarPage);
+    fixture.detectChanges();
+    const el = fixture.nativeElement as HTMLElement;
+    expect(texto(el)).not.toContain('vai ser conferida');
+
+    fixture.componentRef.setInput('lista', 'l1');
+    fixture.detectChanges();
+    expect(texto(el)).toContain('A nota vai ser conferida com a lista Compras do mês.');
+    botao(el, 'Não conferir').click();
+    expect(navegar).toHaveBeenLastCalledWith([], {
+      queryParams: { lista: null },
+      replaceUrl: true,
+    });
+
+    await TestBed.inject(ImportarStore).importarTexto(URL_QR);
+    fixture.detectChanges();
+    expect(botao(el, 'Abrir a nota')).toBeTruthy();
+    botao(el, 'Conferir com a lista').click();
+    await fixture.whenStable();
+    expect(navegar).toHaveBeenLastCalledWith(['/listas', 'l1', 'conferir'], {
+      queryParams: { chave: CHAVE },
+    });
+
+    fixture.componentRef.setInput('lista', undefined);
+    fixture.detectChanges();
+    expect(TestBed.inject(ImportarStore).lista()).toBeNull();
+    expect(() => botao(el, 'Conferir com a lista')).toThrow();
+  });
+
+  it('lista que não está entre as carregadas aparece com nome genérico', () => {
+    montar();
+    const fixture = TestBed.createComponent(ImportarPage);
+    fixture.componentRef.setInput('lista', 'outra');
+    fixture.detectChanges();
+    expect(texto(fixture.nativeElement)).toContain('conferida com a lista de compras.');
+  });
+
+  it('prévia com lista: "Importar e conferir"', async () => {
+    montar({ previewNfce: [{ ok: true, nota: NOTA }] });
+    const store = TestBed.inject(ImportarStore);
+    store.definirLista('l1');
+    await store.importarTexto(URL_QR);
+    const fixture = TestBed.createComponent(PreviewNotaPage);
+    fixture.detectChanges();
+    expect(botao(fixture.nativeElement, 'Importar e conferir')).toBeTruthy();
   });
 });
 

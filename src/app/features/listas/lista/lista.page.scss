@@ -1,0 +1,67 @@
+@use '../../../shared/style/tokens' as *;
+@use '../../../shared/style/breakpoints' as *;
+
+.lista-skeleton {
+  height: 320px;
+}
+
+.lista-barra {
+  display: block;
+  height: 6px;
+  border-radius: $cp-radius-pill;
+  background: $cp-surface-track;
+  overflow: hidden;
+
+  > span {
+    display: block;
+    height: 100%;
+    background: $cp-accent;
+    transition: width 0.2s $cp-ease;
+  }
+}
+
+.lista-item {
+  padding: 2px 0;
+}
+
+.lista-aviso {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px 12px;
+}
+
+.lista-vazia {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+
+  p {
+    margin: 0;
+  }
+}
+
+.lista-rodape {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px 16px;
+
+  @include mobile {
+    .cp-btn-primary {
+      flex: 1;
+    }
+  }
+}
+
+.lista-estimativa {
+  margin: 0;
+  font-size: 14px;
+  color: $cp-text-secondary;
+
+  strong {
+    color: $cp-text;
+  }
+}

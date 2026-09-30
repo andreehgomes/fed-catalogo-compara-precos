@@ -23,6 +23,7 @@ export interface QuantidadeEditada {
                 <cp-sugestao-item
                   [sugestao]="s"
                   [selecionado]="selecao().has(s.grupo)"
+                  [naLista]="naLista().has(s.grupo)"
                   [quantidade]="quantidades().get(s.grupo) ?? s.quantidade.valor"
                   (quantidadeChange)="quantidade.emit({ grupo: s.grupo, valor: $event })"
                   (alternar)="alternar.emit(s.grupo)"
@@ -138,6 +139,7 @@ export class ListaCompleta {
   readonly parou = input<Sugestao[]>([]);
   readonly ocultos = input<{ grupo: string; descricao: string }[]>([]);
   readonly selecao = input.required<ReadonlySet<string>>();
+  readonly naLista = input<ReadonlySet<string>>(new Set());
   readonly quantidades = input.required<ReadonlyMap<string, number>>();
   readonly totais = input.required<TotaisDaLista>();
 

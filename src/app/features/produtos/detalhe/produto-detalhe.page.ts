@@ -20,6 +20,8 @@ import { FontePrecoInfo } from '../../../shared/ui/fonte-preco/fonte-preco';
 import { GraficoHistorico } from '../../../shared/ui/grafico-historico/grafico-historico';
 import { BreakpointService } from '../../../core/layout/breakpoint.service';
 import { ApelidosService } from '../../estabelecimentos/data-access/apelidos.service';
+import { ListasStore } from '../../listas/data-access/listas.store';
+import { itemDoProduto } from '../../listas/lista';
 import { NotasService } from '../../notas/data-access/notas.service';
 import { ProdutosService, type PrecoComId } from '../data-access/produtos.service';
 import { DadosVinculo, VincularDialog } from '../vincular/vincular-dialog';
@@ -59,6 +61,7 @@ export default class ProdutoDetalhePage {
   protected readonly estreito = inject(BreakpointService).estreito;
   private readonly dialog = inject(MatDialog);
   private readonly snack = inject(MatSnackBar);
+  private readonly listas = inject(ListasStore);
 
   readonly id = input.required<string>();
 
@@ -98,6 +101,15 @@ export default class ProdutoDetalhePage {
   protected readonly outros = computed(() =>
     (this.valor()?.equivalentes ?? []).filter((p) => p.id !== this.id()),
   );
+
+  /** RF-04: entra na lista pelo canônico, para ligar por grupo na conferência. */
+  protected async adicionarNaLista(): Promise<void> {
+    const v = this.valor();
+    if (!v) return;
+    const canonico = v.produto.vinculadoA ?? v.produto.id;
+    const produto = v.equivalentes.find((p) => p.id === canonico) ?? v.produto;
+    await this.listas.adicionarEmLista([itemDoProduto(produto)]);
+  }
 
   protected async vincular(): Promise<void> {
     const v = this.valor();

@@ -75,6 +75,20 @@ describe('Shell', () => {
     expect(el.querySelector('.cp-fab')).not.toBeNull();
   });
 
+  it('estreito: FAB some na lista e na conferência, mas fica em Minhas listas', async () => {
+    const { fixture, el, router } = await montar(true);
+    for (const url of ['/listas/abc', '/listas/abc/conferir?chave=1', '/listas/abc?x=1']) {
+      await router.navigateByUrl(url);
+      fixture.detectChanges();
+      expect(el.querySelector('.cp-fab')).toBeNull();
+    }
+    for (const url of ['/listas', '/listas?x=1']) {
+      await router.navigateByUrl(url);
+      fixture.detectChanges();
+      expect(el.querySelector('.cp-fab')).not.toBeNull();
+    }
+  });
+
   it('estreito: o drawer fecha ao navegar', async () => {
     const { fixture, el, router } = await montar(true);
     botao(el, 'Abrir menu').click();

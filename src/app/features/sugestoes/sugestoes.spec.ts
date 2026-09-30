@@ -19,6 +19,10 @@ import { CHAMAR_FUNCTION } from '../../core/firebase/callable';
 import { FIRESTORE_API, FirestoreApi } from '../../core/firebase/firestore-api';
 import { FIRESTORE } from '../../core/firebase/firestore.token';
 import { RELOGIO } from '../../core/relogio';
+import { ListasService } from '../listas/data-access/listas.service';
+import { ListasStore } from '../listas/data-access/listas.store';
+import type { ItemNovo, Lista } from '../listas/lista';
+import { listaCompras } from '../../../testing/fixtures/lista/lista';
 import { HistoricoPessoalStore } from '../notas/data-access/historico-pessoal.store';
 import { CompraPessoal, indexarCompras, montarGrupos } from '../notas/detalhe/historico-pessoal';
 import { HoraDeRepor } from '../painel/hora-de-repor';
@@ -101,11 +105,21 @@ function apiFalsa(notas: Nota[]) {
   return { api, colecoes };
 }
 
-function configurar(notas: Nota[] = notasSugestao()) {
+function configurar(
+  notas: Nota[] = notasSugestao(),
+  opcoes: { naLista?: string[]; listas?: Lista[]; cheia?: boolean } = {},
+) {
   localStorage.clear();
   const { api, colecoes } = apiFalsa(notas);
   const snack = { open: vi.fn() };
   const chamar = vi.fn();
+  const gruposNasListas = vi.fn(async () => new Set(opcoes.naLista ?? []));
+  const listas = {
+    listas: signal(opcoes.listas ?? []),
+    cheia: signal(!!opcoes.cheia),
+    criar: vi.fn<(itens: ItemNovo[]) => string>(() => 'nova'),
+    adicionarEmLista: vi.fn<(itens: ItemNovo[]) => Promise<string>>(async () => 'l1'),
+  };
   TestBed.configureTestingModule({
     providers: [
       provideRouter([{ path: 'sugestoes', component: SugestoesPage }], withComponentInputBinding()),
@@ -115,9 +129,11 @@ function configurar(notas: Nota[] = notasSugestao()) {
       { provide: AuthStore, useValue: { uid: signal('u1') } },
       { provide: RELOGIO, useValue: () => HOJE_SUGESTAO },
       { provide: MatSnackBar, useValue: snack },
+      { provide: ListasService, useValue: { gruposNasListas } },
+      { provide: ListasStore, useValue: listas },
     ],
   });
-  return { api, colecoes, snack, chamar };
+  return { api, colecoes, snack, chamar, listas, gruposNasListas };
 }
 
 async function abrir(url = '/sugestoes') {
@@ -527,5 +543,54 @@ describe('SugestoesPage', () => {
     const leituras = colecoes.filter((c) => c.endsWith('/notas')).length;
     await abrir();
     expect(colecoes.filter((c) => c.endsWith('/notas')).length).toBe(leituras);
+  });
+
+  it('"Criar lista com N itens" leva os selecionados com a quantidade ajustada (RF-03)', async () => {
+    const { listas, snack } = configurar();
+    const { harness, el } = await abrir();
+    const qtd = el.querySelector<HTMLInputElement>(
+      '[aria-labelledby="sug-repor"] li:first-child input[type="number"]',
+    )!;
+    qtd.value = '4';
+    qtd.dispatchEvent(new Event('change'));
+    harness.detectChanges();
+    const navegar = vi.spyOn(TestBed.inject(Router), 'navigate').mockResolvedValue(true);
+    botao(el, /Criar lista com 5 itens/).click();
+    await estabilizar(harness);
+    const itens = listas.criar.mock.calls[0][0];
+    expect(itens).toHaveLength(5);
+    expect(itens[0]).toMatchObject({
+      texto: 'LEITE INTEGRAL 1L',
+      grupo: LEITE,
+      quantidade: 4,
+      origem: 'sugestao',
+    });
+    expect(navegar).toHaveBeenCalledWith(['/listas', 'nova']);
+    expect(snack.open).toHaveBeenCalledWith('Lista criada com 5 itens', 'OK', { duration: 4000 });
+    expect(() => botao(el, /Adicionar à lista/)).toThrow();
+  });
+
+  it('item numa lista aparece "Na lista" e fora da seleção; "Adicionar à lista" com lista aberta', async () => {
+    const { listas, gruposNasListas } = configurar(notasSugestao(), {
+      naLista: [LEITE],
+      listas: [listaCompras({}, 'l1')],
+    });
+    const { harness, el } = await abrir();
+    await estabilizar(harness);
+    expect(gruposNasListas).toHaveBeenCalled();
+    const leite = el.querySelector('[aria-labelledby="sug-repor"] li:first-child')!;
+    expect(texto(leite)).toContain('checklist Na lista');
+    expect(leite.querySelector<HTMLInputElement>('input[type="checkbox"]')!.checked).toBe(false);
+    botao(el, /Adicionar à lista/).click();
+    await estabilizar(harness);
+    expect(listas.adicionarEmLista.mock.calls[0][0].map((i) => i.grupo)).not.toContain(LEITE);
+    expect(gruposNasListas).toHaveBeenCalledTimes(2);
+  });
+
+  it('com 5 listas "Criar lista" fica desabilitado e o aviso explica', async () => {
+    configurar(notasSugestao(), { cheia: true });
+    const { el } = await abrir();
+    expect(botao(el, /Criar lista com/).disabled).toBe(true);
+    expect(texto(el)).toContain('Você já tem 5 listas.');
   });
 });

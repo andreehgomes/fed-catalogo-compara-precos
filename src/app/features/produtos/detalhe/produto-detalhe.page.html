@@ -19,6 +19,14 @@
           }
         </p>
       </div>
+      <button
+        type="button"
+        class="cp-btn-secondary-compact cp-detail-header-acao"
+        (click)="adicionarNaLista()"
+      >
+        <mat-icon aria-hidden="true">playlist_add</mat-icon>
+        Adicionar à lista
+      </button>
     </header>
 
     @if (v.resumo; as r) {

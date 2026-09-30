@@ -1,0 +1,240 @@
+@if (store.carregando()) {
+  <main class="cp-page cp-page--detalhe" role="status">
+    <span class="cp-sr-only">Carregando a lista…</span>
+    <div class="cp-skeleton lista-skeleton" aria-hidden="true"></div>
+  </main>
+} @else if (store.lista(); as l) {
+  <main class="cp-page cp-page--detalhe lista-pagina">
+    <header class="cp-detail-header">
+      <a class="cp-btn-icon" routerLink="/listas" aria-label="Voltar para Listas de compras">
+        <mat-icon aria-hidden="true">arrow_back</mat-icon>
+      </a>
+      <div>
+        <h1>{{ l.nome }}</h1>
+        <p aria-live="polite">
+          {{ store.progresso().marcados }} de {{ store.progresso().total }} no carrinho
+        </p>
+      </div>
+      <button
+        type="button"
+        class="cp-btn-icon cp-detail-header-acao"
+        aria-label="Ações da lista"
+        [matMenuTriggerFor]="menuLista"
+      >
+        <mat-icon aria-hidden="true">more_vert</mat-icon>
+      </button>
+      <mat-menu #menuLista="matMenu">
+        <button mat-menu-item type="button" (click)="renomear()">
+          <mat-icon aria-hidden="true">edit</mat-icon>
+          <span>Renomear</span>
+        </button>
+        <button mat-menu-item type="button" [disabled]="!store.itens().length" (click)="copiar()">
+          <mat-icon aria-hidden="true">content_copy</mat-icon>
+          <span>Copiar lista</span>
+        </button>
+        @if (podeCompartilhar) {
+          <button
+            mat-menu-item
+            type="button"
+            [disabled]="!store.itens().length"
+            (click)="compartilhar()"
+          >
+            <mat-icon aria-hidden="true">share</mat-icon>
+            <span>Compartilhar</span>
+          </button>
+        }
+        <button
+          mat-menu-item
+          type="button"
+          [disabled]="!store.progresso().marcados"
+          (click)="store.desmarcarTudo()"
+        >
+          <mat-icon aria-hidden="true">remove_done</mat-icon>
+          <span>Desmarcar tudo</span>
+        </button>
+        <button mat-menu-item type="button" (click)="excluir()">
+          <mat-icon aria-hidden="true">delete</mat-icon>
+          <span>Excluir lista</span>
+        </button>
+      </mat-menu>
+    </header>
+
+    <span
+      class="lista-barra"
+      role="progressbar"
+      aria-label="Itens no carrinho"
+      aria-valuemin="0"
+      [attr.aria-valuemax]="store.progresso().total"
+      [attr.aria-valuenow]="store.progresso().marcados"
+    >
+      <span
+        [style.width.%]="
+          store.progresso().total ? (store.progresso().marcados / store.progresso().total) * 100 : 0
+        "
+      ></span>
+    </span>
+
+    @if (store.offline()) {
+      <div class="cp-info-block cp-info-block--warn" role="status">
+        <mat-icon aria-hidden="true">wifi_off</mat-icon>
+        Sem conexão — suas marcações serão salvas quando voltar.
+      </div>
+    }
+
+    @if (l.status === 'aguardando-nota') {
+      @for (chave of store.notasChegadas(); track chave) {
+        <div class="cp-info-block" role="status">
+          <mat-icon aria-hidden="true">receipt_long</mat-icon>
+          <div class="lista-aviso">
+            <span>A nota chegou.</span>
+            <a
+              class="cp-btn-primary-compact"
+              [routerLink]="['/listas', l.id, 'conferir']"
+              [queryParams]="{ chave }"
+            >
+              Conferir agora
+            </a>
+          </div>
+        </div>
+      }
+      @for (chave of store.pendentesFalhos(); track chave) {
+        <div class="cp-info-block cp-info-block--erro" role="alert">
+          <mat-icon aria-hidden="true">error</mat-icon>
+          <div class="lista-aviso">
+            <span>Não conseguimos importar a nota desta compra.</span>
+            <a
+              class="cp-btn-secondary-compact"
+              routerLink="/importar"
+              [queryParams]="{ lista: l.id }"
+            >
+              Ler de novo
+            </a>
+            <button type="button" class="cp-btn-ghost" (click)="store.esquecerPendente(chave)">
+              Dispensar
+            </button>
+          </div>
+        </div>
+      }
+      @if (!store.notasChegadas().length && !store.pendentesFalhos().length) {
+        <div class="cp-info-block" role="status">
+          <mat-icon aria-hidden="true">schedule</mat-icon>
+          Esperando a SEFAZ-PR liberar a nota. Avisamos aqui quando ela chegar.
+        </div>
+      }
+    }
+
+    @if (store.conferida()) {
+      <cp-finalizar-compra
+        titulo="Compra conferida — excluir ou guardar?"
+        [temFaltantes]="temFaltantes()"
+        [podeLerOutra]="podeLerOutra()"
+        (escolher)="finalizar($event)"
+      />
+    }
+
+    <cp-adicionar-item
+      [buscar]="buscar"
+      (foco)="store.carregarHistorico()"
+      (texto)="store.adicionarTexto($event)"
+      (historico)="store.adicionarDoHistorico($event)"
+    />
+
+    @if (!store.itens().length) {
+      <div class="cp-empty-inline lista-vazia">
+        <p>A lista está vazia. Adicione itens acima ou comece pelo que você costuma recomprar.</p>
+        <a class="cp-btn-secondary" routerLink="/sugestoes">
+          <mat-icon aria-hidden="true">event_repeat</mat-icon>
+          Usar a sugestão de compra
+        </a>
+      </div>
+    } @else {
+      <section class="cp-block" aria-labelledby="lista-pendentes">
+        <h2 class="cp-section-title" id="lista-pendentes">
+          Para pegar ({{ store.separados().pendentes.length }})
+        </h2>
+        @if (semPendentes()) {
+          <p class="cp-empty-inline">Tudo no carrinho.</p>
+        }
+        <ul class="cp-list">
+          @for (item of store.separados().pendentes; track item.id) {
+            <li class="cp-list-row lista-item">
+              <cp-item-lista
+                [item]="item"
+                [referencia]="store.referencias().get(item.id) ?? null"
+                (alternar)="alternar(item)"
+                (editar)="editar(item)"
+                (remover)="store.remover(item)"
+              />
+            </li>
+          }
+        </ul>
+      </section>
+
+      @if (store.separados().noCarrinho.length) {
+        <section class="cp-block" aria-labelledby="lista-carrinho">
+          <div class="cp-section-top">
+            <h2 class="cp-section-title" id="lista-carrinho">
+              No carrinho ({{ store.separados().noCarrinho.length }})
+            </h2>
+            <button
+              type="button"
+              class="cp-btn-ghost"
+              aria-controls="lista-carrinho-itens"
+              [attr.aria-expanded]="mostrarCarrinho()"
+              (click)="mostrarCarrinho.set(!mostrarCarrinho())"
+            >
+              {{ mostrarCarrinho() ? 'Ocultar' : 'Mostrar' }}
+              <mat-icon aria-hidden="true">{{
+                mostrarCarrinho() ? 'expand_less' : 'expand_more'
+              }}</mat-icon>
+            </button>
+          </div>
+          <ul class="cp-list" id="lista-carrinho-itens" [hidden]="!mostrarCarrinho()">
+            @for (item of store.separados().noCarrinho; track item.id) {
+              <li class="cp-list-row lista-item">
+                <cp-item-lista
+                  [item]="item"
+                  [referencia]="store.referencias().get(item.id) ?? null"
+                  (alternar)="alternar(item)"
+                  (editar)="editar(item)"
+                  (remover)="store.remover(item)"
+                />
+              </li>
+            }
+          </ul>
+        </section>
+      }
+    }
+
+    <div class="cp-action-bar">
+      <div class="lista-rodape">
+        <p class="lista-estimativa" role="status">
+          @if (store.estimativa(); as e) {
+            @if (e.comPreco) {
+              ≈ <strong>{{ e.total | currency }}</strong>
+              @if (e.semPreco) {
+                · {{ e.semPreco }} sem preço
+              }
+            } @else if (store.itens().length) {
+              Sem preço de referência ainda
+            }
+          }
+        </p>
+        <a class="cp-btn-primary" routerLink="/importar" [queryParams]="{ lista: l.id }">
+          <mat-icon aria-hidden="true">qr_code_scanner</mat-icon>
+          Ler a nota desta compra
+        </a>
+      </div>
+    </div>
+  </main>
+} @else {
+  <main class="cp-page cp-page--form">
+    <cp-empty-state
+      icone="checklist"
+      titulo="Lista não encontrada"
+      texto="Ela pode ter sido excluída em outro aparelho."
+    >
+      <a class="cp-btn-primary" routerLink="/listas">Ver minhas listas</a>
+    </cp-empty-state>
+  </main>
+}

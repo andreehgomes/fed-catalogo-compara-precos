@@ -1,0 +1,276 @@
+@if (store.carregando()) {
+  <main class="cp-page cp-page--detalhe" role="status">
+    <span class="cp-sr-only">Conferindo a nota com a lista…</span>
+    <div class="cp-skeleton conf-skeleton" aria-hidden="true"></div>
+  </main>
+} @else if (store.lista(); as l) {
+  <main class="cp-page cp-page--detalhe conf-pagina">
+    <header class="cp-detail-header">
+      <a
+        class="cp-btn-icon"
+        [routerLink]="['/listas', l.id]"
+        [attr.aria-label]="'Voltar para ' + l.nome"
+      >
+        <mat-icon aria-hidden="true">arrow_back</mat-icon>
+      </a>
+      <div>
+        <p class="cp-label">Conferir nota</p>
+        <h1>{{ l.nome }}</h1>
+        @if (store.nota(); as n) {
+          <p>
+            <a [routerLink]="['/notas', n.chave]">{{ n.estabelecimentoNome }}</a>
+          </p>
+        }
+      </div>
+    </header>
+
+    @if (store.jaConferida()) {
+      @if (store.notaAusente()) {
+        <div class="cp-info-block cp-info-block--warn" role="status">
+          <mat-icon aria-hidden="true">info</mat-icon>
+          A nota foi excluída. O que ela ligou à lista continua guardado nos itens.
+        </div>
+      }
+      <section class="cp-block" aria-labelledby="conf-ligados">
+        <h2 class="cp-section-title" id="conf-ligados">
+          Comprados com esta nota ({{ store.ligadosANota().length }})
+        </h2>
+        <ul class="cp-list">
+          @for (i of store.ligadosANota(); track i.id) {
+            <li class="cp-list-row">
+              <cp-par-conferido
+                [texto]="i.texto"
+                [nota]="i.vinculo"
+                [como]="i.vinculo?.como ?? null"
+              />
+            </li>
+          } @empty {
+            <li class="cp-empty-inline">
+              {{ store.salvo() ? 'Salvando…' : 'Nenhum item da lista ligado a esta nota.' }}
+            </li>
+          }
+        </ul>
+      </section>
+      <cp-finalizar-compra
+        [temFaltantes]="store.temFaltantes()"
+        [podeLerOutra]="store.podeLerOutra()"
+        (escolher)="finalizar($event)"
+      />
+    } @else if (store.notaAusente()) {
+      <cp-empty-state
+        icone="receipt_long"
+        titulo="Nota não encontrada"
+        texto="Ela pode ter sido excluída ou ainda estar na fila da SEFAZ-PR."
+      >
+        <a class="cp-btn-primary" [routerLink]="['/listas', l.id]">Voltar para a lista</a>
+      </cp-empty-state>
+    } @else if (store.limiteDeNotas()) {
+      <cp-empty-state
+        icone="receipt_long"
+        titulo="Esta lista já foi conferida com 3 notas"
+        texto="Finalize a compra na lista (excluir ou guardar) para conferir outra nota."
+      >
+        <a class="cp-btn-primary" [routerLink]="['/listas', l.id]">Voltar para a lista</a>
+      </cp-empty-state>
+    } @else if (store.ajustes(); as c) {
+      @if (store.resumo(); as r) {
+        <section class="cp-summary" aria-label="Resumo da conferência">
+          <div>
+            <span class="cp-summary-label">Total da nota</span>
+            <span class="cp-summary-value">{{ r.total | currency }}</span>
+          </div>
+          <div>
+            <span class="cp-summary-label">Da lista</span>
+            <span class="cp-summary-value">{{ r.daLista | currency }}</span>
+            <span class="conf-resumo-qtd"
+              >{{ r.qtdDaLista }} {{ r.qtdDaLista === 1 ? 'item' : 'itens' }}</span
+            >
+          </div>
+          <div>
+            <span class="cp-summary-label">Fora da lista</span>
+            <span class="cp-summary-value">{{ r.foraDaLista | currency }}</span>
+            <span class="conf-resumo-qtd">
+              {{ r.qtdForaDaLista }} {{ r.qtdForaDaLista === 1 ? 'item' : 'itens' }}
+            </span>
+          </div>
+          <div>
+            <span class="cp-summary-label">Faltou</span>
+            <span class="cp-summary-value">{{ r.qtdFaltou }}</span>
+            <span class="conf-resumo-qtd">{{ r.qtdFaltou === 1 ? 'item' : 'itens' }}</span>
+          </div>
+        </section>
+      }
+
+      <div class="conf-colunas">
+        <div class="conf-coluna">
+          <section class="cp-block" aria-labelledby="conf-comprados">
+            <h2 class="cp-section-title" id="conf-comprados">
+              <mat-icon aria-hidden="true">check</mat-icon>
+              Comprados ({{ c.comprados.length + c.adicionados.length }})
+            </h2>
+            <ul class="cp-list">
+              @for (p of c.comprados; track p.item.id) {
+                <li class="cp-list-row">
+                  <cp-par-conferido [texto]="p.item.texto" [nota]="p.nota" [como]="p.como">
+                    <button
+                      type="button"
+                      class="cp-btn-ghost"
+                      [attr.aria-label]="'Não é este: ' + p.item.texto"
+                      (click)="store.desfazer(p.item.id)"
+                    >
+                      <mat-icon aria-hidden="true">link_off</mat-icon>
+                      Não é este
+                    </button>
+                  </cp-par-conferido>
+                </li>
+              }
+              @for (n of c.adicionados; track n.n) {
+                <li class="cp-list-row">
+                  <cp-par-conferido [nota]="n">
+                    <span class="cp-chip">
+                      <mat-icon aria-hidden="true">playlist_add</mat-icon>
+                      entra na lista
+                    </span>
+                    <button
+                      type="button"
+                      class="cp-btn-ghost"
+                      [attr.aria-label]="'Não adicionar ' + n.descricao"
+                      (click)="store.alternarAdicionado(n.n)"
+                    >
+                      Desfazer
+                    </button>
+                  </cp-par-conferido>
+                </li>
+              }
+              @if (!c.comprados.length && !c.adicionados.length) {
+                <li class="cp-empty-inline">Nenhum item da lista achado na nota.</li>
+              }
+            </ul>
+          </section>
+
+          @if (c.confirme.length) {
+            <section class="cp-block" aria-labelledby="conf-confirme">
+              <h2 class="cp-section-title" id="conf-confirme">
+                <mat-icon aria-hidden="true">help</mat-icon>
+                Confirme ({{ c.confirme.length }})
+              </h2>
+              <ul class="cp-list">
+                @for (p of c.confirme; track p.item.id) {
+                  <li class="cp-list-row">
+                    <cp-par-conferido [texto]="p.item.texto" [nota]="p.nota" [como]="p.como">
+                      <button
+                        type="button"
+                        class="cp-btn-secondary-compact"
+                        [attr.aria-label]="'Sim, ' + p.item.texto + ' é ' + p.nota.descricao"
+                        (click)="store.confirmar(p.item.id)"
+                      >
+                        Sim
+                      </button>
+                      <button
+                        type="button"
+                        class="cp-btn-ghost"
+                        [attr.aria-label]="'Não, ' + p.item.texto + ' não é ' + p.nota.descricao"
+                        (click)="store.desfazer(p.item.id)"
+                      >
+                        Não
+                      </button>
+                    </cp-par-conferido>
+                  </li>
+                }
+              </ul>
+            </section>
+          }
+        </div>
+
+        <div class="conf-coluna">
+          <section class="cp-block" aria-labelledby="conf-faltou">
+            <h2 class="cp-section-title" id="conf-faltou">
+              <mat-icon aria-hidden="true">remove_shopping_cart</mat-icon>
+              Faltou ({{ c.faltou.length }})
+            </h2>
+            <ul class="cp-list">
+              @for (i of c.faltou; track i.id) {
+                <li class="cp-list-row">
+                  <cp-par-conferido [texto]="i.texto">
+                    @if (c.foraDaLista.length) {
+                      <button
+                        type="button"
+                        class="cp-btn-ghost"
+                        [attr.aria-label]="i.texto + ' estava na nota como…'"
+                        (click)="estavaNaNota(i.id, i.texto)"
+                      >
+                        <mat-icon aria-hidden="true">link</mat-icon>
+                        Estava na nota como…
+                      </button>
+                    }
+                  </cp-par-conferido>
+                </li>
+              } @empty {
+                <li class="cp-empty-inline">Nada faltou.</li>
+              }
+            </ul>
+          </section>
+
+          <section class="cp-block" aria-labelledby="conf-fora">
+            <h2 class="cp-section-title" id="conf-fora">
+              <mat-icon aria-hidden="true">add_shopping_cart</mat-icon>
+              Fora da lista ({{ c.foraDaLista.length }})
+            </h2>
+            <ul class="cp-list">
+              @for (n of c.foraDaLista; track n.n) {
+                <li class="cp-list-row">
+                  <cp-par-conferido [nota]="n">
+                    @if (c.faltou.length) {
+                      <button
+                        type="button"
+                        class="cp-btn-ghost"
+                        [attr.aria-label]="n.descricao + ' estava na lista como…'"
+                        (click)="estavaNaLista(n.n, n.descricao)"
+                      >
+                        <mat-icon aria-hidden="true">link</mat-icon>
+                        Estava na lista como…
+                      </button>
+                    }
+                    <button
+                      type="button"
+                      class="cp-btn-ghost"
+                      [attr.aria-label]="'Adicionar à lista: ' + n.descricao"
+                      (click)="store.alternarAdicionado(n.n)"
+                    >
+                      <mat-icon aria-hidden="true">playlist_add</mat-icon>
+                      Adicionar à lista
+                    </button>
+                  </cp-par-conferido>
+                </li>
+              } @empty {
+                <li class="cp-empty-inline">Tudo o que você comprou estava na lista.</li>
+              }
+            </ul>
+          </section>
+        </div>
+      </div>
+
+      <div class="cp-action-bar">
+        @if (c.confirme.length) {
+          <p class="cp-field-hint conf-dica">
+            Os itens em "Confirme" sem resposta ficam como faltou.
+          </p>
+        }
+        <button type="button" class="cp-btn-primary" (click)="salvar()">
+          <mat-icon aria-hidden="true">check</mat-icon>
+          Salvar conferência
+        </button>
+      </div>
+    }
+  </main>
+} @else {
+  <main class="cp-page cp-page--form">
+    <cp-empty-state
+      icone="checklist"
+      titulo="Lista não encontrada"
+      texto="Ela pode ter sido excluída em outro aparelho."
+    >
+      <a class="cp-btn-primary" routerLink="/listas">Ver minhas listas</a>
+    </cp-empty-state>
+  </main>
+}

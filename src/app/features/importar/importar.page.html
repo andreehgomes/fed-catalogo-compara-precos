@@ -6,6 +6,19 @@
     </div>
   </header>
 
+  @if (nomeDaLista(); as nome) {
+    <div class="cp-info-block" role="status">
+      <mat-icon aria-hidden="true">checklist</mat-icon>
+      <div class="importar-erro">
+        <span
+          >A nota vai ser conferida com a lista <strong>{{ nome }}</strong
+          >.</span
+        >
+        <button type="button" class="cp-btn-ghost" (click)="naoConferir()">Não conferir</button>
+      </div>
+    </div>
+  }
+
   @if (!conexao.online()) {
     <div class="cp-info-block cp-info-block--warn" role="alert">
       <mat-icon aria-hidden="true">wifi_off</mat-icon>
@@ -56,6 +69,9 @@
         <div class="cp-info-block" role="status">
           <mat-icon aria-hidden="true">schedule</mat-icon>
           Nota guardada. Vamos importar sozinhos quando a SEFAZ-PR voltar.
+          @if (store.lista()) {
+            A lista fica esperando a nota.
+          }
         </div>
       }
     }
@@ -66,6 +82,11 @@
           <mat-icon aria-hidden="true">error</mat-icon>
           <div class="importar-erro">
             <span>{{ m.texto }}</span>
+            @if (jaImportadaComLista()) {
+              <button type="button" class="cp-btn-primary-compact" (click)="conferirComLista()">
+                Conferir com a lista
+              </button>
+            }
             @if (m.acao) {
               <button type="button" class="cp-btn-secondary-compact" (click)="executarAcao(m.acao)">
                 {{ rotuloAcao(m.acao) }}

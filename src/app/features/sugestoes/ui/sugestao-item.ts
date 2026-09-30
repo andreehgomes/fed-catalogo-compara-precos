@@ -53,6 +53,12 @@ let proximoId = 0;
               Em breve
             </span>
           }
+          @if (naLista()) {
+            <span class="cp-chip">
+              <mat-icon aria-hidden="true">checklist</mat-icon>
+              Na lista
+            </span>
+          }
         </div>
         <p class="item-detalhe">
           Costuma comprar a cada {{ s.cicloDias | number: '1.0-0' }} dias · última vez há
@@ -125,6 +131,7 @@ let proximoId = 0;
 export class SugestaoItem {
   readonly sugestao = input.required<Sugestao>();
   readonly selecionado = input(false);
+  readonly naLista = input(false);
   readonly quantidade = model.required<number>();
   readonly alternar = output();
   readonly jaTenho = output();

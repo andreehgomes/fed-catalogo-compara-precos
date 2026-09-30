@@ -1,0 +1,107 @@
+<main class="cp-page">
+  <header class="cp-page-header">
+    <div>
+      <h1>Listas de compras</h1>
+      <p>Monte a lista, marque o que já está no carrinho e confira com a nota.</p>
+    </div>
+    <button
+      type="button"
+      class="cp-btn-primary"
+      [disabled]="store.cheia() || store.carregando()"
+      (click)="nova()"
+    >
+      <mat-icon aria-hidden="true">add</mat-icon>
+      Nova lista
+    </button>
+  </header>
+
+  @if (store.cheia()) {
+    <div class="cp-info-block cp-info-block--warn" role="status">
+      <mat-icon aria-hidden="true">info</mat-icon>
+      Você já tem {{ max }} listas. Exclua uma ou use uma lista guardada.
+    </div>
+  }
+
+  @if (store.carregando()) {
+    <div class="listas-skeleton" role="status">
+      <span class="cp-sr-only">Carregando as listas…</span>
+      <div class="cp-skeleton" aria-hidden="true"></div>
+      <div class="cp-skeleton" aria-hidden="true"></div>
+    </div>
+  } @else if (store.erro()) {
+    <div class="cp-info-block cp-info-block--erro" role="alert">
+      <mat-icon aria-hidden="true">cloud_off</mat-icon>
+      Não foi possível carregar suas listas. Verifique a conexão.
+    </div>
+  } @else if (!store.listas().length) {
+    <cp-empty-state
+      icone="checklist"
+      titulo="Nenhuma lista ainda"
+      texto="Crie uma lista para usar no mercado ou comece pelo que você costuma recomprar."
+    >
+      <div class="listas-vazio-acoes">
+        <button type="button" class="cp-btn-primary" (click)="nova()">
+          <mat-icon aria-hidden="true">add</mat-icon>
+          Nova lista
+        </button>
+        <a class="cp-btn-secondary" routerLink="/sugestoes">
+          <mat-icon aria-hidden="true">event_repeat</mat-icon>
+          Usar a sugestão de compra
+        </a>
+      </div>
+    </cp-empty-state>
+  } @else {
+    <ul class="cp-list listas" aria-label="Suas listas">
+      @for (l of store.listas(); track l.id) {
+        <li class="cp-card lista-card">
+          <a class="lista-link" [routerLink]="['/listas', l.id]">
+            <span class="item-nome">{{ l.nome }}</span>
+            <span class="item-detalhe">
+              {{ l.qtdMarcados }} de {{ l.qtdItens }} {{ l.qtdItens === 1 ? 'item' : 'itens' }} no
+              carrinho
+            </span>
+            <span
+              class="lista-barra"
+              role="progressbar"
+              aria-valuemin="0"
+              [attr.aria-valuemax]="l.qtdItens"
+              [attr.aria-valuenow]="l.qtdMarcados"
+              [attr.aria-label]="'Progresso de ' + l.nome"
+            >
+              <span [style.width.%]="percentual(l)"></span>
+            </span>
+            @if (l.status === 'aguardando-nota') {
+              <span class="cp-status--aguardando">
+                <mat-icon aria-hidden="true">schedule</mat-icon>
+                Aguardando nota
+              </span>
+            } @else if (l.ultimaCompraEm) {
+              <span class="cp-chip">
+                <mat-icon aria-hidden="true">history</mat-icon>
+                Última compra em {{ l.ultimaCompraEm | date: 'dd/MM' }}
+              </span>
+            }
+          </a>
+          <button
+            type="button"
+            class="cp-btn-icon"
+            [matMenuTriggerFor]="acoes"
+            [attr.aria-label]="'Ações de ' + l.nome"
+          >
+            <mat-icon aria-hidden="true">more_vert</mat-icon>
+          </button>
+          <mat-menu #acoes="matMenu">
+            <button mat-menu-item type="button" (click)="renomear(l)">
+              <mat-icon aria-hidden="true">edit</mat-icon>
+              <span>Renomear</span><span class="cp-sr-only">: {{ l.nome }}</span>
+            </button>
+            <button mat-menu-item type="button" (click)="excluir(l)">
+              <mat-icon aria-hidden="true">delete</mat-icon>
+              <span>Excluir</span><span class="cp-sr-only">: {{ l.nome }}</span>
+            </button>
+          </mat-menu>
+        </li>
+      }
+    </ul>
+  }
+</main>

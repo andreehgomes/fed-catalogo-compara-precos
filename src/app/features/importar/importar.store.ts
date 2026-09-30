@@ -2,6 +2,7 @@ import { Injectable, computed, inject, signal } from '@angular/core';
 import { MatSnackBar } from '@angular/material/snack-bar';
 import { Router } from '@angular/router';
 import type { ErroImportacao, NfceParsed, PreviewEntrada } from '@shared/model';
+import { ListasService } from '../listas/data-access/listas.service';
 import { HistoricoPessoalStore } from '../notas/data-access/historico-pessoal.store';
 import { ImportarService } from './data-access/importar.service';
 import { estabelecimentoAtualizado, interpretarEntrada } from './mensagens';
@@ -28,6 +29,11 @@ export class ImportarStore {
   private readonly router = inject(Router);
   private readonly snack = inject(MatSnackBar);
   private readonly historico = inject(HistoricoPessoalStore);
+  private readonly listas = inject(ListasService);
+
+  private readonly _lista = signal<string | null>(null);
+  /** Lista de compras em contexto (RF-09): a nota importada vai ser conferida com ela. */
+  readonly lista = this._lista.asReadonly();
 
   private readonly _estado = signal<EstadoImportacao>({ tipo: 'ocioso' });
   readonly estado = this._estado.asReadonly();
@@ -93,6 +99,14 @@ export class ImportarStore {
     }
     this.historico.invalidar();
     this._estado.set({ tipo: 'ocioso' });
+    const lista = this._lista();
+    if (lista) {
+      await this.router.navigate(['/listas', lista, 'conferir'], {
+        queryParams: { chave: r.valor },
+      });
+      this.snack.open('Nota importada — confira com a lista', 'OK', { duration: 4000 });
+      return;
+    }
     await this.router.navigate(['/notas', r.valor]);
     this.snack.open('Nota importada', 'OK', { duration: 4000 });
   }
@@ -107,9 +121,16 @@ export class ImportarStore {
       return;
     }
     this._estado.set({ tipo: 'guardada', ...r.valor });
+    const lista = this._lista();
+    if (lista) this.listas.aguardarNota(lista, r.valor.chave).catch(() => undefined);
     this.snack.open('Nota guardada. Vamos importar quando a SEFAZ-PR voltar.', 'OK', {
       duration: 5000,
     });
+  }
+
+  /** Só `definirLista(null)` tira a lista de contexto; `reiniciar()` a mantém. */
+  definirLista(id: string | null): void {
+    this._lista.set(id);
   }
 
   reiniciar(): void {

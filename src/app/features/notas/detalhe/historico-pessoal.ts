@@ -161,7 +161,7 @@ export function indexarCompras(
 }
 
 /** Mesmo conteúdo, ou conteúdo desconhecido em um dos lados (não dá para afirmar que difere). */
-function conteudoCompativel(a: string, b: string): boolean {
+export function conteudoCompativel(a: string, b: string): boolean {
   const ca = extrairConteudo(a);
   const cb = extrairConteudo(b);
   return (

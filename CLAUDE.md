@@ -71,8 +71,8 @@ supermercado do Paraná pelo QR Code do cupom e compara preços entre mercados.
 
 **Rotas:** `/login`, `/cadastro`, `/redefinir-senha` (fora do shell); dentro do shell
 com `authGuard`: `/` (painel), `/importar`, `/importar/preview`, `/notas`,
-`/notas/:chave`, `/sugestoes`, `/regiao`, `/produtos`, `/produtos/:id`, `/estabelecimentos`,
-`/estabelecimentos/:cnpj`; `**` → página de erro.
+`/notas/:chave`, `/sugestoes`, `/listas`, `/listas/:id`, `/listas/:id/conferir`, `/regiao`,
+`/produtos`, `/produtos/:id`, `/estabelecimentos`, `/estabelecimentos/:cnpj`; `**` → página de erro.
 
 ## PWA e CI
 
@@ -121,7 +121,8 @@ no target `test`, relativo a `src/`).
 - **Não usar `@angular/fire`** (não suporta o v22). SDK modular injetado por
   `InjectionToken` (`FIREBASE_AUTH`, `FIRESTORE`, `FUNCTIONS`).
 - O cliente **nunca escreve** em coleções compartilhadas nem em `usuarios/{uid}/notas`.
-  Toda escrita de nota ou preço passa por callable.
+  Toda escrita de nota ou preço passa por callable. A **única** escrita do cliente é em
+  `usuarios/{uid}/listas/**` (lista de compras, validada nas regras).
 
 **Estilo**
 - **Classe global primeiro** (`src/styles.scss`, `.cp-*`). Mixin só para o que é
@@ -192,8 +193,8 @@ Detalhes: [docs/analise/compara-precos-nfce-analise.md](docs/analise/compara-pre
 - **Guards** `authGuard`/`guestGuard` esperam `pronto()` antes de decidir (refresh
   não pisca o login). O `authGuard` manda para `/login?voltar=<url>`.
 - **Regras:** `firestore.rules` (dono lê/exclui as próprias notas e pendentes; dono só lê
-  os apelidos em `usuarios/{uid}/estabelecimentos`; base compartilhada só leitura; nada
-  escrito pelo cliente). Sem teste automatizado:
+  os apelidos em `usuarios/{uid}/estabelecimentos`; base compartilhada só leitura; o cliente só
+  grava `usuarios/{uid}/listas/**`, com `keys().hasOnly` e tipos/tamanhos de cada campo). Sem teste automatizado:
   checklist do Rules Playground em `docs/qualidade/regras-firestore-checklist.md`,
   rodado pelo usuário após `npm run deploy:rules:dev`.
 - **e2e:** usuário de teste em `.env.e2e` (`E2E_EMAIL`, `E2E_SENHA`; ver
@@ -215,10 +216,10 @@ erro (`**`) ficam fora dele.
   `inert`.
 - Header sticky (fora da área de rolagem) e **scroll interno em `.cp-content`**.
 - `BreakpointService.estreito` (`matchMedia('(max-width: 900px)')`) decide o modo.
-- No celular, **FAB "Importar nota"** fixo (some em `/importar` e `/sugestoes`, que têm ação
-  fixa no rodapé).
-- Itens: Painel, Importar nota, Minhas notas, Sugestão de compra, Preços perto de mim,
-  Produtos, Estabelecimentos (`ITENS_NAV`) e Sair.
+- No celular, **FAB "Importar nota"** fixo (some em `/importar`, `/sugestoes`, `/listas/:id` e
+  na conferência, que têm ação fixa no rodapé; fica em `/listas`).
+- Itens: Painel, Importar nota, Minhas notas, Sugestão de compra, Lista de compras, Preços perto
+  de mim, Produtos, Estabelecimentos (`ITENS_NAV`) e Sair.
 - Telas ainda não implementadas usam `features/em-breve` (título pela `data.secao`
   da rota).
 
@@ -312,6 +313,9 @@ Instale as dependências **de dentro da pasta** (`cd functions && npm install`):
   conexão (`ConexaoService`) e o bloco de pendentes. `/importar/preview` tem
   `previewGuard` (sem prévia volta para Importar); `preview-expirado` refaz a prévia uma
   vez sozinho.
+- Lista em contexto (`/importar?lista=<id>`, RF-09 da lista de compras): `ImportarStore.lista`
+  (`definirLista`; `reiniciar()` não limpa). Confirmar → `/listas/:id/conferir?chave=`;
+  `ja-importada` oferece "Conferir com a lista"; guardar na fila → `ListasService.aguardarNota`.
 - Pendentes: `features/notas/data-access/pendentes.service.ts` (`onSnapshot` →
   `toSignal`, snackbar quando um pendente some e a nota `veioDaFila` aparece),
   `<cp-pendentes-bloco>` e `<cp-pendente-row>` (usados em Importar, Minhas notas e
@@ -375,6 +379,51 @@ Tudo no cliente, nada gravado no Firestore.
 - Query params `horizonte` (`hoje|semana|quinzena|mes`) e `visao` (`lista|mercado`), padrão fora da
   URL. "Copiar lista"/"Compartilhar" (`navigator.share`) com `textoDaLista`.
 - Painel: `<cp-hora-de-repor>` (até 5 vencidos) em `@defer (on viewport)`.
+- "Criar lista com N itens" (`itensDaSugestao` → `ListasStore.criar`) e "Adicionar à lista";
+  `SugestoesStore.naLista` (grupos em listas, lido só quando a tela chama `recarregarNaLista()`)
+  marca "Na lista" e tira o item da pré-seleção.
+
+## Lista de compras
+
+Plano `docs/plano/lista-compras-plano.md` (análise `docs/analise/lista-compras-analise.md`).
+Até 5 listas (`MAX_LISTAS`), 150 itens (`MAX_ITENS`) e 3 notas por lista, limites do cliente.
+
+- **Dados:** `usuarios/{uid}/listas/{id}` (`ListaCompras`: nome, status `aberta|aguardando-nota`,
+  contadores, `ultimaCompraEm`, `notas`, `pendentes`) e `…/itens/{itemId}` (`ItemLista`: texto,
+  `grupo` canônico, quantidade/unidade/base, origem, ordem, marcação e `vinculo` — retrato do
+  item da nota, que sobrevive à exclusão da nota). **Gravados direto pelo cliente** (única
+  exceção à regra de escrita), com o cache persistente: funciona offline.
+- **Escrita otimista:** `ListasService` devolve a promessa do `commit()` e a UI **não aguarda**
+  (offline ela só resolve quando a conexão volta); o `onSnapshot` local já mostra a mudança e só
+  o `catch` avisa (regra recusou). Contadores do cabeçalho no mesmo `writeBatch` do item, com
+  valor **absoluto** (`contadores(itens)`), não `increment`: a regra recusa
+  `qtdMarcados > qtdItens`, e um contador divergente travaria a lista.
+- Regra pura em `features/listas/lista.ts` (100 % de cobertura, fixture da nota real em
+  `src/testing/fixtures/lista/`): `planejarAdicao`/`mesclarItem` (mesmo grupo ou texto
+  normalizado soma), `autocompletar` (prefixo das palavras sobre o índice do histórico),
+  `precoDeReferencia`/`estimativa` (última compra, `precoNaQuantidade`), `conciliar`,
+  ajustes (`confirmarPar`, `desfazerPar`, `ligarManual`, `alternarAdicionado`),
+  `resumoDaConferencia` e `planoDeFinalizacao`.
+- **Conciliação** (`conciliar`, D-04): só itens sem `vinculo`; 1) pelo grupo (`chaveDoGrupo`, o de
+  maior valor); 2) por texto (Jaccard de `tokensSemMedida`, conteúdo compatível, melhor par
+  primeiro): liga com score ≥ `LIGA_POR_TEXTO` (1/3) e um candidato só; de `PERGUNTA_POR_TEXTO`
+  (0,2) para cima ou ambíguo vai para "Confirme". Salvar grava vínculo, marca o item e o `grupo`
+  aprendido nos digitados (a próxima compra liga por grupo).
+- **Finalização** (RF-13): excluir, guardar para usar de novo (desmarca, limpa vínculos, grava
+  `ultimaCompraEm`), manter só o que faltou, ou ler outra nota (até 3).
+- Stores: `ListasStore` (root; listas em tempo real, `criar` devolve o id na hora,
+  `adicionarEmLista` cria/adiciona/pergunta com `escolher-lista-dialog`), `ListaStore` (provido
+  na página; histórico só sob demanda) e `ConferenciaStore` (provido na conferência; ajustes em
+  `linkedSignal` que só recomeça quando muda a nota ou o conjunto de itens livres).
+  `HistoricoPessoalStore.gruposDaNota(nota)` resolve os grupos da nota.
+- Tela acesa: `manterTelaAcesa(signal)` (`data-access/tela-acesa.ts`, token `WAKE_LOCK`) enquanto
+  há pendentes e a aba está visível.
+- Integrações: "Adicionar à lista" no produto (canônico), "Conferir com uma lista" no detalhe da
+  nota, card `<cp-lista-em-andamento>` no painel (`@defer`).
+- Testes: `src/testing/firestore-falso.ts` (Firestore em memória no protocolo do
+  `FIRESTORE_API`, com commit `ok|erro|pendente` para simular offline) e `src/testing/listas.ts`
+  (providers da feature). e2e `e2e/listas.spec.ts` grava no dv e apaga as listas que criou
+  (precisa das regras publicadas).
 
 ## Produtos, estabelecimentos e painel
 

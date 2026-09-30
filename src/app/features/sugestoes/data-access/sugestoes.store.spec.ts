@@ -15,6 +15,7 @@ import {
 } from '../../../../testing/fixtures/sugestao/produtos';
 import { AuthStore } from '../../../core/auth/auth.store';
 import { RELOGIO } from '../../../core/relogio';
+import { ListasService } from '../../listas/data-access/listas.service';
 import { HistoricoPessoalStore } from '../../notas/data-access/historico-pessoal.store';
 import { indexarCompras, montarGrupos } from '../../notas/detalhe/historico-pessoal';
 import { SugestoesStore } from './sugestoes.store';
@@ -27,8 +28,10 @@ function indiceDe(notas: Nota[]) {
   return { notas, grupos, indice: indexarCompras(notas, grupos) };
 }
 
-async function montar(notas = notasSugestao()) {
+async function montar(notas = notasSugestao(), naLista: string[][] = []) {
   localStorage.clear();
+  const leituras = [...naLista];
+  const gruposNasListas = vi.fn(async () => new Set(leituras.shift() ?? []));
   const indiceCompleto = vi.fn(async () => indiceDe(notas));
   const versao = signal(0);
   const uid = signal<string | null>('u1');
@@ -37,12 +40,13 @@ async function montar(notas = notasSugestao()) {
       { provide: HistoricoPessoalStore, useValue: { indiceCompleto, versao } },
       { provide: AuthStore, useValue: { uid } },
       { provide: RELOGIO, useValue: () => HOJE_SUGESTAO },
+      { provide: ListasService, useValue: { gruposNasListas } },
     ],
   });
   const store = TestBed.inject(SugestoesStore);
   store.repor();
   await TestBed.inject(ApplicationRef).whenStable();
-  return { store, indiceCompleto, versao, uid };
+  return { store, indiceCompleto, versao, uid, gruposNasListas };
 }
 
 const grupos = (l: { grupo: string }[]) => l.map((s) => s.grupo);
@@ -142,5 +146,32 @@ describe('SugestoesStore', () => {
     await TestBed.inject(ApplicationRef).whenStable();
     expect(store.repor()).toEqual([]);
     expect(store.insuficiente()).toBe(false);
+  });
+
+  it('"Na lista": só lê as listas quando a tela pede; o que está numa lista sai da seleção', async () => {
+    const { store, gruposNasListas } = await montar(notasSugestao(), [[LEITE], [LEITE, ARROZ]]);
+    expect(gruposNasListas).not.toHaveBeenCalled();
+    expect(store.selecao().has(LEITE)).toBe(true);
+    store.alternar(BANANA);
+
+    store.recarregarNaLista();
+    store.repor();
+    await TestBed.inject(ApplicationRef).whenStable();
+    expect([...store.naLista()]).toEqual([LEITE]);
+    expect(store.selecao().has(LEITE)).toBe(false);
+    expect(store.selecao().has(ARROZ)).toBe(true);
+    expect(store.selecao().has(BANANA)).toBe(false);
+
+    store.alternar(LEITE);
+    store.recarregarNaLista();
+    expect([...store.naLista()]).toEqual([LEITE]);
+    await TestBed.inject(ApplicationRef).whenStable();
+    expect([...store.naLista()]).toEqual([LEITE, ARROZ]);
+    expect(store.selecao().has(LEITE)).toBe(true);
+    expect(store.selecao().has(ARROZ)).toBe(false);
+
+    store.definirHorizonte('quinzena');
+    expect(store.selecao().has(LEITE)).toBe(false);
+    expect(store.selecao().has(DETERGENTE_1L)).toBe(true);
   });
 });

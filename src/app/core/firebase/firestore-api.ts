@@ -1,5 +1,7 @@
 import { InjectionToken } from '@angular/core';
 import {
+  arrayRemove,
+  arrayUnion,
   collection,
   deleteDoc,
   doc,
@@ -11,11 +13,15 @@ import {
   orderBy,
   query,
   startAfter,
+  updateDoc,
   where,
+  writeBatch,
 } from 'firebase/firestore';
 
 function criarFirestoreApi() {
   return {
+    arrayRemove,
+    arrayUnion,
     collection,
     deleteDoc,
     doc,
@@ -27,7 +33,9 @@ function criarFirestoreApi() {
     orderBy,
     query,
     startAfter,
+    updateDoc,
     where,
+    writeBatch,
   };
 }
 

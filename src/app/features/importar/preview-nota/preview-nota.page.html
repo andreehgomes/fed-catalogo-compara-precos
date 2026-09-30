@@ -84,7 +84,13 @@
           [disabled]="confirmando() || apelidoInvalido()"
           (click)="confirmar()"
         >
-          {{ confirmando() ? 'Importando…' : 'Confirmar importação' }}
+          {{
+            confirmando()
+              ? 'Importando…'
+              : store.lista()
+                ? 'Importar e conferir'
+                : 'Confirmar importação'
+          }}
         </button>
       </div>
     </div>

@@ -44,6 +44,39 @@ Marque cada linha quando o resultado bater com a coluna **Esperado**.
 | 32 | get / list | `/usuarios/uidA/estabelecimentos/76189406000126` | `uidB` | ⛔ negado | [ ] |
 | 33 | create / update / delete | `/usuarios/uidA/estabelecimentos/76189406000126` | `uidA` | ⛔ negado (apelido só pela callable) | [ ] |
 
+## Lista de compras (privada, gravada pelo cliente)
+
+Nos cenários de create/update, cole o documento no campo **Document** do Playground. Base
+válida da lista (`L`):
+
+```json
+{ "nome": "Compras de 30/09", "status": "aberta", "criadaEm": "2026-09-30T12:00:00.000Z",
+  "atualizadaEm": "2026-09-30T12:00:00.000Z", "qtdItens": 1, "qtdMarcados": 0,
+  "ultimaCompraEm": null, "notas": [], "pendentes": [] }
+```
+
+Base válida do item (`I`):
+
+```json
+{ "texto": "Leite integral", "grupo": null, "quantidade": 6, "unidade": "un", "base": "un",
+  "origem": "manual", "ordem": 1, "marcado": false, "marcadoEm": null, "vinculo": null }
+```
+
+| # | Operação | Caminho | Auth (`uid`) | Documento | Esperado | OK |
+|---|---|---|---|---|---|---|
+| 34 | create | `/usuarios/uidA/listas/l1` | `uidA` | `L` | ✅ permitido | [ ] |
+| 35 | create | `/usuarios/uidA/listas/l1/itens/i1` | `uidA` | `I` | ✅ permitido | [ ] |
+| 36 | get / list / delete | `/usuarios/uidA/listas/l1` e `/itens/i1` | `uidA` | — | ✅ permitido | [ ] |
+| 37 | get / list | `/usuarios/uidA/listas/l1` e `/itens/i1` | `uidB` | — | ⛔ negado | [ ] |
+| 38 | create / update / delete | `/usuarios/uidA/listas/l1` e `/itens/i1` | `uidB` | `L` / `I` | ⛔ negado | [ ] |
+| 39 | create | `/usuarios/uidA/listas/l1` | `uidA` | `L` + `"extra": 1` | ⛔ negado (campo extra) | [ ] |
+| 40 | create | `/usuarios/uidA/listas/l1/itens/i1` | `uidA` | `I` com `texto` de 81 caracteres | ⛔ negado | [ ] |
+| 41 | create | `/usuarios/uidA/listas/l1/itens/i1` | `uidA` | `I` com `"quantidade": 0` | ⛔ negado | [ ] |
+| 42 | create | `/usuarios/uidA/listas/l1` | `uidA` | `L` com `"qtdItens": 151` | ⛔ negado | [ ] |
+| 43 | create | `/usuarios/uidA/listas/l1` | `uidA` | `L` com `"qtdMarcados": 2` (maior que `qtdItens`) | ⛔ negado | [ ] |
+| 44 | create | `/usuarios/uidA/listas/l1/itens/i1` | `uidA` | `I` com `vinculo.chave` de 43 dígitos (demais campos do vínculo válidos) | ⛔ negado | [ ] |
+| 45 | create | `/usuarios/uidA/notas/4126…8547` | `uidA` | qualquer | ⛔ negado (continua só pela callable) | [ ] |
+
 ## Base compartilhada (somente leitura)
 
 | # | Operação | Caminho | Auth | Esperado | OK |
@@ -79,4 +112,4 @@ Marque cada linha quando o resultado bater com a coluna **Esperado**.
 |---|---|---|---|---|---|
 | 30 | list (collection group) | `pendentes` | `uidA` | ⛔ negado (só a Function agendada consulta o grupo, pelo Admin SDK) | [ ] |
 
-Resultado: ____ de 33 cenários conferidos em ___/___/2026.
+Resultado: ____ de 45 cenários conferidos em ___/___/2026.

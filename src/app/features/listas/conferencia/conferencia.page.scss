@@ -1,0 +1,38 @@
+@use '../../../shared/style/tokens' as *;
+@use '../../../shared/style/breakpoints' as *;
+
+.conf-skeleton {
+  height: 360px;
+}
+
+.conf-resumo-qtd {
+  font-size: 12px;
+  color: $cp-text-muted;
+}
+
+.conf-colunas {
+  display: grid;
+  gap: $cp-section-gap;
+
+  @include desktop {
+    grid-template-columns: 1fr 1fr;
+    align-items: start;
+  }
+}
+
+.conf-coluna {
+  display: flex;
+  flex-direction: column;
+  gap: $cp-section-gap;
+  min-width: 0;
+}
+
+.cp-section-title {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.conf-dica {
+  margin: 0;
+}

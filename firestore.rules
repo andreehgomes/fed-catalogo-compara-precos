@@ -4,12 +4,54 @@ service cloud.firestore {
     function logado() { return request.auth != null; }
     function dono(uid) { return logado() && request.auth.uid == uid; }
 
+    function texto(v, min, max) { return v is string && v.size() >= min && v.size() <= max; }
+    function dataOuNulo(v) { return v == null || texto(v, 20, 30); }
+    function listaValida(d) {
+      return d.keys().hasOnly(['nome', 'status', 'criadaEm', 'atualizadaEm', 'qtdItens',
+                               'qtdMarcados', 'ultimaCompraEm', 'notas', 'pendentes'])
+        && texto(d.nome, 1, 60) && d.status in ['aberta', 'aguardando-nota']
+        && texto(d.criadaEm, 20, 30) && texto(d.atualizadaEm, 20, 30)
+        && dataOuNulo(d.ultimaCompraEm)
+        && d.qtdItens is int && d.qtdItens >= 0 && d.qtdItens <= 150
+        && d.qtdMarcados is int && d.qtdMarcados >= 0 && d.qtdMarcados <= d.qtdItens
+        && d.notas is list && d.notas.size() <= 3
+        && d.pendentes is list && d.pendentes.size() <= 3;
+    }
+    function vinculoValido(v) {
+      return v == null || (v.keys().hasOnly(['chave', 'n', 'produtoId', 'descricao', 'qtd',
+                                             'unidade', 'vlTotal', 'cnpj', 'mercado', 'como'])
+        && v.chave is string && v.chave.matches('^[0-9]{44}$') && v.n is int
+        && texto(v.produtoId, 5, 120) && texto(v.descricao, 1, 200) && v.qtd is number
+        && texto(v.unidade, 0, 10) && v.vlTotal is number && texto(v.cnpj, 14, 14)
+        && texto(v.mercado, 0, 120) && v.como in ['grupo', 'texto', 'manual']);
+    }
+    function itemValido(d) {
+      return d.keys().hasOnly(['texto', 'grupo', 'quantidade', 'unidade', 'base', 'origem',
+                               'ordem', 'marcado', 'marcadoEm', 'vinculo'])
+        && texto(d.texto, 1, 80) && (d.grupo == null || texto(d.grupo, 5, 120))
+        && (d.quantidade == null
+            || (d.quantidade is number && d.quantidade > 0 && d.quantidade <= 999))
+        && (d.unidade == null || texto(d.unidade, 1, 10))
+        && (d.base == null || d.base in ['kg', 'L', 'un'])
+        && d.origem in ['manual', 'sugestao', 'historico', 'produto', 'nota']
+        && d.ordem is number && d.marcado is bool && dataOuNulo(d.marcadoEm)
+        && vinculoValido(d.vinculo);
+    }
+
     match /usuarios/{uid} {
       allow read: if dono(uid);
       allow write: if false;
       match /notas/{chave}     { allow read, delete: if dono(uid); allow create, update: if false; }
       match /pendentes/{chave} { allow read, delete: if dono(uid); allow create, update: if false; }
       match /estabelecimentos/{cnpj} { allow read: if dono(uid); allow write: if false; }
+      match /listas/{listaId} {
+        allow read, delete: if dono(uid);
+        allow create, update: if dono(uid) && listaValida(request.resource.data);
+        match /itens/{itemId} {
+          allow read, delete: if dono(uid);
+          allow create, update: if dono(uid) && itemValido(request.resource.data);
+        }
+      }
     }
     match /produtos/{id}         { allow read: if logado(); allow write: if false; }
     match /estabelecimentos/{id} { allow read: if logado(); allow write: if false; }

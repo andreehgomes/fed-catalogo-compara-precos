@@ -15,6 +15,17 @@
         </h1>
         <p>{{ n.emissao | date: "dd/MM/yyyy 'às' HH:mm" }} · CNPJ {{ cnpj() }}</p>
       </div>
+      @if (listas.listas().length) {
+        <button
+          type="button"
+          class="cp-btn-icon cp-detail-header-acao"
+          aria-label="Conferir com uma lista"
+          matTooltip="Conferir com uma lista"
+          (click)="conferirComLista()"
+        >
+          <mat-icon aria-hidden="true">checklist</mat-icon>
+        </button>
+      }
       <button
         type="button"
         class="cp-btn-icon cp-btn-icon--danger cp-detail-header-acao"

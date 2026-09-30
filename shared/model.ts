@@ -166,6 +166,57 @@ export interface Produto {
   candidatosVinculo?: ProdutoId[];
 }
 
+export type StatusLista = 'aberta' | 'aguardando-nota';
+
+export type OrigemItemLista = 'manual' | 'sugestao' | 'historico' | 'produto' | 'nota';
+
+/** `usuarios/{uid}/listas/{listaId}` — privado, gravado pelo cliente. */
+export interface ListaCompras {
+  nome: string;
+  status: StatusLista;
+  criadaEm: DataIso;
+  atualizadaEm: DataIso;
+  qtdItens: number;
+  qtdMarcados: number;
+  /** Última compra finalizada com a lista guardada para usar de novo. */
+  ultimaCompraEm: DataIso | null;
+  /** Chaves conferidas na compra em andamento (até 3). */
+  notas: string[];
+  /** Chaves guardadas na fila da SEFAZ, ainda sem nota (até 3). */
+  pendentes: string[];
+}
+
+/** `usuarios/{uid}/listas/{listaId}/itens/{itemId}` — privado, gravado pelo cliente. */
+export interface ItemLista {
+  texto: string;
+  /** Canônico do produto, quando se sabe qual é. */
+  grupo: string | null;
+  quantidade: number | null;
+  unidade: string | null;
+  base: UnidadeBase | null;
+  origem: OrigemItemLista;
+  ordem: number;
+  marcado: boolean;
+  marcadoEm: DataIso | null;
+  vinculo: VinculoItemLista | null;
+}
+
+/** Retrato do item da nota ligado ao item da lista: sobrevive à exclusão da nota. */
+export interface VinculoItemLista {
+  chave: string;
+  n: number;
+  produtoId: ProdutoId;
+  descricao: string;
+  qtd: number;
+  unidade: string;
+  vlTotal: number;
+  cnpj: string;
+  mercado: string;
+  como: 'grupo' | 'texto' | 'manual';
+}
+
+export type ComId<T> = T & { id: string };
+
 export interface SugestaoEan {
   gtin: string;
   descricao: string;

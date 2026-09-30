@@ -55,15 +55,19 @@
     box-shadow: $cp-shadow-card;
 
     button {
-      flex: 1;
+      flex: 1 1 40%;
     }
   }
 }
 
 .sug-pagina {
   @include mobile {
-    padding-bottom: 96px;
+    padding-bottom: 150px;
   }
+}
+
+.sug-aviso-listas {
+  margin: 0;
 }
 
 .sug-vazio {

@@ -9,6 +9,7 @@ import { intervaloDe } from '../notas/lista/periodo';
 import { PendentesBloco } from '../notas/ui/pendentes-bloco';
 import { ProdutosService } from '../produtos/data-access/produtos.service';
 import { HoraDeRepor } from './hora-de-repor';
+import { ListaEmAndamento } from './ui/lista-em-andamento';
 import { economiaPotencial, totalDe, variacao } from './painel.calculos';
 
 @Component({
@@ -19,6 +20,7 @@ import { economiaPotencial, totalDe, variacao } from './painel.calculos';
     DecimalPipe,
     EmptyState,
     HoraDeRepor,
+    ListaEmAndamento,
     MatIconModule,
     PendentesBloco,
     RouterLink,

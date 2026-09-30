@@ -14,6 +14,7 @@ import { EstabelecimentosService } from '../estabelecimentos/data-access/estabel
 import EstabelecimentoDetalhePage from '../estabelecimentos/detalhe/estabelecimento-detalhe.page';
 import EstabelecimentosListaPage from '../estabelecimentos/lista/estabelecimentos-lista.page';
 import { RenomearDialog } from '../estabelecimentos/renomear/renomear-dialog';
+import { ListasStore } from '../listas/data-access/listas.store';
 import { NotasService } from '../notas/data-access/notas.service';
 import { PendentesService } from '../notas/data-access/pendentes.service';
 import { ProdutosService } from '../produtos/data-access/produtos.service';
@@ -56,10 +57,12 @@ function nota(chave: string, total: number): Nota {
 
 let apelidos = signal<ReadonlyMap<string, string>>(new Map());
 let definir = vi.fn();
+let adicionarEmLista = vi.fn();
 
 function base(providers: unknown[]) {
   apelidos = signal(new Map());
   definir = vi.fn();
+  adicionarEmLista = vi.fn(async () => 'l1');
   TestBed.configureTestingModule({
     providers: [
       provideRouter([]),
@@ -75,6 +78,14 @@ function base(providers: unknown[]) {
           apelidos: () => apelidos(),
           nome: (e: Estabelecimento) => nomeExibido(e, apelidos().get(e.cnpj)),
           definir: (...a: unknown[]) => definir(...a),
+        },
+      },
+      {
+        provide: ListasStore,
+        useValue: {
+          listas: signal([]),
+          emAndamento: signal(null),
+          adicionarEmLista: (...a: unknown[]) => adicionarEmLista(...a),
         },
       },
       ...(providers as never[]),
@@ -207,6 +218,32 @@ describe('ProdutoDetalhePage', () => {
     expect(texto(el)).toContain('Suas notas');
     expect(texto(el)).toContain('Comunidade');
     expect(() => botao(el, /Este produto é o mesmo que/)).toThrow();
+  });
+
+  it('"Adicionar à lista" leva o canônico (RF-04)', async () => {
+    const s = servico([
+      produto('ean:7891000100103', { descricao: 'LEITE ITALAC 1L' }),
+      produto('loc:03644587000836:1001', { vinculadoA: 'ean:7891000100103' }),
+    ]);
+    base([
+      { provide: ProdutosService, useValue: s },
+      { provide: NotasService, useValue: { chaves: vi.fn(async () => new Set()) } },
+      { provide: MatDialog, useValue: { open: vi.fn() } },
+      {
+        provide: LocalizacaoStore,
+        useValue: { pronta: signal(false), geohash: signal(null), raioKm: signal(2) },
+      },
+    ]);
+    const { el, fixture } = await renderizar(ProdutoDetalhePage, { id: 'loc:03644587000836:1001' });
+    botao(el, /Adicionar à lista/).click();
+    await fixture.whenStable();
+    expect(adicionarEmLista).toHaveBeenCalledWith([
+      expect.objectContaining({
+        grupo: 'ean:7891000100103',
+        texto: 'LEITE ITALAC 1L',
+        origem: 'produto',
+      }),
+    ]);
   });
 
   it('produto sem EAN oferece o vínculo e o desfazer', async () => {

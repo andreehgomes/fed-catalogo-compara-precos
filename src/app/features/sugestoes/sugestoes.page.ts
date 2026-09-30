@@ -4,6 +4,8 @@ import { MatIconModule } from '@angular/material/icon';
 import { MatSnackBar } from '@angular/material/snack-bar';
 import { Router, RouterLink } from '@angular/router';
 import { EmptyState } from '../../shared/ui/empty-state/empty-state';
+import { ListasStore } from '../listas/data-access/listas.store';
+import { itensDaSugestao } from '../listas/lista';
 import { SugestoesStore } from './data-access/sugestoes.store';
 import { HORIZONTES, Horizonte, VisaoSugestao, textoDaLista } from './sugestao';
 import { ListaCompleta } from './ui/lista-completa';
@@ -32,6 +34,7 @@ export default class SugestoesPage {
   protected readonly store = inject(SugestoesStore);
   private readonly router = inject(Router);
   private readonly snack = inject(MatSnackBar);
+  protected readonly listas = inject(ListasStore);
 
   readonly horizonte = input<string>();
   readonly visao = input<string>();
@@ -65,6 +68,25 @@ export default class SugestoesPage {
 
   constructor() {
     effect(() => this.store.definirHorizonte(this.horizonteAtual()));
+    this.store.recarregarNaLista();
+  }
+
+  /** RF-03: os selecionados, com a quantidade ajustada, viram uma lista nova. */
+  protected criarLista(): void {
+    if (this.listas.cheia()) return;
+    const itens = itensDaSugestao(this.store.selecionados());
+    const id = this.listas.criar(itens);
+    this.store.recarregarNaLista();
+    void this.router.navigate(['/listas', id]);
+    const n = itens.length;
+    this.snack.open(`Lista criada com ${n} ${n === 1 ? 'item' : 'itens'}`, 'OK', {
+      duration: 4000,
+    });
+  }
+
+  protected async adicionarALista(): Promise<void> {
+    const id = await this.listas.adicionarEmLista(itensDaSugestao(this.store.selecionados()));
+    if (id) this.store.recarregarNaLista();
   }
 
   protected escolherHorizonte(h: Horizonte): void {

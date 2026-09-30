@@ -30,6 +30,9 @@ import {
 } from './detalhe/historico-pessoal';
 import { MaisBaratoPerto, equivalentesPorTexto } from './detalhe/mais-barato-perto';
 import NotaDetalhePage from './detalhe/nota-detalhe.page';
+import { ListasStore } from '../listas/data-access/listas.store';
+import type { Lista } from '../listas/lista';
+import { listaCompras } from '../../../testing/fixtures/lista/lista';
 import NotasListaPage from './lista/notas-lista.page';
 import { intervaloDe } from './lista/periodo';
 
@@ -358,7 +361,8 @@ describe('MaisBaratoPerto', () => {
 });
 
 describe('NotaDetalhePage', () => {
-  function montar(n: Nota | null, confirmar = true) {
+  function montar(n: Nota | null, confirmar = true, listas: Lista[] = [], escolha: unknown = null) {
+    const escolher = vi.fn(async () => escolha);
     const api = apiFalsa();
     const excluir = vi.fn(async () => undefined);
     const historico = { comparar: vi.fn(async () => new Map()), invalidar: vi.fn() };
@@ -374,6 +378,7 @@ describe('NotaDetalhePage', () => {
         { provide: MatDialog, useValue: dialog },
         { provide: MatSnackBar, useValue: snack },
         { provide: HistoricoPessoalStore, useValue: historico },
+        { provide: ListasStore, useValue: { listas: signal(listas), escolher } },
         {
           provide: LocalizacaoStore,
           useValue: {
@@ -398,6 +403,7 @@ describe('NotaDetalhePage', () => {
       dialog,
       navegar,
       historico,
+      escolher,
     };
   }
 
@@ -454,6 +460,46 @@ describe('NotaDetalhePage', () => {
     await fixture.whenStable();
     expect(excluir).not.toHaveBeenCalled();
     expect(historico.invalidar).not.toHaveBeenCalled();
+  });
+
+  it('"Conferir com uma lista" (RF-14): some sem listas; com uma vai direto; com várias pergunta', async () => {
+    const sem = montar(NOTA);
+    await sem.fixture.whenStable();
+    sem.fixture.detectChanges();
+    expect(() => botao(sem.el, 'Conferir com uma lista')).toThrow();
+
+    TestBed.resetTestingModule();
+    const uma = montar(NOTA, true, [listaCompras({}, 'l1')]);
+    await uma.fixture.whenStable();
+    uma.fixture.detectChanges();
+    botao(uma.el, 'Conferir com uma lista').click();
+    await uma.fixture.whenStable();
+    expect(uma.escolher).not.toHaveBeenCalled();
+    expect(uma.navegar).toHaveBeenCalledWith(['/listas', 'l1', 'conferir'], {
+      queryParams: { chave: CHAVE },
+    });
+
+    TestBed.resetTestingModule();
+    const duas = [listaCompras({}, 'l1'), listaCompras({}, 'l2')];
+    const varias = montar(NOTA, true, duas, { id: 'l2' });
+    await varias.fixture.whenStable();
+    varias.fixture.detectChanges();
+    botao(varias.el, 'Conferir com uma lista').click();
+    await varias.fixture.whenStable();
+    expect(varias.escolher).toHaveBeenCalledWith(
+      expect.objectContaining({ podeCriar: false, confirmar: 'Conferir' }),
+    );
+    expect(varias.navegar).toHaveBeenCalledWith(['/listas', 'l2', 'conferir'], {
+      queryParams: { chave: CHAVE },
+    });
+
+    TestBed.resetTestingModule();
+    const cancelou = montar(NOTA, true, duas, null);
+    await cancelou.fixture.whenStable();
+    cancelou.fixture.detectChanges();
+    botao(cancelou.el, 'Conferir com uma lista').click();
+    await cancelou.fixture.whenStable();
+    expect(cancelou.navegar).not.toHaveBeenCalled();
   });
 
   it('comparar sem localização abre o seletor; nota inexistente mostra aviso', async () => {

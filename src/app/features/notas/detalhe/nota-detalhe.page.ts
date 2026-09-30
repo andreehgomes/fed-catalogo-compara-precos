@@ -25,6 +25,7 @@ import { ConfirmDialog, DadosConfirmacao } from '../../../shared/ui/confirm-dial
 import { EmptyState } from '../../../shared/ui/empty-state/empty-state';
 import { FontePrecoInfo } from '../../../shared/ui/fonte-preco/fonte-preco';
 import { Preco } from '../../../shared/ui/preco/preco';
+import { ListasStore } from '../../listas/data-access/listas.store';
 import { LocalizacaoSeletor } from '../../regiao/localizacao/localizacao-seletor';
 import { LocalizacaoStore } from '../../regiao/localizacao/localizacao.store';
 import { formatarDistancia } from '../../regiao/ui/oferta-row';
@@ -89,6 +90,7 @@ export default class NotaDetalhePage {
   private readonly historicoStore = inject(HistoricoPessoalStore);
   protected readonly comparacao = inject(MaisBaratoPerto);
   protected readonly loc = inject(LocalizacaoStore);
+  protected readonly listas = inject(ListasStore);
 
   readonly chave = input.required<string>();
   /** Filtro da lista em `?itens=`. */
@@ -216,6 +218,26 @@ export default class NotaDetalhePage {
     }
     await this.filtrar('todos');
     afterNextRender(rolar, { injector: this.injector });
+  }
+
+  /** RF-14: nota importada sem passar pela lista também pode ser conferida. */
+  protected async conferirComLista(): Promise<void> {
+    const listas = this.listas.listas();
+    let id = listas.length === 1 ? listas[0].id : null;
+    if (listas.length > 1) {
+      const r = await this.listas.escolher({
+        listas,
+        podeCriar: false,
+        titulo: 'Conferir com qual lista?',
+        confirmar: 'Conferir',
+      });
+      id = r && 'id' in r ? r.id : null;
+    }
+    if (id) {
+      await this.router.navigate(['/listas', id, 'conferir'], {
+        queryParams: { chave: this.chave() },
+      });
+    }
   }
 
   protected async copiarChave(): Promise<void> {

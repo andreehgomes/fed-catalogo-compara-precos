@@ -1,0 +1,62 @@
+@use '../../../shared/style/tokens' as *;
+
+.listas {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.lista-card {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  padding: 6px 6px 6px 16px;
+}
+
+.lista-link {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 6px;
+  padding: 10px 0;
+  color: inherit;
+  text-decoration: none;
+
+  .item-nome {
+    font-size: 16px;
+  }
+}
+
+.lista-barra {
+  display: block;
+  width: 100%;
+  height: 6px;
+  border-radius: $cp-radius-pill;
+  background: $cp-surface-track;
+  overflow: hidden;
+
+  > span {
+    display: block;
+    height: 100%;
+    background: $cp-accent;
+  }
+}
+
+.listas-skeleton {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+
+  .cp-skeleton {
+    height: 96px;
+  }
+}
+
+.listas-vazio-acoes {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 10px;
+}

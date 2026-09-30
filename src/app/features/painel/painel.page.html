@@ -19,6 +19,12 @@
 
   <cp-pendentes-bloco />
 
+  @defer (on viewport) {
+    <cp-lista-em-andamento />
+  } @placeholder {
+    <div aria-hidden="true"></div>
+  }
+
   @if (dados.isLoading()) {
     <div class="painel-skeleton" role="status">
       <span class="cp-sr-only">Carregando o painel…</span>
