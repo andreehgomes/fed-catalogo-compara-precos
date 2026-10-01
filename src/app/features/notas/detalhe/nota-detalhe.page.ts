@@ -37,6 +37,7 @@ import {
   ComparacaoHistorico,
   FILTROS_HISTORICO,
   FiltroHistorico,
+  JANELA_MELHOR_PRECO_DIAS,
   comValores,
   consolidarItens,
   contarPorFiltro,
@@ -49,12 +50,10 @@ import { MaisBaratoPerto } from './mais-barato-perto';
 
 const ROTULOS_FILTRO: Record<FiltroHistorico, string> = {
   todos: 'Todos',
-  subiram: 'Subiram',
-  baixaram: 'Baixaram',
+  acima: 'Acima do melhor',
+  melhor: 'Melhor preço',
   primeira: 'Primeira compra',
 };
-
-type TipoDestaque = 'mais-barato' | 'mais-caro';
 
 const LIMITE_DESTAQUES = 3;
 
@@ -141,35 +140,23 @@ export default class NotaDetalhePage {
     filtrarItens(this.itensConsolidados(), this.comparacoes(), this.filtro()),
   );
   protected readonly limiteDestaques = LIMITE_DESTAQUES;
-  private readonly destaquesAbertos = signal<ReadonlySet<TipoDestaque>>(new Set());
-  protected readonly gruposDestaque = computed(() => {
+  protected readonly janela = JANELA_MELHOR_PRECO_DIAS;
+  protected readonly destaquesAbertos = signal(false);
+  /** Itens acima do seu melhor preço recente, do maior impacto para o menor. */
+  protected readonly destaquesAcima = computed(() => {
     const itens = new Map(this.itensConsolidados().map((i) => [i.n, i]));
     const r = this.comparacoes();
-    const d = destaques(r);
-    const abertos = this.destaquesAbertos();
-    const grupo = (tipo: TipoDestaque, titulo: string, ns: number[]) => {
-      const lista = ns.flatMap((n) => {
-        const item = itens.get(n);
-        const c = comValores(r.get(n));
-        return item && c
-          ? [{ item, c, impacto: Math.abs(c.impacto), sufixo: sufixoDaBase(c) }]
-          : [];
-      });
-      const aberto = abertos.has(tipo);
-      return {
-        tipo,
-        titulo,
-        total: lista.length,
-        aberto,
-        itens: aberto ? lista : lista.slice(0, LIMITE_DESTAQUES),
-      };
-    };
-    return [
-      grupo('mais-barato', 'Ficaram mais baratos', d.quedas),
-      grupo('mais-caro', 'Ficaram mais caros', d.altas),
-    ].filter((g) => g.total > 0);
+    return destaques(r).flatMap((n) => {
+      const item = itens.get(n);
+      const c = comValores(r.get(n));
+      return item && c ? [{ item, c, sufixo: sufixoDaBase(c) }] : [];
+    });
   });
-  protected readonly comDestaques = computed(() => this.gruposDestaque().length > 0);
+  protected readonly destaquesVisiveis = computed(() =>
+    this.destaquesAbertos()
+      ? this.destaquesAcima()
+      : this.destaquesAcima().slice(0, LIMITE_DESTAQUES),
+  );
 
   constructor() {
     const abertas = inject(NotasAbertasService);
@@ -188,14 +175,6 @@ export default class NotaDetalhePage {
     }
     this.escolhendoLocal.set(false);
     this.comparacao.comparar(this.itensConsolidados());
-  }
-
-  protected alternarDestaques(tipo: TipoDestaque): void {
-    this.destaquesAbertos.update((atual) => {
-      const novo = new Set(atual);
-      if (!novo.delete(tipo)) novo.add(tipo);
-      return novo;
-    });
   }
 
   protected filtrar(filtro: FiltroHistorico): Promise<boolean> {

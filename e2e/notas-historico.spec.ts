@@ -3,7 +3,7 @@ import { MOTIVO_SEM_USUARIO, TEM_USUARIO_E2E } from './support/env';
 import { entrar } from './support/login';
 import { bloquearServicosReais, mockMenorPreco } from './support/mocks';
 
-test.describe('detalhe da nota: comparado com a última vez (usuário de teste no dv)', () => {
+test.describe('detalhe da nota: comparado com seu melhor preço (usuário de teste no dv)', () => {
   test.skip(!TEM_USUARIO_E2E, MOTIVO_SEM_USUARIO);
 
   test.beforeEach(async ({ page }) => {
@@ -12,7 +12,7 @@ test.describe('detalhe da nota: comparado com a última vez (usuário de teste n
     await entrar(page);
   });
 
-  test('resumo, filtro "Subiram" na URL e expansão de um item', async ({ page }) => {
+  test('resumo, filtro "Acima do melhor" na URL e expansão de um item', async ({ page }) => {
     await page.goto('/notas');
     const notas = page.getByRole('list', { name: 'Notas' }).getByRole('link');
     await expect(notas.first().or(page.getByText('Importar primeira nota'))).toBeVisible();
@@ -20,16 +20,16 @@ test.describe('detalhe da nota: comparado com a última vez (usuário de teste n
 
     await notas.first().click();
     await expect(page).toHaveURL(/\/notas\/\d{44}/);
-    const resumo = page.getByRole('status').filter({ hasText: 'Comparado com a última vez' });
+    const resumo = page.getByRole('status').filter({ hasText: 'Comparado com seu melhor preço' });
     await expect(resumo).toBeVisible();
     await expect(
-      resumo.getByText(/itens comparados|Primeira vez com esses produtos/),
+      resumo.getByText(/itens comparados|Sem compras recentes desses produtos/),
     ).toBeVisible();
 
-    const subiram = page.getByRole('button', { name: /Subiram/ });
-    await subiram.click();
-    await expect(page).toHaveURL(/[?&]itens=subiram/);
-    await expect(subiram).toHaveAttribute('aria-pressed', 'true');
+    const acima = page.getByRole('button', { name: /^Acima do melhor/ });
+    await acima.click();
+    await expect(page).toHaveURL(/[?&]itens=acima/);
+    await expect(acima).toHaveAttribute('aria-pressed', 'true');
 
     await page.getByRole('button', { name: /^Todos/ }).click();
     await expect(page).not.toHaveURL(/itens=/);

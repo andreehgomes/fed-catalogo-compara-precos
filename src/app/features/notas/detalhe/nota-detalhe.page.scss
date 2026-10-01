@@ -1,5 +1,4 @@
 @use '../../../shared/style/tokens' as *;
-@use '../../../shared/style/breakpoints' as *;
 
 .cp-detail-header h1 a {
   color: inherit;
@@ -69,10 +68,6 @@
   &--mais-caro {
     color: $cp-pricier;
   }
-
-  &--mais-barato {
-    color: $cp-cheaper;
-  }
 }
 
 .historico-resumo-detalhe {
@@ -90,20 +85,6 @@
 
   button {
     margin-left: auto;
-  }
-}
-
-.destaques {
-  display: grid;
-  gap: 16px;
-  align-items: start;
-
-  @include tablet-up {
-    grid-template-columns: 1fr 1fr;
-  }
-
-  .cp-block {
-    margin: 0;
   }
 }
 

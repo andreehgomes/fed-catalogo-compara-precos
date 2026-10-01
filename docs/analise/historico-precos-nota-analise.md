@@ -60,7 +60,11 @@ pessoal, não a base comunitária nem o Menor Preço).
   (a) tem o mesmo `produtoId`; ou (b) os dois `produtoId` estão no mesmo grupo de equivalência
   (mesmo canônico por `vinculadoA`, inclusive vínculo automático por etiquetas/IA). Não há
   comparação por semelhança de texto (Jaccard) neste recurso: sem vínculo, é outro produto.
-- **RF-03 — Referência de comparação (decidido: D-02).** Cada item é comparado com a **última
+> **Atualizado em 2026-09-30 (D-03):** RF-03, RF-04, RF-06, RF-07 e RF-08 abaixo descrevem a
+> v1 (última compra). A referência passou a ser o **melhor preço do usuário nos 60 dias
+> anteriores**; ver D-03 e [melhor-preco-recente-plano.md](../plano/melhor-preco-recente-plano.md).
+
+- **RF-03 — Referência de comparação (decidido: D-02, substituído por D-03).** Cada item é comparado com a **última
   vez que o usuário comprou o mesmo produto antes desta nota** (maior `emissao` menor que a da
   nota): valor, data e estabelecimento. Compras **posteriores** a esta nota não contam (numa
   nota antiga, a pergunta continua sendo "paguei mais ou menos que da vez anterior?"). Sem
@@ -210,7 +214,19 @@ em grupos de 30), no mesmo padrão de `produtosPorIds`.
   exclusão). O cliente é zero infraestrutura e sempre coerente com as notas; custa ≤ 400
   leituras na primeira abertura da sessão. Migrar para o agregado só se os usuários passarem
   de ~400 notas/ano ou se o custo de leitura aparecer na fatura.
-- **D-02 — Referência = última compra anterior (decidido pelo usuário em 2026-09-29).** O
+- **D-03 — Referência = melhor preço do usuário nos 60 dias anteriores (decidido pelo
+  usuário em 2026-09-30, substitui D-02).** O badge responde "paguei bem? quanto poderia ter
+  economizado?": o menor valor pago pelo mesmo produto/grupo, em qualquer mercado, com
+  `emissao` em `[emissão da nota − 60 dias, emissão da nota)`. Acima → "R$ X acima do seu
+  melhor" e o valor entra no resumo ("você poderia ter economizado"); igual ou abaixo → selo
+  "Seu melhor preço"/"Novo melhor preço", fora do resumo (não há "a menos" nem saldo). A
+  última compra fica como tendência secundária. Sem compra nos 60 dias → mostra a última, fora
+  do resumo. Motivo: Coca-Cola 2L Zero a R$ 10,00 no Box e depois R$ 11,00 duas vezes no
+  Merkagel — com D-02 a segunda nota do Merkagel dizia "Mesmo preço" e a referência boa
+  sumia. Mês do calendário foi descartado: o corte no dia 1º perde a referência do dia 30; a
+  janela móvel resolve os dois casos sem regra especial.
+- **D-02 — Referência = última compra anterior (decidido pelo usuário em 2026-09-29;
+  substituído por D-03).** O
   badge responde "paguei mais caro ou mais barato que da última vez?". Média e menor preço
   ficam só no detalhe expandido.
 - **R-01 — Item sem EAN em mercado novo** só é reconhecido depois do vínculo; nesses casos a

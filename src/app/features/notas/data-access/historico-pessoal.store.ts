@@ -67,7 +67,7 @@ export class HistoricoPessoalStore {
     return this.gruposDe(idsDe([nota]));
   }
 
-  /** Resumo "comparado com a última vez" de várias notas (lista), numa leitura só. */
+  /** Resumo "comparado com seu melhor preço" de várias notas (lista), numa leitura só. */
   async resumir(alvo: readonly Nota[]): Promise<Map<string, ResumoHistorico>> {
     if (!alvo.length) return new Map();
     const notas = await this.notasCom(alvo);

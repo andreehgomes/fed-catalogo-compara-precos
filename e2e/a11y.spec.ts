@@ -112,7 +112,7 @@ test.describe('acessibilidade com login (usuário de teste no dv)', () => {
     await notas.first().click();
     await expect(page.getByRole('heading', { name: 'Itens' })).toBeVisible();
     await expect(
-      page.getByRole('status').filter({ hasText: 'Comparado com a última vez' }),
+      page.getByRole('status').filter({ hasText: 'Comparado com seu melhor preço' }),
     ).not.toContainText('Comparando');
     expect(await violacoesGraves(page)).toEqual([]);
   });

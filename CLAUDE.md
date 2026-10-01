@@ -337,14 +337,20 @@ Instale as dependências **de dentro da pasta** (`cd functions && npm install`):
   `localStorage` (`NotasAbertasService`), porque o cliente não grava nas notas.
 - Detalhe (`/notas/:chave`): link para estabelecimento e produto, copiar chave,
   exclusão com `<cp-confirm-dialog>` (`shared/ui/confirm-dialog`).
-- "Comparado com a última vez" (histórico pessoal): `HistoricoPessoalStore`
+- "Comparado com seu melhor preço" (histórico pessoal; plano
+  `docs/plano/melhor-preco-recente-plano.md`): `HistoricoPessoalStore`
   (`data-access/historico-pessoal.store.ts`) lê as notas dos últimos 12 meses (até 20 páginas =
   400 notas) uma vez por sessão e por `uid`, resolve os grupos de vínculo (`produtosPorIds` +
   `membrosDosGrupos`) e cacheia; `invalidar()` após excluir nota e após `confirmarNfce`. Regra
-  pura em `detalhe/historico-pessoal.ts`: cada item compara com a **última compra anterior** do
-  mesmo produto/grupo (a própria nota e compras posteriores não contam); base `vlUnit` (mesma
-  unidade comercial e mesmo conteúdo) → R$/unidade base (impacto × `quantidadeNaUnidadeBase`)
-  → "sem comparação". Resumo, destaques (`@defer on viewport`) e filtro em `?itens=`.
+  pura em `detalhe/historico-pessoal.ts`: a referência de cada item é o **menor preço que o
+  usuário pagou pelo mesmo produto/grupo, em qualquer mercado, nos `JANELA_MELHOR_PRECO_DIAS`
+  (60) antes da emissão da nota** (a própria nota e compras posteriores não contam). Base
+  ancorada no item: `vlUnit` (mesma unidade comercial e conteúdo) ou R$/unidade base, a que
+  aceitar mais compras da janela → senão "sem comparação". `acima` → impacto (diferença ×
+  quantidade) entra no resumo como "poderia ter economizado"; `melhor` (igual ou abaixo,
+  `novoMelhor`) é só selo e não desconta. A última compra é tendência secundária (`ultima`);
+  sem compra nos 60 dias → `sem-recente`. Resumo, destaques (só os acima, `@defer on
+  viewport`), filtro em `?itens=` (`acima|melhor|primeira`) e saldo "R$ X a mais" na lista.
 - "Tem mais barato perto?" (`detalhe/mais-barato-perto.ts`): sob demanda, item a item
   com `concatMap` (1 requisição em voo, cache do client), menor oferta **coerente**
   (`separarDivergentes`) e economia potencial = Σ diferença × qtd. Item sem EAN usa a

@@ -24,6 +24,7 @@ import { PendentesService } from './data-access/pendentes.service';
 import { HistoricoItem } from './detalhe/historico-item';
 import {
   ComparacaoHistorico,
+  CompraPessoal,
   compararNota,
   indexarCompras,
   montarGrupos,
@@ -206,14 +207,13 @@ describe('NotasListaPage', () => {
     );
   });
 
-  it('mostra o saldo de cada nota contra a última vez (a mais, economia ou mesmo valor)', async () => {
+  it('mostra quanto cada nota pagou acima do melhor preço (a mais ou no melhor preço)', async () => {
     const api = apiFalsa([nota(1), nota(2), nota(3), nota(4)]);
-    const resumo = (saldo: number, comparados = 2) => ({
-      aMais: 0,
-      itensAMais: 0,
-      aMenos: 0,
-      itensAMenos: 0,
-      saldo,
+    const resumo = (aMais: number, comparados = 2) => ({
+      aMais,
+      itensAcima: aMais ? 1 : 0,
+      itensNoMelhor: 1,
+      itensNovoMelhor: 1,
       comparados,
       total: 2,
     });
@@ -221,7 +221,7 @@ describe('NotasListaPage', () => {
       async () =>
         new Map([
           ['chave001', resumo(3.2)],
-          ['chave002', resumo(-30.2)],
+          ['chave002', resumo(0)],
           ['chave003', resumo(0)],
           ['chave004', resumo(0, 0)],
         ]),
@@ -240,9 +240,9 @@ describe('NotasListaPage', () => {
       expect.arrayContaining([expect.objectContaining({ chave: 'chave001' })]),
     );
     expect(linhas[0]).toContain('R$ 3,20 a mais');
-    expect(linhas[1]).toContain('R$ 30,20 de economia');
-    expect(linhas[2]).toContain('Mesmo valor');
-    expect(linhas[3]).not.toMatch(/a mais|economia|Mesmo valor/);
+    expect(linhas[1]).toContain('No melhor preço');
+    expect(linhas[2]).toContain('No melhor preço');
+    expect(linhas[3]).not.toMatch(/a mais|economia|melhor preço/);
   });
 
   it('sem notas: "Importar primeira nota"', async () => {
@@ -517,7 +517,10 @@ describe('NotaDetalhePage', () => {
   });
 });
 
-const NOTAS_H = notasHistorico as Nota[];
+/** A nota de 10/06 vai para 05/08, dentro dos 60 dias da de 20/09: a tela passa por todos os estados. */
+const NOTAS_H = (notasHistorico as Nota[]).map((n, i) =>
+  i === 0 ? { ...n, emissao: '2026-08-05T14:00:00.000Z' } : n,
+);
 const PRODUTOS_H = produtosHistorico as Produto[];
 const [, , ATUAL_H, POSTERIOR_H] = NOTAS_H;
 
@@ -553,7 +556,7 @@ function linha(el: HTMLElement, n: number): string {
   return texto(el.querySelector(`#item-${n}`));
 }
 
-describe('NotaDetalhePage: comparado com a última vez', () => {
+describe('NotaDetalhePage: comparado com seu melhor preço', () => {
   function montar(
     comparar: (n: Nota) => Promise<Map<number, ComparacaoHistorico>> = compararComFixture,
     itens?: string,
@@ -586,35 +589,37 @@ describe('NotaDetalhePage: comparado com a última vez', () => {
     return { fixture, el: fixture.nativeElement as HTMLElement, historico, navegar };
   }
 
-  it('resumo com saldo, a mais, a menos e itens comparados (soma manual da fixture)', async () => {
+  it('resumo: quanto poderia ter economizado, itens no melhor e comparados', async () => {
     const { fixture, el, historico } = montar();
     await pronto(fixture);
     expect(historico.comparar).toHaveBeenCalledWith(ATUAL_H);
     const resumo = texto(el.querySelector('.historico-resumo'));
-    // (5,00 + 1,20 + 1,96) − (3,00 + 1,25) = 3,91
-    expect(resumo).toContain('R$ 3,91 a mais');
-    expect(resumo).toContain('R$ 8,16 a mais em 3 itens');
-    expect(resumo).toContain('R$ 4,25 a menos em 2 itens');
-    expect(resumo).toContain('6 de 8 itens comparados · últimos 12 meses');
+    // Café 2,50 × 2 + Leite 0,40 × 3 + Coca 0,49/L × 4 L = 8,16; os novos melhores não descontam
+    expect(resumo).toContain('Comparado com seu melhor preço');
+    expect(resumo).toContain('R$ 8,16 a mais');
+    expect(resumo).toContain('Você poderia ter economizado R$ 8,16 em 3 itens');
+    expect(resumo).toContain('3 no seu melhor preço · 6 de 8 itens comparados · últimos 60 dias');
     expect(el.querySelector('.historico-resumo')!.getAttribute('role')).toBe('status');
   });
 
-  it('linha do item: badge, última vez com data e mercado, diferença e %', async () => {
+  it('linha do item: acima do melhor, novo melhor, seu melhor, com data e mercado', async () => {
     const { fixture, el } = montar();
     await pronto(fixture);
-    expect(linha(el, 1)).toContain('R$ 5,00 mais caro');
-    expect(linha(el, 1)).toContain('Última vez R$ 18,90 (10/06 · Mercado A)');
+    expect(linha(el, 1)).toContain('R$ 5,00 acima do seu melhor');
+    expect(linha(el, 1)).toContain('Seu melhor em 60 dias R$ 18,90 (05/08 · Mercado A)');
     expect(linha(el, 1)).toContain('+R$ 2,50/un (+13,2 %)');
     expect(linha(el, 1)).toContain('Suas notas');
-    expect(linha(el, 2)).toContain('R$ 3,00 mais barato');
-    expect(linha(el, 2)).toContain('−R$ 0,30/un');
+    expect(linha(el, 1)).not.toContain('Última vez');
+    expect(linha(el, 2)).toContain('Novo melhor preço');
+    expect(linha(el, 2)).toContain('Antes R$ 2,79 (05/08 · Mercado A)');
     expect(linha(el, 3)).toContain('Mercado B');
-    expect(linha(el, 4)).toContain('Última vez R$ 8,99/kg');
+    expect(linha(el, 4)).toContain('Antes R$ 8,99/kg');
     expect(linha(el, 5)).toContain('+R$ 0,49/L');
-    expect(linha(el, 6)).toContain('Unidade diferente da última compra');
+    expect(linha(el, 6)).toContain('Unidade diferente das compras recentes');
     expect(linha(el, 7)).toContain('Primeira compra');
     expect(el.querySelector('#item-7 .cp-badge')).toBeNull();
-    expect(linha(el, 8)).toContain('Mesmo preço');
+    expect(linha(el, 8)).toContain('Seu melhor preço');
+    expect(linha(el, 8)).toContain('Igual a 05/08 · Mercado A');
   });
 
   it('a lista aparece antes do histórico resolver, com skeleton só no resumo', async () => {
@@ -639,32 +644,33 @@ describe('NotaDetalhePage: comparado com a última vez', () => {
     botao(el, 'Tentar de novo').click();
     await pronto(fixture);
     expect(historico.comparar).toHaveBeenCalledTimes(2);
-    expect(texto(el.querySelector('.historico-resumo'))).toContain('R$ 3,91 a mais');
+    expect(texto(el.querySelector('.historico-resumo'))).toContain('R$ 8,16 a mais');
   });
 
-  it('sem nenhum comparável: "Primeira vez com esses produtos"', async () => {
+  it('sem nenhum comparável: "Sem compras recentes desses produtos"', async () => {
     const { fixture, el } = montar(todosPrimeiraCompra);
     await pronto(fixture);
     expect(texto(el.querySelector('.historico-resumo'))).toContain(
-      'Primeira vez com esses produtos',
+      'Sem compras recentes desses produtos',
     );
     expect(el.querySelector('.destaques-placeholder')).toBeNull();
   });
 
-  it('?itens=subiram mostra só os que subiram; trocar o filtro atualiza a URL', async () => {
-    const { fixture, el, navegar } = montar(compararComFixture, 'subiram');
+  it('?itens=acima mostra só os acima do melhor; trocar o filtro atualiza a URL', async () => {
+    const { fixture, el, navegar } = montar(compararComFixture, 'acima');
     await pronto(fixture);
     expect([...el.querySelectorAll('li.detalhe-item')].map((li) => li.id)).toEqual([
       'item-1',
       'item-3',
       'item-5',
     ]);
-    expect(botao(el, /^Subiram/).getAttribute('aria-pressed')).toBe('true');
-    expect(texto(botao(el, /^Subiram/))).toBe('Subiram 3');
-    botao(el, /^Baixaram/).click();
+    expect(botao(el, /^Acima do melhor/).getAttribute('aria-pressed')).toBe('true');
+    expect(texto(botao(el, /^Acima do melhor/))).toBe('Acima do melhor 3');
+    expect(texto(botao(el, /^Melhor preço/))).toBe('Melhor preço 3');
+    botao(el, /^Melhor preço/).click();
     expect(navegar).toHaveBeenLastCalledWith(
       [],
-      expect.objectContaining({ queryParams: { itens: 'baixaram' } }),
+      expect.objectContaining({ queryParams: { itens: 'melhor' } }),
     );
     botao(el, /^Todos/).click();
     expect(navegar).toHaveBeenLastCalledWith(
@@ -674,7 +680,7 @@ describe('NotaDetalhePage: comparado com a última vez', () => {
   });
 
   it('filtro sem itens mostra aviso; valor desconhecido vira "todos"', async () => {
-    const vazio = montar(todosPrimeiraCompra, 'subiram');
+    const vazio = montar(todosPrimeiraCompra, 'acima');
     await pronto(vazio.fixture);
     expect(texto(vazio.el)).toContain('Nenhum item neste filtro.');
     TestBed.resetTestingModule();
@@ -683,35 +689,33 @@ describe('NotaDetalhePage: comparado com a última vez', () => {
     expect(outro.el.querySelectorAll('li.detalhe-item')).toHaveLength(8);
   });
 
-  it('destaques em dois cards, com valor por unidade, levando ao item', async () => {
-    const { fixture, el, navegar } = montar(compararComFixture, 'baixaram');
+  it('destaques: só os acima do melhor, por impacto, levando ao item', async () => {
+    const { fixture, el, navegar } = montar(compararComFixture, 'melhor');
     await pronto(fixture);
     const [bloco] = await fixture.getDeferBlocks();
     await bloco.render(DeferBlockState.Complete);
     fixture.detectChanges();
-    const titulos = [...el.querySelectorAll('.destaques h2')].map(texto);
-    expect(titulos).toEqual(['Ficaram mais baratos 2', 'Ficaram mais caros 3']);
-    const caros = [...el.querySelectorAll('ul[aria-label="Ficaram mais caros"] button')].map(texto);
-    expect(caros).toEqual([
+    const titulos = [...el.querySelectorAll('section[aria-labelledby="destaques-acima"] h2')];
+    expect(titulos.map(texto)).toEqual(['Pagou acima do seu melhor preço 3']);
+    const acima = [
+      ...el.querySelectorAll('ul[aria-label="Pagou acima do seu melhor preço"] button'),
+    ].map(texto);
+    expect(acima).toEqual([
       expect.stringContaining('Cafe Itamaraty 500g'),
       expect.stringContaining('Refr Coca Cola 2l Ze'),
       expect.stringContaining('Leite Lider 1l Desn'),
     ]);
-    expect(caros[0]).toContain('2 UN · R$ 21,40/un · antes R$ 18,90/un');
-    expect(caros[0]).toContain('R$ 5,00 mais caro');
-    expect(caros[1]).toContain('2 UN · R$ 4,99/L · antes R$ 4,50/L');
-    const baratos = [...el.querySelectorAll('ul[aria-label="Ficaram mais baratos"] button')].map(
-      texto,
-    );
-    expect(baratos[0]).toContain('Det Ype 500ml Coco');
-    expect(baratos[0]).toContain('R$ 3,00 mais barato');
+    expect(acima[0]).toContain('2 UN · R$ 21,40/un · seu melhor R$ 18,90/un (Mercado A)');
+    expect(acima[0]).toContain('R$ 5,00 a mais');
+    expect(acima[1]).toContain('2 UN · R$ 4,99/L · seu melhor R$ 4,50/L (Mercado B)');
     expect(el.querySelector('.destaques-mais')).toBeNull();
 
-    const rolar = vi.fn();
-    Element.prototype.scrollIntoView = rolar;
-    (el.querySelector('ul[aria-label="Ficaram mais baratos"] button') as HTMLButtonElement).click();
-    expect(rolar).toHaveBeenCalled();
-    (el.querySelector('ul[aria-label="Ficaram mais caros"] button') as HTMLButtonElement).click();
+    Element.prototype.scrollIntoView = vi.fn();
+    (
+      el.querySelector(
+        'ul[aria-label="Pagou acima do seu melhor preço"] button',
+      ) as HTMLButtonElement
+    ).click();
     await fixture.whenStable();
     expect(navegar).toHaveBeenLastCalledWith(
       [],
@@ -730,7 +734,7 @@ describe('NotaDetalhePage: comparado com a última vez', () => {
     const [bloco] = await fixture.getDeferBlocks();
     await bloco.render(DeferBlockState.Complete);
     fixture.detectChanges();
-    const lista = () => el.querySelectorAll('ul[aria-label="Ficaram mais caros"] li');
+    const lista = () => el.querySelectorAll('ul[aria-label="Pagou acima do seu melhor preço"] li');
     expect(lista()).toHaveLength(3);
     const mais = botao(el, /^Ver todos \(8\)/);
     expect(mais.getAttribute('aria-expanded')).toBe('false');
@@ -764,8 +768,8 @@ describe('HistoricoItem', () => {
     expect(b.getAttribute('aria-expanded')).toBe('true');
     expect(painel.hidden).toBe(false);
     expect(painel.querySelectorAll('li')).toHaveLength(1);
-    expect(texto(painel)).toContain('10/06/26 · Mercado A');
-    expect(texto(painel)).toContain('Menor preço que você já pagou: R$ 18,90/un');
+    expect(texto(painel)).toContain('05/08/26 · Mercado A');
+    expect(texto(painel)).toContain('Menor preço nos últimos 12 meses: R$ 18,90/un');
     expect(texto(painel)).not.toContain('nesta compra');
     expect(texto(painel)).toContain('Média da compra anterior: R$ 18,90/un');
     expect(botao(painel, 'Ver histórico completo').getAttribute('href')).toBe('/produtos/loc:1:1');
@@ -774,16 +778,48 @@ describe('HistoricoItem', () => {
   it('sem comparação mostra as compras sem valores de diferença', async () => {
     const r = (await compararComFixture(ATUAL_H)).get(6)!;
     const { el } = criar(r);
-    expect(texto(el)).toContain('Unidade diferente da última compra');
+    expect(texto(el)).toContain('Unidade diferente das compras recentes');
     expect(texto(el)).not.toContain('Menor preço');
     expect(el.querySelector('.cp-badge')).toBeNull();
   });
 
-  it('quando baixou, o menor preço é o desta compra', async () => {
+  it('novo melhor preço: o menor dos 12 meses é o desta compra', async () => {
     const r = (await compararComFixture(ATUAL_H)).get(2)!;
     const { el } = criar(r);
-    expect(texto(el)).toContain('Menor preço que você já pagou: R$ 2,49/un (nesta compra)');
+    expect(texto(el)).toContain('Menor preço nos últimos 12 meses: R$ 2,49/un (nesta compra)');
     expect(texto(el)).toContain('Média da compra anterior: R$ 2,79/un');
+  });
+
+  it('última compra diferente da referência aparece como tendência', async () => {
+    const r = (await compararComFixture(POSTERIOR_H)).get(2)!;
+    const { el } = criar(r);
+    expect(texto(el)).toContain('R$ 0,10 acima do seu melhor');
+    expect(texto(el)).toContain('Seu melhor em 60 dias R$ 18,90 (05/08 · Mercado A)');
+    expect(texto(el.querySelector('.historico-tendencia'))).toBe(
+      'trending_down Última vez R$ 21,40 (20/09 · Mercado A) · baixou R$ 2,40/un',
+    );
+  });
+
+  it('sem compra nos 60 dias mostra a última, neutra e sem badge', () => {
+    const ultima: CompraPessoal = {
+      chave: 'c',
+      n: 1,
+      cnpj: '1',
+      mercado: 'Mercado A',
+      emissao: '2026-06-10T14:00:00.000Z',
+      produtoId: 'loc:1:1',
+      descricao: 'CAFE',
+      qtd: 1,
+      unidade: 'UN',
+      vlUnit: 18.9,
+      porUnidade: null,
+    };
+    const { el } = criar({ tipo: 'sem-recente', ultima, compras: [ultima] });
+    expect(texto(el)).toContain(
+      'Última compra há mais de 60 dias: R$ 18,90 (10/06/26 · Mercado A)',
+    );
+    expect(el.querySelector('.cp-badge')).toBeNull();
+    expect(botao(el, /^Ver compras/)).toBeTruthy();
   });
 
   it('primeira compra é neutra, sem badge nem expansão', () => {
@@ -820,7 +856,7 @@ describe('HistoricoPessoalStore', () => {
     expect(todas).toHaveBeenCalledWith({ de: expect.any(String) }, 20);
 
     const posterior = await store.comparar(POSTERIOR_H);
-    expect(posterior.get(1)).toMatchObject({ tipo: 'mais-barato', impacto: -1 });
+    expect(posterior.get(1)).toMatchObject({ tipo: 'melhor', novoMelhor: true, impacto: 0 });
     expect(todas).toHaveBeenCalledOnce();
 
     produtosPorIds.mockClear();
@@ -850,11 +886,11 @@ describe('HistoricoPessoalStore', () => {
     expect(todas).toHaveBeenCalledTimes(2);
   });
 
-  it('resumir várias notas numa leitura só, com o saldo de cada uma', async () => {
+  it('resumir várias notas numa leitura só, com o valor a mais de cada uma', async () => {
     const { store, todas, produtosPorIds } = montarStore();
     const r = await store.resumir([ATUAL_H, POSTERIOR_H]);
-    expect(r.get(ATUAL_H.chave)).toMatchObject({ saldo: 3.91, comparados: 6 });
-    expect(r.get(POSTERIOR_H.chave)).toMatchObject({ comparados: 2 });
+    expect(r.get(ATUAL_H.chave)).toMatchObject({ aMais: 8.16, comparados: 6 });
+    expect(r.get(POSTERIOR_H.chave)).toMatchObject({ aMais: 0.1, comparados: 2 });
     expect(todas).toHaveBeenCalledOnce();
     expect(produtosPorIds).toHaveBeenCalledOnce();
     expect(await store.resumir([])).toEqual(new Map());

@@ -31,22 +31,39 @@ export type Grupos = ReadonlyMap<string, string>;
 
 export type BaseComparacao = 'unidade' | UnidadeBase;
 
+export const JANELA_MELHOR_PRECO_DIAS = 60;
+
+const DIA_MS = 24 * 60 * 60 * 1000;
+
+export interface Tendencia {
+  compra: CompraPessoal;
+  valor: number;
+  tendencia: 'subiu' | 'baixou' | 'igual';
+  /** Atual − última, na base da comparação, com sinal. */
+  diferenca: number;
+}
+
 export interface ComparacaoComValores {
-  tipo: 'mais-caro' | 'mais-barato' | 'igual';
+  /** `acima` do melhor preço recente, ou no `melhor` (igual ou abaixo). */
+  tipo: 'acima' | 'melhor';
   /** `unidade` = `vlUnit` (por unidade comercial); senão R$/kg, R$/L ou R$/un. */
   base: BaseComparacao;
+  /** Compra do melhor preço na janela. */
   referencia: CompraPessoal;
   valorAtual: number;
-  valorAnterior: number;
+  melhor: number;
+  /** ≥ 0; 0 quando `melhor`. */
   diferenca: number;
   percentual: number;
-  /** Diferença × quantidade desta nota, com sinal. */
+  /** Diferença × quantidade desta nota; 0 quando `melhor`. */
   impacto: number;
-  /** Menor valor já pago, contando esta compra. */
+  /** Abaixo do melhor preço recente. */
+  novoMelhor: boolean;
+  /** Última compra anterior, se a base a aceita: só tendência. */
+  ultima: Tendencia | null;
+  /** Menor valor dos 12 meses, contando esta compra. */
   menor: number;
-  /** Esta compra é (ou empata com) a mais barata. */
-  menorNestaCompra: boolean;
-  /** Média e quantidade das compras anteriores (sem esta). */
+  /** Média e quantidade das compras anteriores dos 12 meses (sem esta). */
   media: number;
   vezes: number;
   compras: CompraPessoal[];
@@ -54,26 +71,27 @@ export interface ComparacaoComValores {
 
 export type ComparacaoHistorico =
   | { tipo: 'primeira-compra' }
+  | { tipo: 'sem-recente'; ultima: CompraPessoal; compras: CompraPessoal[] }
   | { tipo: 'sem-comparacao'; compras: CompraPessoal[] }
   | ComparacaoComValores;
 
 export interface ResumoHistorico {
+  /** Σ impacto dos itens acima do melhor preço: quanto poderia ter economizado. */
   aMais: number;
-  itensAMais: number;
-  /** Valor absoluto. */
-  aMenos: number;
-  itensAMenos: number;
-  saldo: number;
+  itensAcima: number;
+  /** Igual ou abaixo do melhor preço (inclui `itensNovoMelhor`). */
+  itensNoMelhor: number;
+  itensNovoMelhor: number;
   comparados: number;
   total: number;
 }
 
-export type FiltroHistorico = 'todos' | 'subiram' | 'baixaram' | 'primeira';
+export type FiltroHistorico = 'todos' | 'acima' | 'melhor' | 'primeira';
 
 export const FILTROS_HISTORICO: readonly FiltroHistorico[] = [
   'todos',
-  'subiram',
-  'baixaram',
+  'acima',
+  'melhor',
   'primeira',
 ];
 
@@ -200,20 +218,29 @@ function porUnidadeBase(unidade: UnidadeBase): BaseComum {
 const PELO_VL_UNIT = (c: { vlUnit: number }) => c.vlUnit;
 
 /**
- * RF-05: mesma unidade comercial com o mesmo conteúdo → `vlUnit`; senão R$/unidade base
- * dos dois lados; senão não há comparação.
+ * RF-05, ancorada no item: `vlUnit` (mesma unidade comercial e conteúdo compatível) ou
+ * R$/unidade base, a que aceitar mais candidatas (no empate, `vlUnit`); nenhuma → sem comparação.
  */
-function escolherBase(item: ItemNota, ref: CompraPessoal): Base | null {
+function baseDoItem(item: ItemNota, candidatas: readonly CompraPessoal[]): Base | null {
   const mesmaUnidade = mesmaUnidadeQue(item.unidade, item.descricao);
-  if (mesmaUnidade(ref)) {
-    return { base: 'unidade', valor: PELO_VL_UNIT, aceita: mesmaUnidade, quantidade: item.qtd };
-  }
+  const porVlUnit: Base = {
+    base: 'unidade',
+    valor: PELO_VL_UNIT,
+    aceita: mesmaUnidade,
+    quantidade: item.qtd,
+  };
   const pu = item.precoPorUnidadeBase;
-  if (pu && ref.porUnidade?.unidade === pu.unidade) {
-    const quantidade = quantidadeNaUnidadeBase(item.qtd, item.unidade, item.descricao);
-    if (quantidade !== null) return { ...porUnidadeBase(pu.unidade), quantidade };
-  }
-  return null;
+  const quantidade = pu ? quantidadeNaUnidadeBase(item.qtd, item.unidade, item.descricao) : null;
+  const porBase: Base | null =
+    pu && quantidade !== null ? { ...porUnidadeBase(pu.unidade), quantidade } : null;
+  const nVlUnit = candidatas.filter(mesmaUnidade).length;
+  const nBase = porBase ? candidatas.filter(porBase.aceita).length : 0;
+  if (!nVlUnit && !nBase) return null;
+  return porBase && nBase > nVlUnit ? porBase : porVlUnit;
+}
+
+function inicioDaJanelaDe(emissao: string): number {
+  return Date.parse(emissao) - JANELA_MELHOR_PRECO_DIAS * DIA_MS;
 }
 
 /**
@@ -232,36 +259,57 @@ export function baseComum(compras: readonly CompraPessoal[]): BaseComum | null {
   return contar(porBase) > contar(porVlUnit) ? porBase : porVlUnit;
 }
 
-/** RF-03: compara com a última compra do mesmo produto antes desta nota. */
+function tendencia(valorAtual: number, compra: CompraPessoal, valor: number): Tendencia {
+  const bruto = valorAtual - valor;
+  const igual = Math.abs(bruto) < CENTAVO;
+  return {
+    compra,
+    valor,
+    tendencia: igual ? 'igual' : bruto > 0 ? 'subiu' : 'baixou',
+    diferenca: igual ? 0 : centavos(bruto),
+  };
+}
+
+/**
+ * RF-03 (D-03): compara com o menor preço que o usuário pagou, em qualquer mercado, nos
+ * `JANELA_MELHOR_PRECO_DIAS` antes da emissão desta nota. A última compra é só tendência.
+ */
 export function compararItem(
   item: ItemNota,
   nota: Pick<Nota, 'chave' | 'emissao'>,
   compras: readonly CompraPessoal[],
 ): ComparacaoHistorico {
-  const candidatas = compras.filter((c) => c.emissao < nota.emissao && c.chave !== nota.chave);
-  const ref = candidatas[0];
-  if (!ref) return { tipo: 'primeira-compra' };
-  const recentes = candidatas.slice(0, COMPRAS_NA_EXPANSAO);
-  const base = escolherBase(item, ref);
+  const anteriores = compras.filter((c) => c.emissao < nota.emissao && c.chave !== nota.chave);
+  const ultima = anteriores[0];
+  if (!ultima) return { tipo: 'primeira-compra' };
+  const recentes = anteriores.slice(0, COMPRAS_NA_EXPANSAO);
+  const limite = inicioDaJanelaDe(nota.emissao);
+  const naJanela = anteriores.filter((c) => Date.parse(c.emissao) >= limite);
+  if (!naJanela.length) return { tipo: 'sem-recente', ultima, compras: recentes };
+  const base = baseDoItem(item, naJanela);
   if (!base) return { tipo: 'sem-comparacao', compras: recentes };
 
+  const referencia = naJanela
+    .filter(base.aceita)
+    .reduce((m, c) => (base.valor(c) < base.valor(m) - CENTAVO ? c : m));
   const valorAtual = base.valor({ vlUnit: item.vlUnit, porUnidade: item.precoPorUnidadeBase });
-  const valorAnterior = base.valor(ref);
-  const bruto = valorAtual - valorAnterior;
-  const igual = Math.abs(bruto) < CENTAVO;
-  const valores = candidatas.filter(base.aceita).map(base.valor);
+  const melhor = base.valor(referencia);
+  const bruto = valorAtual - melhor;
+  const acima = bruto >= CENTAVO;
+  const valores = anteriores.filter(base.aceita).map(base.valor);
 
   return {
-    tipo: igual ? 'igual' : bruto > 0 ? 'mais-caro' : 'mais-barato',
+    tipo: acima ? 'acima' : 'melhor',
     base: base.base,
-    referencia: ref,
+    referencia,
     valorAtual,
-    valorAnterior,
-    diferenca: igual ? 0 : centavos(bruto),
-    percentual: igual || !valorAnterior ? 0 : Math.round((bruto / valorAnterior) * 1000) / 10,
-    impacto: igual ? 0 : centavos(bruto * base.quantidade),
+    melhor,
+    diferenca: acima ? centavos(bruto) : 0,
+    percentual: acima && melhor ? Math.round((bruto / melhor) * 1000) / 10 : 0,
+    impacto: acima ? centavos(bruto * base.quantidade) : 0,
+    novoMelhor: bruto <= -CENTAVO,
+    ultima: base.aceita(ultima) ? tendencia(valorAtual, ultima, base.valor(ultima)) : null,
     menor: Math.min(valorAtual, ...valores),
-    menorNestaCompra: valorAtual < Math.min(...valores) + CENTAVO,
     media: centavos(valores.reduce((s, v) => s + v, 0) / valores.length),
     vezes: valores.length,
     compras: recentes,
@@ -281,7 +329,7 @@ export function compararNota(
 }
 
 export function comValores(c: ComparacaoHistorico | undefined): ComparacaoComValores | null {
-  return c && (c.tipo === 'mais-caro' || c.tipo === 'mais-barato' || c.tipo === 'igual') ? c : null;
+  return c && (c.tipo === 'acima' || c.tipo === 'melhor') ? c : null;
 }
 
 const SUFIXO_COMERCIAL: Readonly<Record<string, string>> = {
@@ -306,59 +354,49 @@ export function resumirHistorico(
   r: ReadonlyMap<number, ComparacaoHistorico>,
 ): ResumoHistorico {
   let aMais = 0;
-  let aMenos = 0;
-  let itensAMais = 0;
-  let itensAMenos = 0;
+  let itensAcima = 0;
+  let itensNoMelhor = 0;
+  let itensNovoMelhor = 0;
   let comparados = 0;
   for (const item of itens) {
     const c = comValores(r.get(item.n));
     if (!c) continue;
     comparados++;
-    if (c.tipo === 'mais-caro') {
+    if (c.tipo === 'acima') {
       aMais += c.impacto;
-      itensAMais++;
-    } else if (c.tipo === 'mais-barato') {
-      aMenos -= c.impacto;
-      itensAMenos++;
+      itensAcima++;
+    } else {
+      itensNoMelhor++;
+      if (c.novoMelhor) itensNovoMelhor++;
     }
   }
-  aMais = centavos(aMais);
-  aMenos = centavos(aMenos);
   return {
-    aMais,
-    itensAMais,
-    aMenos,
-    itensAMenos,
-    saldo: centavos(aMais - aMenos),
+    aMais: centavos(aMais),
+    itensAcima,
+    itensNoMelhor,
+    itensNovoMelhor,
     comparados,
     total: itens.length,
   };
 }
 
-/** Itens (`n`) com as maiores altas e quedas, por |impacto|. */
-export function destaques(
-  r: ReadonlyMap<number, ComparacaoHistorico>,
-  limite = Infinity,
-): { altas: number[]; quedas: number[] } {
-  const lista = [...r].flatMap(([n, c]) => {
-    const v = comValores(c);
-    return v ? [{ n, v }] : [];
-  });
-  const ordenar = (tipo: 'mais-caro' | 'mais-barato') =>
-    lista
-      .filter((x) => x.v.tipo === tipo)
-      .sort((a, b) => Math.abs(b.v.impacto) - Math.abs(a.v.impacto) || a.n - b.n)
-      .slice(0, limite)
-      .map((x) => x.n);
-  return { altas: ordenar('mais-caro'), quedas: ordenar('mais-barato') };
+/** Itens (`n`) acima do melhor preço recente, do maior impacto para o menor. */
+export function destaques(r: ReadonlyMap<number, ComparacaoHistorico>): number[] {
+  return [...r]
+    .flatMap(([n, c]) => {
+      const v = comValores(c);
+      return v?.tipo === 'acima' ? [{ n, impacto: v.impacto }] : [];
+    })
+    .sort((a, b) => b.impacto - a.impacto || a.n - b.n)
+    .map((x) => x.n);
 }
 
 function passa(c: ComparacaoHistorico | undefined, filtro: FiltroHistorico): boolean {
   switch (filtro) {
-    case 'subiram':
-      return c?.tipo === 'mais-caro';
-    case 'baixaram':
-      return c?.tipo === 'mais-barato';
+    case 'acima':
+      return c?.tipo === 'acima';
+    case 'melhor':
+      return c?.tipo === 'melhor';
     case 'primeira':
       return c?.tipo === 'primeira-compra';
     default:

@@ -106,6 +106,7 @@ describe('consolidarItens', () => {
     const anterior = {
       ...N1,
       chave: 'ant',
+      emissao: '2026-09-01T00:00:00.000Z',
       itens: [det(1, { vlUnit: 2.79 }), det(2, { vlUnit: 2.79 })],
     };
     const atual = { ...ATUAL, chave: 'atu', itens: [det(1), det(2), det(3)] };
@@ -114,8 +115,8 @@ describe('consolidarItens', () => {
     expect(indice.get('loc:1:9')!.map((c) => c.chave)).toEqual(['atu', 'ant']);
     const r = compararNota(atual, indice, grupos);
     expect([...r.keys()]).toEqual([1]);
-    // (2,49 − 2,79) × 3 un
-    expect(r.get(1)).toMatchObject({ tipo: 'mais-barato', impacto: -0.9, vezes: 1 });
+    expect(r.get(1)).toMatchObject({ tipo: 'melhor', novoMelhor: true, impacto: 0, vezes: 1 });
+    expect(comValores(r.get(1))!.ultima).toMatchObject({ tendencia: 'baixou', diferenca: -0.3 });
   });
 });
 
@@ -164,27 +165,111 @@ describe('montarGrupos e indexarCompras', () => {
 });
 
 describe('compararItem', () => {
-  it('subiu: diferença por unidade, % e impacto × quantidade', () => {
+  it('acima do melhor: diferença por unidade, % e impacto × quantidade', () => {
     const r = compararItem(item({ qtd: 3, vlUnit: 5.99 }), NOTA, [compra({ vlUnit: 5.49 })]);
     expect(r).toMatchObject({
-      tipo: 'mais-caro',
+      tipo: 'acima',
       base: 'unidade',
-      valorAnterior: 5.49,
+      melhor: 5.49,
       diferenca: 0.5,
       percentual: 9.1,
       impacto: 1.5,
+      novoMelhor: false,
       vezes: 1,
     });
   });
 
-  it('baixou: impacto negativo', () => {
-    const r = compararItem(item({ qtd: 2, vlUnit: 9 }), NOTA, [compra({ vlUnit: 10 })]);
-    expect(r).toMatchObject({ tipo: 'mais-barato', diferenca: -1, impacto: -2, percentual: -10 });
+  it('Box 10,00 → Merkagel 11,00 → Merkagel 11,00: as duas acima do Box', () => {
+    const coca = { descricao: 'REFR COCA COLA ZERO 2L' };
+    const box = compra({
+      ...coca,
+      chave: 'box',
+      mercado: 'Box',
+      emissao: '2026-09-20T12:00:00.000Z',
+      vlUnit: 10,
+    });
+    const merk1 = compra({
+      ...coca,
+      chave: 'merk1',
+      mercado: 'Merkagel',
+      emissao: '2026-09-25T12:00:00.000Z',
+      vlUnit: 11,
+    });
+    const atual = item({ ...coca, qtd: 2, vlUnit: 11 });
+
+    const primeira = comValores(
+      compararItem(atual, { chave: 'merk1', emissao: merk1.emissao }, [box]),
+    )!;
+    expect(primeira).toMatchObject({ tipo: 'acima', melhor: 10, diferenca: 1, impacto: 2 });
+    expect(primeira.referencia.mercado).toBe('Box');
+
+    const segunda = comValores(
+      compararItem(atual, { chave: 'merk2', emissao: '2026-09-29T12:00:00.000Z' }, [merk1, box]),
+    )!;
+    expect(segunda).toMatchObject({ tipo: 'acima', melhor: 10, diferenca: 1, impacto: 2 });
+    expect(segunda.referencia.chave).toBe('box');
+    expect(segunda.ultima).toMatchObject({ tendencia: 'igual', diferenca: 0, valor: 11 });
+    expect(segunda.ultima!.compra.chave).toBe('merk1');
   });
 
-  it('mesmo preço dentro de meio centavo → igual, impacto 0', () => {
+  it('janela de 60 dias: compra mais barata de 61 dias atrás não conta, de 59 conta', () => {
+    const r = (dias: number) =>
+      comValores(
+        compararItem(item({ vlUnit: 10 }), NOTA, [
+          compra({ chave: 'recente', emissao: '2026-08-25T00:00:00.000Z', vlUnit: 10 }),
+          compra({
+            chave: 'antiga',
+            emissao: new Date(Date.parse(NOTA.emissao) - dias * 86_400_000).toISOString(),
+            vlUnit: 8,
+          }),
+        ]),
+      )!;
+    expect(r(61)).toMatchObject({ tipo: 'melhor', melhor: 10, menor: 8 });
+    expect(r(59)).toMatchObject({ tipo: 'acima', melhor: 8, impacto: 2 });
+    expect(r(60).referencia.chave).toBe('antiga');
+  });
+
+  it('abaixo do melhor → novo melhor preço, sem impacto, tendência baixou', () => {
+    const r = compararItem(item({ qtd: 2, vlUnit: 9 }), NOTA, [compra({ vlUnit: 10 })]);
+    expect(r).toMatchObject({ tipo: 'melhor', novoMelhor: true, diferenca: 0, impacto: 0 });
+    expect(comValores(r)!.ultima).toMatchObject({ tendencia: 'baixou', diferenca: -1 });
+  });
+
+  it('igual ao melhor dentro de meio centavo → melhor, sem novo melhor', () => {
     const r = compararItem(item({ vlUnit: 10.004 }), NOTA, [compra({ vlUnit: 10 })]);
-    expect(r).toMatchObject({ tipo: 'igual', diferenca: 0, percentual: 0, impacto: 0 });
+    expect(r).toMatchObject({ tipo: 'melhor', novoMelhor: false, diferenca: 0, impacto: 0 });
+  });
+
+  it('empate no melhor preço → referência é a mais recente', () => {
+    const r = comValores(
+      compararItem(item({ vlUnit: 12 }), NOTA, [
+        compra({ chave: 'nova', emissao: '2026-08-20T00:00:00.000Z', vlUnit: 10 }),
+        compra({ chave: 'velha', emissao: '2026-08-10T00:00:00.000Z', vlUnit: 10 }),
+      ]),
+    )!;
+    expect(r.referencia.chave).toBe('nova');
+  });
+
+  it('melhor de qualquer mercado; a última compra, mais cara, fica só como tendência', () => {
+    const r = comValores(
+      compararItem(item({ vlUnit: 11 }), NOTA, [
+        compra({ chave: 'b', mercado: 'B', emissao: '2026-08-20T00:00:00.000Z', vlUnit: 12 }),
+        compra({ chave: 'a', mercado: 'A', emissao: '2026-08-10T00:00:00.000Z', vlUnit: 9.5 }),
+      ]),
+    )!;
+    expect(r).toMatchObject({ tipo: 'acima', melhor: 9.5, diferenca: 1.5 });
+    expect(r.referencia.mercado).toBe('A');
+    expect(r.ultima).toMatchObject({ tendencia: 'baixou', diferenca: -1 });
+  });
+
+  it('só compras com mais de 60 dias → sem-recente com a última', () => {
+    const r = compararItem(item({}), NOTA, [
+      compra({ chave: 'c2', emissao: '2026-06-20T00:00:00.000Z' }),
+      compra({ chave: 'c1', emissao: '2026-05-20T00:00:00.000Z' }),
+    ]);
+    expect(r.tipo).toBe('sem-recente');
+    expect(r.tipo === 'sem-recente' && r.ultima.chave).toBe('c2');
+    expect(r.tipo === 'sem-recente' && r.compras).toHaveLength(2);
   });
 
   it('sem compra anterior → primeira compra', () => {
@@ -204,7 +289,7 @@ describe('compararItem', () => {
     expect(r).toEqual({ tipo: 'primeira-compra' });
   });
 
-  it('referência é a última anterior; menor conta esta compra, média e vezes só as anteriores', () => {
+  it('menor, média e vezes olham os 12 meses; compra posterior não conta', () => {
     const compras = [
       compra({ chave: 'depois', emissao: '2026-09-20T00:00:00.000Z', vlUnit: 1 }),
       compra({ chave: 'c3', emissao: '2026-08-20T00:00:00.000Z', vlUnit: 12 }),
@@ -212,11 +297,11 @@ describe('compararItem', () => {
       compra({ chave: 'c1', emissao: '2026-06-20T00:00:00.000Z', vlUnit: 11 }),
     ];
     const r = comValores(compararItem(item({ vlUnit: 10 }), NOTA, compras))!;
-    expect(r.referencia.chave).toBe('c3');
-    expect(r.tipo).toBe('mais-barato');
-    expect(r).toMatchObject({ menor: 9, menorNestaCompra: false, media: 10.67, vezes: 3 });
+    expect(r.referencia.chave).toBe('c2');
+    expect(r).toMatchObject({ tipo: 'acima', melhor: 9, menor: 9, media: 10.67, vezes: 3 });
+    expect(r.ultima).toMatchObject({ tendencia: 'baixou', diferenca: -2 });
     const minimo = comValores(compararItem(item({ vlUnit: 8 }), NOTA, compras))!;
-    expect(minimo).toMatchObject({ menor: 8, menorNestaCompra: true, media: 10.67 });
+    expect(minimo).toMatchObject({ tipo: 'melhor', novoMelhor: true, menor: 8 });
     expect(r.compras.map((c) => c.chave)).toEqual(['c3', 'c2', 'c1']);
   });
 
@@ -226,7 +311,7 @@ describe('compararItem', () => {
       NOTA,
       [compra({ descricao: 'TOMATE KG', unidade: 'kg', vlUnit: 5.99 })],
     );
-    expect(r).toMatchObject({ tipo: 'mais-caro', base: 'unidade', diferenca: 2, impacto: 2.49 });
+    expect(r).toMatchObject({ tipo: 'acima', base: 'unidade', diferenca: 2, impacto: 2.49 });
   });
 
   it('2L × 3L do mesmo grupo compara por R$/L', () => {
@@ -246,7 +331,44 @@ describe('compararItem', () => {
         }),
       ],
     );
-    expect(r).toMatchObject({ tipo: 'mais-caro', base: 'L', diferenca: 0.49, impacto: 1.96 });
+    expect(r).toMatchObject({ tipo: 'acima', base: 'L', diferenca: 0.49, impacto: 1.96 });
+  });
+
+  it('a base que aceita mais compras da janela vence', () => {
+    const r = comValores(
+      compararItem(
+        item({
+          descricao: 'REFR COCA COLA 2L',
+          vlUnit: 10,
+          precoPorUnidadeBase: { valor: 5, unidade: 'L' },
+        }),
+        NOTA,
+        [
+          compra({
+            chave: 'c3',
+            descricao: 'REFR COCA COLA 3L',
+            vlUnit: 13.5,
+            porUnidade: { valor: 4.5, unidade: 'L' },
+          }),
+          compra({
+            chave: 'c2',
+            emissao: '2026-07-25T00:00:00.000Z',
+            descricao: 'REFR COCA COLA 1L',
+            vlUnit: 4,
+            porUnidade: { valor: 4, unidade: 'L' },
+          }),
+          compra({
+            chave: 'c1',
+            emissao: '2026-07-20T00:00:00.000Z',
+            descricao: 'REFR COCA COLA 2L',
+            vlUnit: 9,
+            porUnidade: { valor: 4.5, unidade: 'L' },
+          }),
+        ],
+      ),
+    )!;
+    expect(r).toMatchObject({ base: 'L', melhor: 4, diferenca: 1, impacto: 2 });
+    expect(r.referencia.chave).toBe('c2');
   });
 
   it('UN × KG sem conteúdo → sem comparação, com as compras para a expansão', () => {
@@ -268,6 +390,23 @@ describe('compararItem', () => {
       [compra({ porUnidade: { valor: 4.5, unidade: 'L' } })],
     );
     expect(r.tipo).toBe('sem-comparacao');
+  });
+
+  it('última compra em outra unidade não vira tendência', () => {
+    const r = comValores(
+      compararItem(item({ descricao: 'MAMAO', vlUnit: 7 }), NOTA, [
+        compra({
+          chave: 'kg',
+          emissao: '2026-08-20T00:00:00.000Z',
+          descricao: 'MAMAO',
+          unidade: 'KG',
+          vlUnit: 5,
+          porUnidade: { valor: 5, unidade: 'kg' },
+        }),
+        compra({ chave: 'un', descricao: 'MAMAO', vlUnit: 6 }),
+      ]),
+    )!;
+    expect(r).toMatchObject({ tipo: 'acima', melhor: 6, ultima: null });
   });
 
   it('expansão guarda no máximo 5 compras', () => {
@@ -340,53 +479,62 @@ describe('baseComum', () => {
 });
 
 describe('fixture notas-historico: nota de 20/09 no Mercado A', () => {
-  it('cada item cai no ramo esperado', () => {
+  it('cada item cai no ramo esperado (a nota de 10/06 fica fora dos 60 dias)', () => {
     const r = compararAtual();
     expect([...r.values()].map((c) => c.tipo)).toEqual([
-      'mais-caro',
-      'mais-barato',
-      'mais-caro',
-      'mais-barato',
-      'mais-caro',
+      'sem-recente',
+      'sem-recente',
+      'acima',
+      'sem-recente',
+      'acima',
       'sem-comparacao',
       'primeira-compra',
-      'igual',
+      'sem-recente',
     ]);
-    expect(comValores(r.get(1))!.referencia.chave).toBe(N1.chave);
     expect(comValores(r.get(3))!.referencia.mercado).toBe('Mercado B');
     expect(comValores(r.get(5))!.base).toBe('L');
+    const cafe = r.get(1)!;
+    expect(cafe.tipo === 'sem-recente' && cafe.ultima.chave).toBe(N1.chave);
   });
 
-  it('resumo bate com a soma manual', () => {
-    // Café (21,40 − 18,90) × 2 = 5,00 · Leite (4,99 − 4,59) × 3 = 1,20 · Coca (4,99 − 4,50)/L × 4 L = 1,96
-    const aMais = 5 + 1.2 + 1.96;
-    // Detergente (2,79 − 2,49) × 10 = 3,00 · Tomate (8,99 − 7,99)/kg × 1,25 kg = 1,25
-    const aMenos = 3 + 1.25;
-    const resumo = resumirHistorico(ATUAL.itens, compararAtual());
-    expect(resumo).toEqual({
-      aMais: Math.round(aMais * 100) / 100,
-      itensAMais: 3,
-      aMenos: Math.round(aMenos * 100) / 100,
-      itensAMenos: 2,
-      saldo: Math.round((aMais - aMenos) * 100) / 100,
-      comparados: 6,
+  it('resumo soma só o que ficou acima do melhor', () => {
+    // Leite (4,99 − 4,59) × 3 = 1,20 · Coca (4,99 − 4,50)/L × 4 L = 1,96
+    expect(resumirHistorico(ATUAL.itens, compararAtual())).toEqual({
+      aMais: 3.16,
+      itensAcima: 2,
+      itensNoMelhor: 0,
+      itensNovoMelhor: 0,
+      comparados: 2,
       total: 8,
     });
-    expect(resumo.saldo).toBe(3.91);
   });
 
-  it('destaques por |impacto| e filtro', () => {
+  it('nota de 27/09: novos melhores contam no melhor e não reduzem o valor a mais', () => {
+    const grupos = gruposDaNota(POSTERIOR);
+    const r = compararNota(POSTERIOR, indexarCompras(NOTAS, grupos), grupos);
+    expect(r.get(1)).toMatchObject({ tipo: 'melhor', novoMelhor: true, melhor: 18.9 });
+    expect(r.get(2)).toMatchObject({ tipo: 'melhor', novoMelhor: true, melhor: 21.4 });
+    expect(resumirHistorico(POSTERIOR.itens, r)).toEqual({
+      aMais: 0,
+      itensAcima: 0,
+      itensNoMelhor: 2,
+      itensNovoMelhor: 2,
+      comparados: 2,
+      total: 2,
+    });
+  });
+
+  it('destaques por impacto e filtro', () => {
     const r = compararAtual();
-    expect(destaques(r)).toEqual({ altas: [1, 5, 3], quedas: [2, 4] });
-    expect(destaques(r, 1)).toEqual({ altas: [1], quedas: [2] });
-    expect(filtrarItens(ATUAL.itens, r, 'subiram').map((i) => i.n)).toEqual([1, 3, 5]);
-    expect(filtrarItens(ATUAL.itens, r, 'baixaram').map((i) => i.n)).toEqual([2, 4]);
+    expect(destaques(r)).toEqual([5, 3]);
+    expect(filtrarItens(ATUAL.itens, r, 'acima').map((i) => i.n)).toEqual([3, 5]);
+    expect(filtrarItens(ATUAL.itens, r, 'melhor')).toEqual([]);
     expect(filtrarItens(ATUAL.itens, r, 'primeira').map((i) => i.n)).toEqual([7]);
     expect(filtrarItens(ATUAL.itens, r, 'todos')).toHaveLength(8);
     expect(contarPorFiltro(ATUAL.itens, r)).toEqual({
       todos: 8,
-      subiram: 3,
-      baixaram: 2,
+      acima: 2,
+      melhor: 0,
       primeira: 1,
     });
   });
