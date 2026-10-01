@@ -22,6 +22,7 @@ import { BreakpointService } from '../../../core/layout/breakpoint.service';
 import { ApelidosService } from '../../estabelecimentos/data-access/apelidos.service';
 import { ListasStore } from '../../listas/data-access/listas.store';
 import { itemDoProduto } from '../../listas/lista';
+import { HistoricoPessoalStore } from '../../notas/data-access/historico-pessoal.store';
 import { NotasService } from '../../notas/data-access/notas.service';
 import { ProdutosService, type PrecoComId } from '../data-access/produtos.service';
 import { DadosVinculo, VincularDialog } from '../vincular/vincular-dialog';
@@ -62,6 +63,7 @@ export default class ProdutoDetalhePage {
   private readonly dialog = inject(MatDialog);
   private readonly snack = inject(MatSnackBar);
   private readonly listas = inject(ListasStore);
+  private readonly historico = inject(HistoricoPessoalStore);
 
   readonly id = input.required<string>();
 
@@ -119,6 +121,7 @@ export default class ProdutoDetalhePage {
       this.dialog.open(VincularDialog, { data, width: '520px', maxWidth: '95vw' }).afterClosed(),
     );
     if (ok) {
+      this.historico.invalidar();
       this.snack.open('Produtos ligados. A comparação já considera os dois.', 'OK', {
         duration: 4000,
       });
@@ -131,6 +134,9 @@ export default class ProdutoDetalhePage {
     this.snack.open(r.ok ? 'Vínculo removido.' : 'Não foi possível remover o vínculo.', 'OK', {
       duration: 3000,
     });
-    if (r.ok) this.dados.reload();
+    if (r.ok) {
+      this.historico.invalidar();
+      this.dados.reload();
+    }
   }
 }

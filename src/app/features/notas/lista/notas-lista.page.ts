@@ -72,7 +72,7 @@ export default class NotasListaPage {
     ...(this.primeira.hasValue() ? this.primeira.value().notas : []),
     ...this.extras(),
   ]);
-  /** Quanto cada nota pagou acima do seu melhor preço recente; falha só esconde o valor. */
+  /** Saldo de cada nota contra o seu melhor preço recente (a mais − economia); falha só esconde o valor. */
   private readonly resumos = resource({
     params: () => this.notas(),
     loader: ({ params }) => this.historico.resumir(params),
@@ -80,7 +80,7 @@ export default class NotasListaPage {
   protected readonly saldos = computed(() => {
     const r = this.resumos.hasValue() ? this.resumos.value() : null;
     return new Map(
-      [...(r ?? [])].filter(([, v]) => v.comparados > 0).map(([chave, v]) => [chave, v.aMais]),
+      [...(r ?? [])].filter(([, v]) => v.comparados > 0).map(([chave, v]) => [chave, v.saldo]),
     );
   });
   protected readonly temMais = computed(

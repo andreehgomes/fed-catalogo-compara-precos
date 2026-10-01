@@ -218,8 +218,9 @@ em grupos de 30), no mesmo padrão de `produtosPorIds`.
   usuário em 2026-09-30, substitui D-02).** O badge responde "paguei bem? quanto poderia ter
   economizado?": o menor valor pago pelo mesmo produto/grupo, em qualquer mercado, com
   `emissao` em `[emissão da nota − 60 dias, emissão da nota)`. Acima → "R$ X acima do seu
-  melhor" e o valor entra no resumo ("você poderia ter economizado"); igual ou abaixo → selo
-  "Seu melhor preço"/"Novo melhor preço", fora do resumo (não há "a menos" nem saldo). A
+  melhor" e o valor entra no resumo como "a mais"; abaixo → "Novo melhor preço" com a
+  economia (melhor − atual) × quantidade; igual → "Seu melhor preço". O resumo mostra o saldo
+  líquido (a mais − economia) e as duas parcelas separadas (ajuste do usuário em 2026-09-30). A
   última compra fica como tendência secundária. Sem compra nos 60 dias → mostra a última, fora
   do resumo. Motivo: Coca-Cola 2L Zero a R$ 10,00 no Box e depois R$ 11,00 duas vezes no
   Merkagel — com D-02 a segunda nota do Merkagel dizia "Mesmo preço" e a referência boa

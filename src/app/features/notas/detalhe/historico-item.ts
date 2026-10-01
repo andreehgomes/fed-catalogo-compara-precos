@@ -50,9 +50,12 @@ const ICONE_TENDENCIA: Record<Tendencia['tendencia'], string> = {
               %)
             </span>
           } @else if (v.novoMelhor) {
-            <cp-badge-preco tipo="mais-barato" rotulo="Novo melhor preço" />
+            <cp-badge-preco
+              tipo="mais-barato"
+              [rotulo]="(v.economia | currency) + ' de economia'"
+            />
             <span class="item-detalhe">
-              Antes {{ v.melhor | currency }}{{ sufixoValor() }} ({{
+              Novo melhor preço · antes {{ v.melhor | currency }}{{ sufixoValor() }} ({{
                 v.referencia.emissao | date: 'dd/MM'
               }}
               · {{ v.referencia.mercado }})

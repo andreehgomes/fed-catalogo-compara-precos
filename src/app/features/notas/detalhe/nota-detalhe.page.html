@@ -66,10 +66,20 @@
             @if (r.comparados === 0) {
               <span class="historico-resumo-detalhe">Sem compras recentes desses produtos</span>
             } @else {
-              @if (r.aMais > 0) {
+              @if (r.saldo > 0) {
                 <span class="cp-summary-value historico-saldo historico-saldo--mais-caro">
                   <mat-icon aria-hidden="true">trending_up</mat-icon>
-                  {{ r.aMais | currency }} a mais
+                  Saldo: {{ r.saldo | currency }} a mais
+                </span>
+              } @else if (r.saldo < 0) {
+                <span class="cp-summary-value historico-saldo historico-saldo--mais-barato">
+                  <mat-icon aria-hidden="true">trending_down</mat-icon>
+                  Saldo: {{ -r.saldo | currency }} de economia
+                </span>
+              } @else if (r.aMais > 0) {
+                <span class="cp-summary-value historico-saldo">
+                  <mat-icon aria-hidden="true">compare_arrows</mat-icon>
+                  Saldo: zerado
                 </span>
               } @else {
                 <span class="cp-summary-value historico-saldo">
@@ -79,8 +89,18 @@
               }
               <span class="historico-resumo-detalhe">
                 @if (r.aMais > 0) {
-                  Você poderia ter economizado {{ r.aMais | currency }} em {{ r.itensAcima }}
-                  {{ r.itensAcima === 1 ? 'item' : 'itens' }} ·
+                  <span class="historico-parcela historico-parcela--mais-caro">
+                    {{ r.aMais | currency }} a mais em {{ r.itensAcima }}
+                    {{ r.itensAcima === 1 ? 'item' : 'itens' }}
+                  </span>
+                  ·
+                }
+                @if (r.economia > 0) {
+                  <span class="historico-parcela historico-parcela--mais-barato">
+                    {{ r.economia | currency }} de economia em {{ r.itensNovoMelhor }}
+                    {{ r.itensNovoMelhor === 1 ? 'item' : 'itens' }}
+                  </span>
+                  ·
                 }
                 {{ r.itensNoMelhor }} no seu melhor preço · {{ r.comparados }} de
                 {{ r.total }} itens comparados · últimos {{ janela }} dias
@@ -102,59 +122,6 @@
           Tentar de novo
         </button>
       </div>
-    }
-
-    @if (destaquesAcima().length) {
-      @defer (on viewport) {
-        <section class="cp-block" aria-labelledby="destaques-acima">
-          <h2 id="destaques-acima" class="cp-section-title">
-            Pagou acima do seu melhor preço
-            <span class="destaques-contagem">{{ destaquesAcima().length }}</span>
-          </h2>
-          <ul
-            class="cp-list"
-            id="destaques-lista-acima"
-            aria-label="Pagou acima do seu melhor preço"
-          >
-            @for (d of destaquesVisiveis(); track d.item.n) {
-              <li>
-                <button type="button" class="cp-list-row destaque" (click)="irPara(d.item.n)">
-                  <span class="item-principal">
-                    <span class="destaque-nome">{{ d.item.descricao }}</span>
-                    <span class="item-detalhe">
-                      {{ d.item.qtd | number: '1.0-3' }} {{ d.item.unidade }} ·
-                      {{ d.c.valorAtual | currency }}{{ d.sufixo }} · seu melhor
-                      {{ d.c.melhor | currency }}{{ d.sufixo }} ({{ d.c.referencia.mercado }})
-                    </span>
-                  </span>
-                  <cp-badge-preco
-                    tipo="mais-caro"
-                    [rotulo]="(d.c.impacto | currency) + ' a mais'"
-                  />
-                </button>
-              </li>
-            }
-          </ul>
-          @if (destaquesAcima().length > limiteDestaques) {
-            <button
-              type="button"
-              class="cp-btn-ghost destaques-mais"
-              [attr.aria-expanded]="destaquesAbertos()"
-              aria-controls="destaques-lista-acima"
-              (click)="destaquesAbertos.set(!destaquesAbertos())"
-            >
-              {{
-                destaquesAbertos() ? 'Mostrar menos' : 'Ver todos (' + destaquesAcima().length + ')'
-              }}
-              <mat-icon aria-hidden="true">{{
-                destaquesAbertos() ? 'expand_less' : 'expand_more'
-              }}</mat-icon>
-            </button>
-          }
-        </section>
-      } @placeholder {
-        <div class="cp-skeleton destaques-placeholder" aria-hidden="true"></div>
-      }
     }
 
     <section class="cp-block" aria-labelledby="comparar-titulo">

@@ -68,6 +68,22 @@
   &--mais-caro {
     color: $cp-pricier;
   }
+
+  &--mais-barato {
+    color: $cp-cheaper;
+  }
+}
+
+.historico-parcela {
+  font-weight: 600;
+
+  &--mais-caro {
+    color: $cp-pricier;
+  }
+
+  &--mais-barato {
+    color: $cp-cheaper;
+  }
 }
 
 .historico-resumo-detalhe {
@@ -86,31 +102,6 @@
   button {
     margin-left: auto;
   }
-}
-
-.destaques-contagem {
-  font-variant-numeric: tabular-nums;
-  color: $cp-text-muted;
-}
-
-.destaques-mais {
-  align-self: center;
-}
-
-.destaque {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  gap: 8px;
-}
-
-.destaque-nome {
-  min-width: 0;
-  overflow-wrap: anywhere;
-}
-
-.destaques-placeholder {
-  height: 120px;
 }
 
 .itens-filtro {

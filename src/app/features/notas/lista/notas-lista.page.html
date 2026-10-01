@@ -106,15 +106,22 @@
               </div>
               <div class="item-lado">
                 <span class="cp-price">{{ n.total | currency }}</span>
-                @if (saldos().get(n.chave); as aMais) {
-                  <span class="notas-saldo notas-saldo--mais-caro">
-                    <mat-icon aria-hidden="true">trending_up</mat-icon>
-                    {{ aMais | currency }} a mais
+                @if (saldos().get(n.chave); as saldo) {
+                  <span
+                    class="notas-saldo"
+                    [class.notas-saldo--mais-caro]="saldo > 0"
+                    [class.notas-saldo--mais-barato]="saldo < 0"
+                  >
+                    <mat-icon aria-hidden="true">{{
+                      saldo > 0 ? 'trending_up' : 'trending_down'
+                    }}</mat-icon>
+                    {{ (saldo > 0 ? saldo : -saldo) | currency }}
+                    {{ saldo > 0 ? 'a mais' : 'de economia' }}
                   </span>
                 } @else if (saldos().has(n.chave)) {
                   <span class="notas-saldo">
                     <mat-icon aria-hidden="true">check</mat-icon>
-                    No melhor preço
+                    Saldo zerado
                   </span>
                 }
               </div>

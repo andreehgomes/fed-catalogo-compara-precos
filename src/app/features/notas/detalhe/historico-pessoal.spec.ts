@@ -10,7 +10,6 @@ import {
   comValores,
   consolidarItens,
   contarPorFiltro,
-  destaques,
   filtrarItens,
   indexarCompras,
   montarGrupos,
@@ -231,7 +230,13 @@ describe('compararItem', () => {
 
   it('abaixo do melhor → novo melhor preço, sem impacto, tendência baixou', () => {
     const r = compararItem(item({ qtd: 2, vlUnit: 9 }), NOTA, [compra({ vlUnit: 10 })]);
-    expect(r).toMatchObject({ tipo: 'melhor', novoMelhor: true, diferenca: 0, impacto: 0 });
+    expect(r).toMatchObject({
+      tipo: 'melhor',
+      novoMelhor: true,
+      diferenca: 0,
+      impacto: 0,
+      economia: 2,
+    });
     expect(comValores(r)!.ultima).toMatchObject({ tendencia: 'baixou', diferenca: -1 });
   });
 
@@ -497,11 +502,13 @@ describe('fixture notas-historico: nota de 20/09 no Mercado A', () => {
     expect(cafe.tipo === 'sem-recente' && cafe.ultima.chave).toBe(N1.chave);
   });
 
-  it('resumo soma só o que ficou acima do melhor', () => {
+  it('resumo: a mais dos itens acima do melhor, sem novos melhores', () => {
     // Leite (4,99 − 4,59) × 3 = 1,20 · Coca (4,99 − 4,50)/L × 4 L = 1,96
     expect(resumirHistorico(ATUAL.itens, compararAtual())).toEqual({
       aMais: 3.16,
       itensAcima: 2,
+      economia: 0,
+      saldo: 3.16,
       itensNoMelhor: 0,
       itensNovoMelhor: 0,
       comparados: 2,
@@ -509,14 +516,17 @@ describe('fixture notas-historico: nota de 20/09 no Mercado A', () => {
     });
   });
 
-  it('nota de 27/09: novos melhores contam no melhor e não reduzem o valor a mais', () => {
+  it('nota de 27/09: novos melhores somam economia e o saldo fica negativo', () => {
     const grupos = gruposDaNota(POSTERIOR);
     const r = compararNota(POSTERIOR, indexarCompras(NOTAS, grupos), grupos);
     expect(r.get(1)).toMatchObject({ tipo: 'melhor', novoMelhor: true, melhor: 18.9 });
     expect(r.get(2)).toMatchObject({ tipo: 'melhor', novoMelhor: true, melhor: 21.4 });
+    // Ovos (18,90 − 17,90) × 1 + Café (21,40 − 19,00) × 1 = 3,40
     expect(resumirHistorico(POSTERIOR.itens, r)).toEqual({
       aMais: 0,
       itensAcima: 0,
+      economia: 3.4,
+      saldo: -3.4,
       itensNoMelhor: 2,
       itensNovoMelhor: 2,
       comparados: 2,
@@ -524,9 +534,24 @@ describe('fixture notas-historico: nota de 20/09 no Mercado A', () => {
     });
   });
 
-  it('destaques por impacto e filtro', () => {
+  it('a mais e economia aparecem separados e o saldo compensa um com o outro', () => {
+    const acima = compararItem(item({ n: 1, qtd: 2, vlUnit: 11 }), NOTA, [compra({ vlUnit: 10 })]);
+    const abaixo = compararItem(item({ n: 2, qtd: 3, vlUnit: 4 }), NOTA, [compra({ vlUnit: 5 })]);
+    const r = new Map([
+      [1, acima],
+      [2, abaixo],
+    ]);
+    expect(resumirHistorico([item({ n: 1 }), item({ n: 2 })], r)).toMatchObject({
+      aMais: 2,
+      economia: 3,
+      saldo: -1,
+      itensAcima: 1,
+      itensNovoMelhor: 1,
+    });
+  });
+
+  it('filtros', () => {
     const r = compararAtual();
-    expect(destaques(r)).toEqual([5, 3]);
     expect(filtrarItens(ATUAL.itens, r, 'acima').map((i) => i.n)).toEqual([3, 5]);
     expect(filtrarItens(ATUAL.itens, r, 'melhor')).toEqual([]);
     expect(filtrarItens(ATUAL.itens, r, 'primeira').map((i) => i.n)).toEqual([7]);

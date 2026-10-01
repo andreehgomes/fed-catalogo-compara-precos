@@ -99,6 +99,7 @@ no target `test`, relativo a `src/`).
 ## Convenções Obrigatórias
 
 **Angular 22**
+
 - Standalone em tudo, sem NgModules. **Zoneless** e **OnPush** são o padrão do v22
   e não devem ser desligados. Declarar `changeDetection: OnPush` explicitamente.
 - `inject()`, nunca injeção por construtor.
@@ -118,6 +119,7 @@ no target `test`, relativo a `src/`).
   template. `LOCALE_ID` `pt-BR` e moeda padrão `BRL`.
 
 **Firebase**
+
 - **Não usar `@angular/fire`** (não suporta o v22). SDK modular injetado por
   `InjectionToken` (`FIREBASE_AUTH`, `FIRESTORE`, `FUNCTIONS`).
 - O cliente **nunca escreve** em coleções compartilhadas nem em `usuarios/{uid}/notas`.
@@ -125,6 +127,7 @@ no target `test`, relativo a `src/`).
   `usuarios/{uid}/listas/**` (lista de compras, validada nas regras).
 
 **Estilo**
+
 - **Classe global primeiro** (`src/styles.scss`, `.cp-*`). Mixin só para o que é
   parametrizado. No SCSS do componente fica só o que é daquela tela.
 - Cor só por token `$cp-*` de `_tokens.scss`. O stylelint bloqueia hex e cor nomeada
@@ -133,6 +136,7 @@ no target `test`, relativo a `src/`).
 - Breakpoint em TS via `BreakpointService` (`matchMedia`), nunca `window.innerWidth`.
 
 **Testes**
+
 - Vitest no front e nas Functions. Fixtures reais em `functions/test/fixtures/` e
   `src/testing/fixtures/`. Nunca bater em SEFAZ, Menor Preço ou Claude API de verdade num teste.
 - **Sem Firebase Emulator Suite.** Testes unitários mockam o SDK; as Functions
@@ -305,7 +309,7 @@ Instale as dependências **de dentro da pasta** (`cd functions && npm install`):
 - `features/importar/`: `ImportarService` (único que conhece as callables, via token
   `CHAMAR_FUNCTION` de `core/firebase/callable.ts`; converte `FunctionsError` em
   `ErroImportacao`), `ImportarStore` (root; estado em união `ocioso | buscando |
-  preview | confirmando | guardando | guardada | erro`, a prévia sobrevive à navegação),
+preview | confirmando | guardando | guardada | erro`, a prévia sobrevive à navegação),
   `mensagens.ts` (texto e ação por código — RF-10 — e `interpretarEntrada`, a validação
   local: **DV inválido nunca chama a function**).
 - `/importar`: ação principal "Ler QR Code do cupom" (`<cp-scanner>` em `@defer`),
@@ -329,7 +333,7 @@ Instale as dependências **de dentro da pasta** (`cd functions && npm install`):
 
 - `NotasService` (`features/notas/data-access/`): `listar({cnpj, de, ate, cursor})` com
   `where`/`orderBy('emissao','desc')`/`limit(20)`/`startAfter` (índice composto `cnpj +
-  emissao desc` em `firestore.indexes.json`), `obter(chave)` em tempo real, `excluir`
+emissao desc` em `firestore.indexes.json`), `obter(chave)` em tempo real, `excluir`
   (os preços publicados continuam) e `estabelecimentos()` para o filtro.
 - Lista (`/notas`): filtros de estabelecimento e período (`mes`, `mes-passado`,
   `3-meses`, `personalizado` com `<input type="date">`) em query params; "Carregar mais"
@@ -347,10 +351,11 @@ Instale as dependências **de dentro da pasta** (`cd functions && npm install`):
   (60) antes da emissão da nota** (a própria nota e compras posteriores não contam). Base
   ancorada no item: `vlUnit` (mesma unidade comercial e conteúdo) ou R$/unidade base, a que
   aceitar mais compras da janela → senão "sem comparação". `acima` → impacto (diferença ×
-  quantidade) entra no resumo como "poderia ter economizado"; `melhor` (igual ou abaixo,
-  `novoMelhor`) é só selo e não desconta. A última compra é tendência secundária (`ultima`);
-  sem compra nos 60 dias → `sem-recente`. Resumo, destaques (só os acima, `@defer on
-  viewport`), filtro em `?itens=` (`acima|melhor|primeira`) e saldo "R$ X a mais" na lista.
+  quantidade) soma em `aMais`; `novoMelhor` (abaixo) soma `economia` = (melhor − atual) ×
+  quantidade. O resumo mostra o **saldo líquido** (`aMais − economia`) e, abaixo, as duas
+  parcelas separadas. A última compra é tendência secundária (`ultima`); sem compra nos 60 dias
+  → `sem-recente`. Filtro em `?itens=`
+  (`acima|melhor|primeira`) e o saldo ("a mais", "de economia" ou "zerado") na lista de notas.
 - "Tem mais barato perto?" (`detalhe/mais-barato-perto.ts`): sob demanda, item a item
   com `concatMap` (1 requisição em voo, cache do client), menor oferta **coerente**
   (`separarDivergentes`) e economia potencial = Σ diferença × qtd. Item sem EAN usa a
@@ -442,8 +447,8 @@ Até 5 listas (`MAX_LISTAS`), 150 itens (`MAX_ITENS`) e 3 notas por lista, limit
   sobre o **último preço de cada estabelecimento**, em R$/unidade base quando todas as
   observações a têm; fonte `minhas-notas` quando o preço veio de uma nota do usuário
   (o id do preço é `{chave}_{n}`). `<cp-grafico-historico>` (SVG próprio, até 5 séries
-  + "Outros", traço e marcador diferentes por série, tabela `cp-sr-only`) e
-  `<cp-precos-perto>` em `@defer (on viewport)`. Cores das séries: `$cp-serie-1..5`.
+  - "Outros", traço e marcador diferentes por série, tabela `cp-sr-only`) e
+    `<cp-precos-perto>` em `@defer (on viewport)`. Cores das séries: `$cp-serie-1..5`.
 - Vínculo (RF-18): callable `vincularProduto` (`functions/src/produtos/`) — o EAN vira o
   canônico, `ean:` × `ean:` diferente é recusado, cadeia seguida até a raiz sem ciclo,
   quem apontava para a origem é reapontado, rate limit da importação. Diálogo
@@ -457,7 +462,7 @@ Até 5 listas (`MAX_LISTAS`), 150 itens (`MAX_ITENS`) e 3 notas por lista, limit
   fora porque há mercado que cadastra "COCA COLA 2L ZERO" sem "REFR"), e
   devolve os ids novos. `vincularNota` (`functions/src/vinculo/`) busca, para cada `loc:`
   novo, as raízes do mesmo bloco vistas em outro mercado (`bloco ==` + `vinculadoA ==
-  null`) e decide com `decidirPorEtiquetas`: tipos diferentes dos dois lados → conflito;
+null`) e decide com `decidirPorEtiquetas`: tipos diferentes dos dois lados → conflito;
   mesma variante com um só candidato → liga
   (`vinculoMotivo: 'etiquetas'`); conflito claro → nada; o resto (inclusive sem variante
   nenhuma: a mesma loja vende produtos diferentes com a mesma descrição) vai para **uma**
@@ -474,7 +479,7 @@ Até 5 listas (`MAX_LISTAS`), 150 itens (`MAX_ITENS`) e 3 notas por lista, limit
   estabelecimentos sem consulta extra.
 - Estabelecimentos: lista por `atualizadoEm desc` (30 por página, busca por nome no
   cliente, inclusive pelo apelido) e detalhe com os produtos de preço mais recente (`precos where
-  cnpj`). O detalhe tem "Renomear" (`renomear/renomear-dialog.ts`, carregado por `import()`),
+cnpj`). O detalhe tem "Renomear" (`renomear/renomear-dialog.ts`, carregado por `import()`),
   que vale para qualquer loja e chama `definirApelido`; o título é o nome exibido, com "Nome na
   Receita" e "Razão social" abaixo quando diferem.
 - `ApelidosService` (`estabelecimentos/data-access/`): `apelidos` (mapa CNPJ → apelido,
@@ -491,7 +496,7 @@ Até 5 listas (`MAX_LISTAS`), 150 itens (`MAX_ITENS`) e 3 notas por lista, limit
 ## Preços da região (Menor Preço)
 
 - `features/regiao/data-access/`: `FontePrecosRegiao` (classe abstrata, `providedIn:
-  'root'` com `useExisting: MenorPrecoClient` — não registrar no `app.config`, senão o
+'root'` com `useExisting: MenorPrecoClient` — não registrar no `app.config`, senão o
   client e o valibot vão para o bundle inicial), `MenorPrecoClient` (HttpClient,
   `timeout` de 10 s, **sem retry**, erros viram `FonteIndisponivelError` com
   `motivo`), `menor-preco.schema.ts` (valibot **por item**: item inválido é descartado

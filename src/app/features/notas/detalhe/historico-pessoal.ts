@@ -59,6 +59,8 @@ export interface ComparacaoComValores {
   impacto: number;
   /** Abaixo do melhor preço recente. */
   novoMelhor: boolean;
+  /** (Melhor − atual) × quantidade desta nota quando `novoMelhor`; senão 0. */
+  economia: number;
   /** Última compra anterior, se a base a aceita: só tendência. */
   ultima: Tendencia | null;
   /** Menor valor dos 12 meses, contando esta compra. */
@@ -79,6 +81,10 @@ export interface ResumoHistorico {
   /** Σ impacto dos itens acima do melhor preço: quanto poderia ter economizado. */
   aMais: number;
   itensAcima: number;
+  /** Σ economia dos novos melhores preços; mostrada à parte, nunca descontada de `aMais`. */
+  economia: number;
+  /** `aMais − economia`: positivo gastou a mais, negativo economizou. */
+  saldo: number;
   /** Igual ou abaixo do melhor preço (inclui `itensNovoMelhor`). */
   itensNoMelhor: number;
   itensNovoMelhor: number;
@@ -296,6 +302,7 @@ export function compararItem(
   const melhor = base.valor(referencia);
   const bruto = valorAtual - melhor;
   const acima = bruto >= CENTAVO;
+  const novoMelhor = bruto <= -CENTAVO;
   const valores = anteriores.filter(base.aceita).map(base.valor);
 
   return {
@@ -307,7 +314,8 @@ export function compararItem(
     diferenca: acima ? centavos(bruto) : 0,
     percentual: acima && melhor ? Math.round((bruto / melhor) * 1000) / 10 : 0,
     impacto: acima ? centavos(bruto * base.quantidade) : 0,
-    novoMelhor: bruto <= -CENTAVO,
+    novoMelhor,
+    economia: novoMelhor ? centavos(-bruto * base.quantidade) : 0,
     ultima: base.aceita(ultima) ? tendencia(valorAtual, ultima, base.valor(ultima)) : null,
     menor: Math.min(valorAtual, ...valores),
     media: centavos(valores.reduce((s, v) => s + v, 0) / valores.length),
@@ -354,6 +362,7 @@ export function resumirHistorico(
   r: ReadonlyMap<number, ComparacaoHistorico>,
 ): ResumoHistorico {
   let aMais = 0;
+  let economia = 0;
   let itensAcima = 0;
   let itensNoMelhor = 0;
   let itensNovoMelhor = 0;
@@ -367,28 +376,24 @@ export function resumirHistorico(
       itensAcima++;
     } else {
       itensNoMelhor++;
-      if (c.novoMelhor) itensNovoMelhor++;
+      if (c.novoMelhor) {
+        itensNovoMelhor++;
+        economia += c.economia;
+      }
     }
   }
+  aMais = centavos(aMais);
+  economia = centavos(economia);
   return {
-    aMais: centavos(aMais),
+    aMais,
     itensAcima,
+    economia,
+    saldo: centavos(aMais - economia),
     itensNoMelhor,
     itensNovoMelhor,
     comparados,
     total: itens.length,
   };
-}
-
-/** Itens (`n`) acima do melhor preço recente, do maior impacto para o menor. */
-export function destaques(r: ReadonlyMap<number, ComparacaoHistorico>): number[] {
-  return [...r]
-    .flatMap(([n, c]) => {
-      const v = comValores(c);
-      return v?.tipo === 'acima' ? [{ n, impacto: v.impacto }] : [];
-    })
-    .sort((a, b) => b.impacto - a.impacto || a.n - b.n)
-    .map((x) => x.n);
 }
 
 function passa(c: ComparacaoHistorico | undefined, filtro: FiltroHistorico): boolean {

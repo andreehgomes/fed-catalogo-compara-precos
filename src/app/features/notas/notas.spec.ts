@@ -1,7 +1,7 @@
 import { provideHttpClient } from '@angular/common/http';
 import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
 import { signal } from '@angular/core';
-import { DeferBlockState, TestBed } from '@angular/core/testing';
+import { TestBed } from '@angular/core/testing';
 import { MatDialog } from '@angular/material/dialog';
 import { MatSnackBar } from '@angular/material/snack-bar';
 import { Router, provideRouter } from '@angular/router';
@@ -207,11 +207,13 @@ describe('NotasListaPage', () => {
     );
   });
 
-  it('mostra quanto cada nota pagou acima do melhor preço (a mais ou no melhor preço)', async () => {
+  it('mostra o saldo de cada nota contra o melhor preço (a mais, economia ou zerado)', async () => {
     const api = apiFalsa([nota(1), nota(2), nota(3), nota(4)]);
-    const resumo = (aMais: number, comparados = 2) => ({
-      aMais,
-      itensAcima: aMais ? 1 : 0,
+    const resumo = (saldo: number, comparados = 2) => ({
+      aMais: Math.max(saldo, 0),
+      itensAcima: 1,
+      economia: Math.max(-saldo, 0),
+      saldo,
       itensNoMelhor: 1,
       itensNovoMelhor: 1,
       comparados,
@@ -221,7 +223,7 @@ describe('NotasListaPage', () => {
       async () =>
         new Map([
           ['chave001', resumo(3.2)],
-          ['chave002', resumo(0)],
+          ['chave002', resumo(-30.2)],
           ['chave003', resumo(0)],
           ['chave004', resumo(0, 0)],
         ]),
@@ -240,9 +242,9 @@ describe('NotasListaPage', () => {
       expect.arrayContaining([expect.objectContaining({ chave: 'chave001' })]),
     );
     expect(linhas[0]).toContain('R$ 3,20 a mais');
-    expect(linhas[1]).toContain('No melhor preço');
-    expect(linhas[2]).toContain('No melhor preço');
-    expect(linhas[3]).not.toMatch(/a mais|economia|melhor preço/);
+    expect(linhas[1]).toContain('R$ 30,20 de economia');
+    expect(linhas[2]).toContain('Saldo zerado');
+    expect(linhas[3]).not.toMatch(/a mais|economia|zerado/);
   });
 
   it('sem notas: "Importar primeira nota"', async () => {
@@ -594,10 +596,11 @@ describe('NotaDetalhePage: comparado com seu melhor preço', () => {
     await pronto(fixture);
     expect(historico.comparar).toHaveBeenCalledWith(ATUAL_H);
     const resumo = texto(el.querySelector('.historico-resumo'));
-    // Café 2,50 × 2 + Leite 0,40 × 3 + Coca 0,49/L × 4 L = 8,16; os novos melhores não descontam
+    // A mais: Café 2,50 × 2 + Leite 0,40 × 3 + Coca 0,49/L × 4 L = 8,16
+    // Economia: Detergente 0,30 × 10 + Tomate 1,00/kg × 1,25 kg = 4,25 → saldo 3,91
     expect(resumo).toContain('Comparado com seu melhor preço');
-    expect(resumo).toContain('R$ 8,16 a mais');
-    expect(resumo).toContain('Você poderia ter economizado R$ 8,16 em 3 itens');
+    expect(resumo).toContain('Saldo: R$ 3,91 a mais');
+    expect(resumo).toContain('R$ 8,16 a mais em 3 itens · R$ 4,25 de economia em 2 itens');
     expect(resumo).toContain('3 no seu melhor preço · 6 de 8 itens comparados · últimos 60 dias');
     expect(el.querySelector('.historico-resumo')!.getAttribute('role')).toBe('status');
   });
@@ -610,10 +613,10 @@ describe('NotaDetalhePage: comparado com seu melhor preço', () => {
     expect(linha(el, 1)).toContain('+R$ 2,50/un (+13,2 %)');
     expect(linha(el, 1)).toContain('Suas notas');
     expect(linha(el, 1)).not.toContain('Última vez');
-    expect(linha(el, 2)).toContain('Novo melhor preço');
-    expect(linha(el, 2)).toContain('Antes R$ 2,79 (05/08 · Mercado A)');
+    expect(linha(el, 2)).toContain('R$ 3,00 de economia');
+    expect(linha(el, 2)).toContain('Novo melhor preço · antes R$ 2,79 (05/08 · Mercado A)');
     expect(linha(el, 3)).toContain('Mercado B');
-    expect(linha(el, 4)).toContain('Antes R$ 8,99/kg');
+    expect(linha(el, 4)).toContain('antes R$ 8,99/kg');
     expect(linha(el, 5)).toContain('+R$ 0,49/L');
     expect(linha(el, 6)).toContain('Unidade diferente das compras recentes');
     expect(linha(el, 7)).toContain('Primeira compra');
@@ -644,7 +647,7 @@ describe('NotaDetalhePage: comparado com seu melhor preço', () => {
     botao(el, 'Tentar de novo').click();
     await pronto(fixture);
     expect(historico.comparar).toHaveBeenCalledTimes(2);
-    expect(texto(el.querySelector('.historico-resumo'))).toContain('R$ 8,16 a mais');
+    expect(texto(el.querySelector('.historico-resumo'))).toContain('Saldo: R$ 3,91 a mais');
   });
 
   it('sem nenhum comparável: "Sem compras recentes desses produtos"', async () => {
@@ -653,7 +656,6 @@ describe('NotaDetalhePage: comparado com seu melhor preço', () => {
     expect(texto(el.querySelector('.historico-resumo'))).toContain(
       'Sem compras recentes desses produtos',
     );
-    expect(el.querySelector('.destaques-placeholder')).toBeNull();
   });
 
   it('?itens=acima mostra só os acima do melhor; trocar o filtro atualiza a URL', async () => {
@@ -687,62 +689,6 @@ describe('NotaDetalhePage: comparado com seu melhor preço', () => {
     const outro = montar(compararComFixture, 'xyz');
     await pronto(outro.fixture);
     expect(outro.el.querySelectorAll('li.detalhe-item')).toHaveLength(8);
-  });
-
-  it('destaques: só os acima do melhor, por impacto, levando ao item', async () => {
-    const { fixture, el, navegar } = montar(compararComFixture, 'melhor');
-    await pronto(fixture);
-    const [bloco] = await fixture.getDeferBlocks();
-    await bloco.render(DeferBlockState.Complete);
-    fixture.detectChanges();
-    const titulos = [...el.querySelectorAll('section[aria-labelledby="destaques-acima"] h2')];
-    expect(titulos.map(texto)).toEqual(['Pagou acima do seu melhor preço 3']);
-    const acima = [
-      ...el.querySelectorAll('ul[aria-label="Pagou acima do seu melhor preço"] button'),
-    ].map(texto);
-    expect(acima).toEqual([
-      expect.stringContaining('Cafe Itamaraty 500g'),
-      expect.stringContaining('Refr Coca Cola 2l Ze'),
-      expect.stringContaining('Leite Lider 1l Desn'),
-    ]);
-    expect(acima[0]).toContain('2 UN · R$ 21,40/un · seu melhor R$ 18,90/un (Mercado A)');
-    expect(acima[0]).toContain('R$ 5,00 a mais');
-    expect(acima[1]).toContain('2 UN · R$ 4,99/L · seu melhor R$ 4,50/L (Mercado B)');
-    expect(el.querySelector('.destaques-mais')).toBeNull();
-
-    Element.prototype.scrollIntoView = vi.fn();
-    (
-      el.querySelector(
-        'ul[aria-label="Pagou acima do seu melhor preço"] button',
-      ) as HTMLButtonElement
-    ).click();
-    await fixture.whenStable();
-    expect(navegar).toHaveBeenLastCalledWith(
-      [],
-      expect.objectContaining({ queryParams: { itens: null } }),
-    );
-  });
-
-  it('card com mais de 3 itens mostra os 3 maiores e expande em "Ver todos"', async () => {
-    const { fixture, el } = montar(async (n) => {
-      const base = (await compararComFixture(n)).get(1) as ComparacaoHistorico & {
-        impacto: number;
-      };
-      return new Map(n.itens.map((i) => [i.n, { ...base, impacto: i.n }]));
-    });
-    await pronto(fixture);
-    const [bloco] = await fixture.getDeferBlocks();
-    await bloco.render(DeferBlockState.Complete);
-    fixture.detectChanges();
-    const lista = () => el.querySelectorAll('ul[aria-label="Pagou acima do seu melhor preço"] li');
-    expect(lista()).toHaveLength(3);
-    const mais = botao(el, /^Ver todos \(8\)/);
-    expect(mais.getAttribute('aria-expanded')).toBe('false');
-    mais.click();
-    fixture.detectChanges();
-    expect(lista()).toHaveLength(8);
-    expect(mais.getAttribute('aria-expanded')).toBe('true');
-    expect(texto(mais)).toContain('Mostrar menos');
   });
 });
 
@@ -889,8 +835,8 @@ describe('HistoricoPessoalStore', () => {
   it('resumir várias notas numa leitura só, com o valor a mais de cada uma', async () => {
     const { store, todas, produtosPorIds } = montarStore();
     const r = await store.resumir([ATUAL_H, POSTERIOR_H]);
-    expect(r.get(ATUAL_H.chave)).toMatchObject({ aMais: 8.16, comparados: 6 });
-    expect(r.get(POSTERIOR_H.chave)).toMatchObject({ aMais: 0.1, comparados: 2 });
+    expect(r.get(ATUAL_H.chave)).toMatchObject({ aMais: 8.16, economia: 4.25, saldo: 3.91 });
+    expect(r.get(POSTERIOR_H.chave)).toMatchObject({ aMais: 0.1, economia: 1, saldo: -0.9 });
     expect(todas).toHaveBeenCalledOnce();
     expect(produtosPorIds).toHaveBeenCalledOnce();
     expect(await store.resumir([])).toEqual(new Map());

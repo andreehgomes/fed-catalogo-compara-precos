@@ -15,6 +15,7 @@ import EstabelecimentoDetalhePage from '../estabelecimentos/detalhe/estabelecime
 import EstabelecimentosListaPage from '../estabelecimentos/lista/estabelecimentos-lista.page';
 import { RenomearDialog } from '../estabelecimentos/renomear/renomear-dialog';
 import { ListasStore } from '../listas/data-access/listas.store';
+import { HistoricoPessoalStore } from '../notas/data-access/historico-pessoal.store';
 import { NotasService } from '../notas/data-access/notas.service';
 import { PendentesService } from '../notas/data-access/pendentes.service';
 import { ProdutosService } from '../produtos/data-access/produtos.service';
@@ -246,10 +247,12 @@ describe('ProdutoDetalhePage', () => {
     ]);
   });
 
-  it('produto sem EAN oferece o vínculo e o desfazer', async () => {
+  it('produto sem EAN oferece o vínculo e o desfazer; os dois refazem o histórico', async () => {
     const s = servico([produto('loc:03644587000836:1001', { vinculadoA: 'loc:1:x' })]);
     const dialog = { open: vi.fn(() => ({ afterClosed: () => of(true) })) };
+    const historico = { invalidar: vi.fn() };
     base([
+      { provide: HistoricoPessoalStore, useValue: historico },
       { provide: ProdutosService, useValue: s },
       { provide: NotasService, useValue: { chaves: vi.fn(async () => new Set()) } },
       { provide: MatDialog, useValue: dialog },
@@ -267,9 +270,11 @@ describe('ProdutoDetalhePage', () => {
         data: expect.objectContaining({ excluir: ['loc:03644587000836:1001'] }),
       }),
     );
+    expect(historico.invalidar).toHaveBeenCalledOnce();
     botao(el, 'Desfazer vínculo').click();
     await fixture.whenStable();
     expect(s.desvincular).toHaveBeenCalledWith('loc:03644587000836:1001');
+    expect(historico.invalidar).toHaveBeenCalledTimes(2);
   });
 
   it('vínculo automático explica que foi ligado a outros mercados', async () => {
