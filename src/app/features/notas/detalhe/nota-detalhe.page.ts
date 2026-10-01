@@ -2,6 +2,8 @@ import { CurrencyPipe, DatePipe, DecimalPipe } from '@angular/common';
 import {
   ChangeDetectionStrategy,
   Component,
+  Injector,
+  afterNextRender,
   computed,
   effect,
   inject,
@@ -36,10 +38,13 @@ import {
   FILTROS_HISTORICO,
   FiltroHistorico,
   JANELA_MELHOR_PRECO_DIAS,
+  comValores,
   consolidarItens,
   contarPorFiltro,
+  destaques,
   filtrarItens,
   resumirHistorico,
+  sufixoDaBase,
 } from './historico-pessoal';
 import { MaisBaratoPerto } from './mais-barato-perto';
 
@@ -49,6 +54,10 @@ const ROTULOS_FILTRO: Record<FiltroHistorico, string> = {
   melhor: 'Melhor preço',
   primeira: 'Primeira compra',
 };
+
+type TipoDestaque = 'mais-barato' | 'mais-caro';
+
+const LIMITE_DESTAQUES = 3;
 
 const SEM_HISTORICO: ReadonlyMap<number, ComparacaoHistorico> = new Map();
 
@@ -78,6 +87,7 @@ export default class NotaDetalhePage {
   private readonly dialog = inject(MatDialog);
   private readonly snack = inject(MatSnackBar);
   private readonly router = inject(Router);
+  private readonly injector = inject(Injector);
   private readonly historicoStore = inject(HistoricoPessoalStore);
   protected readonly comparacao = inject(MaisBaratoPerto);
   protected readonly loc = inject(LocalizacaoStore);
@@ -132,6 +142,43 @@ export default class NotaDetalhePage {
     filtrarItens(this.itensConsolidados(), this.comparacoes(), this.filtro()),
   );
   protected readonly janela = JANELA_MELHOR_PRECO_DIAS;
+  protected readonly limiteDestaques = LIMITE_DESTAQUES;
+  private readonly destaquesAbertos = signal<ReadonlySet<TipoDestaque>>(new Set());
+  /** Mais caros = acima do seu melhor preço (por impacto); mais baratos = novos melhores (por economia). */
+  protected readonly gruposDestaque = computed(() => {
+    const itens = new Map(this.itensConsolidados().map((i) => [i.n, i]));
+    const r = this.comparacoes();
+    const d = destaques(r);
+    const abertos = this.destaquesAbertos();
+    const grupo = (tipo: TipoDestaque, titulo: string, ns: number[]) => {
+      const lista = ns.flatMap((n) => {
+        const item = itens.get(n);
+        const c = comValores(r.get(n));
+        return item && c
+          ? [
+              {
+                item,
+                c,
+                valor: tipo === 'mais-caro' ? c.impacto : c.economia,
+                sufixo: sufixoDaBase(c),
+              },
+            ]
+          : [];
+      });
+      const aberto = abertos.has(tipo);
+      return {
+        tipo,
+        titulo,
+        total: lista.length,
+        aberto,
+        itens: aberto ? lista : lista.slice(0, LIMITE_DESTAQUES),
+      };
+    };
+    return [
+      grupo('mais-barato', 'Ficaram mais baratos', d.quedas),
+      grupo('mais-caro', 'Ficaram mais caros', d.altas),
+    ].filter((g) => g.total > 0);
+  });
 
   constructor() {
     const abertas = inject(NotasAbertasService);
@@ -158,6 +205,28 @@ export default class NotaDetalhePage {
       queryParamsHandling: 'merge',
       replaceUrl: true,
     });
+  }
+
+  protected alternarDestaques(tipo: TipoDestaque): void {
+    this.destaquesAbertos.update((atual) => {
+      const novo = new Set(atual);
+      if (!novo.delete(tipo)) novo.add(tipo);
+      return novo;
+    });
+  }
+
+  protected async irPara(n: number): Promise<void> {
+    const rolar = () => {
+      const el = document.getElementById(`item-${n}`);
+      el?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      el?.focus({ preventScroll: true });
+    };
+    if (this.itensVisiveis().some((i) => i.n === n)) {
+      rolar();
+      return;
+    }
+    await this.filtrar('todos');
+    afterNextRender(rolar, { injector: this.injector });
   }
 
   /** RF-14: nota importada sem passar pela lista também pode ser conferida. */

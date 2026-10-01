@@ -396,6 +396,23 @@ export function resumirHistorico(
   };
 }
 
+/** Itens (`n`) acima do melhor preço (por impacto) e novos melhores preços (por economia). */
+export function destaques(r: ReadonlyMap<number, ComparacaoHistorico>): {
+  altas: number[];
+  quedas: number[];
+} {
+  const lista = [...r].flatMap(([n, c]) => {
+    const v = comValores(c);
+    return v ? [{ n, v }] : [];
+  });
+  const ordenar = (valor: (v: ComparacaoComValores) => number) =>
+    lista
+      .filter((x) => valor(x.v) > 0)
+      .sort((a, b) => valor(b.v) - valor(a.v) || a.n - b.n)
+      .map((x) => x.n);
+  return { altas: ordenar((v) => v.impacto), quedas: ordenar((v) => v.economia) };
+}
+
 function passa(c: ComparacaoHistorico | undefined, filtro: FiltroHistorico): boolean {
   switch (filtro) {
     case 'acima':

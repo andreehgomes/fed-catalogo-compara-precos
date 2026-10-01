@@ -354,7 +354,8 @@ emissao desc` em `firestore.indexes.json`), `obter(chave)` em tempo real, `exclu
   quantidade) soma em `aMais`; `novoMelhor` (abaixo) soma `economia` = (melhor − atual) ×
   quantidade. O resumo mostra o **saldo líquido** (`aMais − economia`) e, abaixo, as duas
   parcelas separadas. A última compra é tendência secundária (`ultima`); sem compra nos 60 dias
-  → `sem-recente`. Filtro em `?itens=`
+  → `sem-recente`. Destaques em dois cards (`@defer on viewport`): "Ficaram mais baratos"
+  (novos melhores, por economia) e "Ficaram mais caros" (acima do melhor, por impacto). Filtro em `?itens=`
   (`acima|melhor|primeira`) e o saldo ("a mais", "de economia" ou "zerado") na lista de notas.
 - "Tem mais barato perto?" (`detalhe/mais-barato-perto.ts`): sob demanda, item a item
   com `concatMap` (1 requisição em voo, cache do client), menor oferta **coerente**

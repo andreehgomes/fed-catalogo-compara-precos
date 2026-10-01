@@ -124,6 +124,54 @@
       </div>
     }
 
+    @if (gruposDestaque().length) {
+      @defer (on viewport) {
+        <div class="destaques">
+          @for (g of gruposDestaque(); track g.tipo) {
+            <section class="cp-block" [attr.aria-labelledby]="'destaques-' + g.tipo">
+              <h2 [id]="'destaques-' + g.tipo" class="cp-section-title">
+                {{ g.titulo }} <span class="destaques-contagem">{{ g.total }}</span>
+              </h2>
+              <ul class="cp-list" [id]="'destaques-lista-' + g.tipo" [attr.aria-label]="g.titulo">
+                @for (d of g.itens; track d.item.n) {
+                  <li>
+                    <button type="button" class="cp-list-row destaque" (click)="irPara(d.item.n)">
+                      <span class="item-principal">
+                        <span class="destaque-nome">{{ d.item.descricao }}</span>
+                        <span class="item-detalhe">
+                          {{ d.item.qtd | number: '1.0-3' }} {{ d.item.unidade }} ·
+                          {{ d.c.valorAtual | currency }}{{ d.sufixo }} ·
+                          {{ g.tipo === 'mais-caro' ? 'seu melhor' : 'antes' }}
+                          {{ d.c.melhor | currency }}{{ d.sufixo }}
+                        </span>
+                      </span>
+                      <cp-badge-preco [tipo]="g.tipo" [diferenca]="d.valor" />
+                    </button>
+                  </li>
+                }
+              </ul>
+              @if (g.total > limiteDestaques) {
+                <button
+                  type="button"
+                  class="cp-btn-ghost destaques-mais"
+                  [attr.aria-expanded]="g.aberto"
+                  [attr.aria-controls]="'destaques-lista-' + g.tipo"
+                  (click)="alternarDestaques(g.tipo)"
+                >
+                  {{ g.aberto ? 'Mostrar menos' : 'Ver todos (' + g.total + ')' }}
+                  <mat-icon aria-hidden="true">{{
+                    g.aberto ? 'expand_less' : 'expand_more'
+                  }}</mat-icon>
+                </button>
+              }
+            </section>
+          }
+        </div>
+      } @placeholder {
+        <div class="cp-skeleton destaques-placeholder" aria-hidden="true"></div>
+      }
+    }
+
     <section class="cp-block" aria-labelledby="comparar-titulo">
       <div class="cp-section-top">
         <h2 id="comparar-titulo" class="cp-section-title">Tem mais barato perto?</h2>

@@ -10,6 +10,7 @@ import {
   comValores,
   consolidarItens,
   contarPorFiltro,
+  destaques,
   filtrarItens,
   indexarCompras,
   montarGrupos,
@@ -548,6 +549,14 @@ describe('fixture notas-historico: nota de 20/09 no Mercado A', () => {
       itensAcima: 1,
       itensNovoMelhor: 1,
     });
+  });
+
+  it('destaques: acima por impacto, novos melhores por economia', () => {
+    expect(destaques(compararAtual())).toEqual({ altas: [5, 3], quedas: [] });
+    const grupos = gruposDaNota(POSTERIOR);
+    const r = compararNota(POSTERIOR, indexarCompras(NOTAS, grupos), grupos);
+    // Café 2,40 de economia, ovos 1,00
+    expect(destaques(r)).toEqual({ altas: [], quedas: [2, 1] });
   });
 
   it('filtros', () => {

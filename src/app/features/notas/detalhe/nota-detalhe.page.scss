@@ -1,4 +1,5 @@
 @use '../../../shared/style/tokens' as *;
+@use '../../../shared/style/breakpoints' as *;
 
 .cp-detail-header h1 a {
   color: inherit;
@@ -102,6 +103,45 @@
   button {
     margin-left: auto;
   }
+}
+
+.destaques {
+  display: grid;
+  gap: 16px;
+  align-items: start;
+
+  @include tablet-up {
+    grid-template-columns: 1fr 1fr;
+  }
+
+  .cp-block {
+    margin: 0;
+  }
+}
+
+.destaques-contagem {
+  font-variant-numeric: tabular-nums;
+  color: $cp-text-muted;
+}
+
+.destaques-mais {
+  align-self: center;
+}
+
+.destaque {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 8px;
+}
+
+.destaque-nome {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+.destaques-placeholder {
+  height: 120px;
 }
 
 .itens-filtro {

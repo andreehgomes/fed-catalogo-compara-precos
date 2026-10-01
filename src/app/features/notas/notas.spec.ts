@@ -1,7 +1,7 @@
 import { provideHttpClient } from '@angular/common/http';
 import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
 import { signal } from '@angular/core';
-import { TestBed } from '@angular/core/testing';
+import { DeferBlockState, TestBed } from '@angular/core/testing';
 import { MatDialog } from '@angular/material/dialog';
 import { MatSnackBar } from '@angular/material/snack-bar';
 import { Router, provideRouter } from '@angular/router';
@@ -656,6 +656,7 @@ describe('NotaDetalhePage: comparado com seu melhor preço', () => {
     expect(texto(el.querySelector('.historico-resumo'))).toContain(
       'Sem compras recentes desses produtos',
     );
+    expect(el.querySelector('.destaques-placeholder')).toBeNull();
   });
 
   it('?itens=acima mostra só os acima do melhor; trocar o filtro atualiza a URL', async () => {
@@ -689,6 +690,68 @@ describe('NotaDetalhePage: comparado com seu melhor preço', () => {
     const outro = montar(compararComFixture, 'xyz');
     await pronto(outro.fixture);
     expect(outro.el.querySelectorAll('li.detalhe-item')).toHaveLength(8);
+  });
+
+  it('destaques em dois cards (novos melhores e acima do melhor), levando ao item', async () => {
+    const { fixture, el, navegar } = montar(compararComFixture, 'melhor');
+    await pronto(fixture);
+    const [bloco] = await fixture.getDeferBlocks();
+    await bloco.render(DeferBlockState.Complete);
+    fixture.detectChanges();
+    const titulos = [...el.querySelectorAll('.destaques h2')].map(texto);
+    expect(titulos).toEqual(['Ficaram mais baratos 2', 'Ficaram mais caros 3']);
+    const caros = [...el.querySelectorAll('ul[aria-label="Ficaram mais caros"] button')].map(texto);
+    expect(caros).toEqual([
+      expect.stringContaining('Cafe Itamaraty 500g'),
+      expect.stringContaining('Refr Coca Cola 2l Ze'),
+      expect.stringContaining('Leite Lider 1l Desn'),
+    ]);
+    expect(caros[0]).toContain('2 UN · R$ 21,40/un · seu melhor R$ 18,90/un');
+    expect(caros[0]).toContain('R$ 5,00 mais caro');
+    expect(caros[1]).toContain('2 UN · R$ 4,99/L · seu melhor R$ 4,50/L');
+    const baratos = [...el.querySelectorAll('ul[aria-label="Ficaram mais baratos"] button')].map(
+      texto,
+    );
+    expect(baratos).toEqual([
+      expect.stringContaining('Det Ype 500ml Coco'),
+      expect.stringContaining('Tomate Italiano Kg'),
+    ]);
+    expect(baratos[0]).toContain('10 UN · R$ 2,49/un · antes R$ 2,79/un');
+    expect(baratos[0]).toContain('R$ 3,00 mais barato');
+    expect(el.querySelector('.destaques-mais')).toBeNull();
+
+    const rolar = vi.fn();
+    Element.prototype.scrollIntoView = rolar;
+    (el.querySelector('ul[aria-label="Ficaram mais baratos"] button') as HTMLButtonElement).click();
+    expect(rolar).toHaveBeenCalled();
+    (el.querySelector('ul[aria-label="Ficaram mais caros"] button') as HTMLButtonElement).click();
+    await fixture.whenStable();
+    expect(navegar).toHaveBeenLastCalledWith(
+      [],
+      expect.objectContaining({ queryParams: { itens: null } }),
+    );
+  });
+
+  it('card com mais de 3 itens mostra os 3 maiores e expande em "Ver todos"', async () => {
+    const { fixture, el } = montar(async (n) => {
+      const base = (await compararComFixture(n)).get(1) as ComparacaoHistorico & {
+        impacto: number;
+      };
+      return new Map(n.itens.map((i) => [i.n, { ...base, impacto: i.n }]));
+    });
+    await pronto(fixture);
+    const [bloco] = await fixture.getDeferBlocks();
+    await bloco.render(DeferBlockState.Complete);
+    fixture.detectChanges();
+    const lista = () => el.querySelectorAll('ul[aria-label="Ficaram mais caros"] li');
+    expect(lista()).toHaveLength(3);
+    const mais = botao(el, /^Ver todos \(8\)/);
+    expect(mais.getAttribute('aria-expanded')).toBe('false');
+    mais.click();
+    fixture.detectChanges();
+    expect(lista()).toHaveLength(8);
+    expect(mais.getAttribute('aria-expanded')).toBe('true');
+    expect(texto(mais)).toContain('Mostrar menos');
   });
 });
 
