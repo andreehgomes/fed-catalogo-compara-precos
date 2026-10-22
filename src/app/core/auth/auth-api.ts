@@ -29,6 +29,9 @@ function criarAuthApi() {
       signInWithRedirect(auth, p, browserPopupRedirectResolver),
     getRedirectResult: (auth: Auth) => getRedirectResult(auth, browserPopupRedirectResolver),
     novoProvedorGoogle: () => new GoogleAuthProvider(),
+    appInstalado: () =>
+      globalThis.matchMedia?.('(display-mode: standalone)').matches === true ||
+      (globalThis.navigator as { standalone?: boolean } | undefined)?.standalone === true,
   };
 }
 

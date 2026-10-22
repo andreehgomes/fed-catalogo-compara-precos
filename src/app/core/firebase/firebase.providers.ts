@@ -29,7 +29,10 @@ export const FIREBASE_AUTH = new InjectionToken<Auth>('FIREBASE_AUTH');
  */
 export function provideFirebase(): EnvironmentProviders {
   return makeEnvironmentProviders([
-    { provide: FIREBASE_APP, useFactory: () => initializeApp(environment.firebase) },
+    {
+      provide: FIREBASE_APP,
+      useFactory: () => initializeApp({ ...environment.firebase, authDomain: dominioAuth() }),
+    },
     {
       provide: FIREBASE_AUTH,
       useFactory: () =>
@@ -38,4 +41,16 @@ export function provideFirebase(): EnvironmentProviders {
         }),
     },
   ]);
+}
+
+const HOSTS_LOCAIS = new Set(['localhost', '127.0.0.1', '[::1]']);
+
+/**
+ * Fora do localhost o authDomain é o próprio host: o Hosting serve `/__/auth/handler` em
+ * todo domínio dele, e o redirect do Google fica same-origin. Com o `*.firebaseapp.com`, o
+ * Safari (PWA instalado no iOS) particiona o storage e o login nunca completa.
+ */
+function dominioAuth(): string {
+  const { host, hostname } = globalThis.location ?? {};
+  return host && !HOSTS_LOCAIS.has(hostname) ? host : environment.firebase.authDomain;
 }

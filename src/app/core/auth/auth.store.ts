@@ -1,5 +1,5 @@
 import { DestroyRef, Injectable, computed, inject, signal } from '@angular/core';
-import type { User } from 'firebase/auth';
+import type { AuthProvider, User } from 'firebase/auth';
 import { FIREBASE_AUTH } from '../firebase/firebase.providers';
 import { AUTH_API } from './auth-api';
 
@@ -30,15 +30,21 @@ export class AuthStore {
   async entrarComGoogle(): Promise<'ok' | 'redirecionando'> {
     const provedor = this.api.novoProvedorGoogle();
     provedor.setCustomParameters({ prompt: 'select_account' });
+    if (this.api.appInstalado()) return this.redirecionar(provedor);
     try {
       await this.api.signInWithPopup(this.auth, provedor);
       return 'ok';
     } catch (erro) {
       if ((erro as { code?: string }).code !== 'auth/popup-blocked') throw erro;
-      marcarRedirect();
-      await this.api.signInWithRedirect(this.auth, provedor);
-      return 'redirecionando';
+      return this.redirecionar(provedor);
     }
+  }
+
+  /** No PWA instalado (iOS) o popup abre fora do app e nunca devolve o resultado. */
+  private async redirecionar(provedor: AuthProvider): Promise<'redirecionando'> {
+    marcarRedirect();
+    await this.api.signInWithRedirect(this.auth, provedor);
+    return 'redirecionando';
   }
 
   async cadastrar(nome: string, email: string, senha: string): Promise<void> {

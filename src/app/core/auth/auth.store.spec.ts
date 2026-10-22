@@ -23,6 +23,7 @@ function criarApi() {
     signInWithRedirect: vi.fn(async () => undefined),
     getRedirectResult: vi.fn(async () => null),
     novoProvedorGoogle: vi.fn(() => provedor),
+    appInstalado: vi.fn(() => false),
   };
   return { api, cancelar, provedor, emitir: (u: unknown) => ouvinte?.(u) };
 }
@@ -95,6 +96,14 @@ describe('AuthStore', () => {
     fake.api.signInWithPopup.mockRejectedValueOnce({ code: 'auth/popup-blocked' });
     expect(await store.entrarComGoogle()).toBe('redirecionando');
     expect(fake.api.signInWithRedirect).toHaveBeenCalledWith(auth, fake.provedor);
+  });
+
+  it('no app instalado vai direto para o redirect', async () => {
+    fake.api.appInstalado.mockReturnValue(true);
+    expect(await store.entrarComGoogle()).toBe('redirecionando');
+    expect(fake.api.signInWithPopup).not.toHaveBeenCalled();
+    expect(fake.api.signInWithRedirect).toHaveBeenCalledWith(auth, fake.provedor);
+    expect(sessionStorage.getItem('cp-login-google-redirect')).toBe('1');
   });
 
   it('depois do redirect, completa o login uma vez ao voltar', async () => {
