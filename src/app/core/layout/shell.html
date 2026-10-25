@@ -8,9 +8,21 @@
     [attr.inert]="estreito() && !drawerAberto() ? '' : null"
   >
     <div class="cp-nav-header">
-      <img class="cp-nav-simbolo" ngSrc="logo/simbolo.png" width="40" height="40" alt="Cupom Esperto" />
+      <img
+        class="cp-nav-simbolo"
+        ngSrc="logo/simbolo.png"
+        width="40"
+        height="40"
+        alt="Cupom Esperto"
+      />
       <div class="cp-nav-brand">
-        <img class="cp-nav-logo" ngSrc="logo/logo.png" width="720" height="151" alt="Cupom Esperto" />
+        <img
+          class="cp-nav-logo"
+          ngSrc="logo/logo.png"
+          width="720"
+          height="151"
+          alt="Cupom Esperto"
+        />
         <span class="cp-nav-brand-tag">Notas do Paraná</span>
       </div>
     </div>
@@ -34,6 +46,19 @@
 
       <button
         type="button"
+        class="cp-nav-item"
+        [matTooltip]="rail() ? 'Verificar atualizações' : ''"
+        matTooltipPosition="right"
+        [attr.aria-label]="rail() ? 'Verificar atualizações' : null"
+        [disabled]="verificando()"
+        (click)="verificarAtualizacoes()"
+      >
+        <mat-icon aria-hidden="true">system_update</mat-icon>
+        <span class="cp-nav-label">Verificar atualizações</span>
+      </button>
+
+      <button
+        type="button"
         class="cp-nav-item cp-nav-item--sair"
         [matTooltip]="rail() ? 'Sair' : ''"
         matTooltipPosition="right"
@@ -48,6 +73,9 @@
     <div class="cp-nav-footer">
       <span class="cp-nav-footer-label">Preços de</span>
       <span class="cp-nav-footer-name">Suas notas · Menor Preço</span>
+      @if (versao) {
+        <span class="cp-nav-footer-versao">Versão {{ versao }}</span>
+      }
     </div>
   </aside>
 
@@ -75,7 +103,13 @@
         <mat-icon aria-hidden="true">menu</mat-icon>
       </button>
       @if (estreito() || rail()) {
-        <img class="cp-header-logo" ngSrc="logo/logo.png" width="720" height="151" alt="Cupom Esperto" />
+        <img
+          class="cp-header-logo"
+          ngSrc="logo/logo.png"
+          width="720"
+          height="151"
+          alt="Cupom Esperto"
+        />
       }
       <span class="cp-header-spacer"></span>
       @if (nomeUsuario()) {
@@ -85,6 +119,22 @@
         </span>
       }
     </header>
+
+    @if (avisoAtualizacao(); as aviso) {
+      <div class="cp-info-block cp-atualizacao" role="status">
+        <mat-icon aria-hidden="true">system_update</mat-icon>
+        <span class="cp-atualizacao-texto">
+          @if (aviso === 'nova-versao') {
+            Nova versão disponível.
+          } @else {
+            O app precisa ser recarregado para continuar funcionando.
+          }
+        </span>
+        <button type="button" class="cp-btn-primary-compact" (click)="atualizar()">
+          {{ aviso === 'nova-versao' ? 'Atualizar' : 'Recarregar' }}
+        </button>
+      </div>
+    }
 
     <div class="cp-content">
       <router-outlet />

@@ -10,9 +10,11 @@ import {
 } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { MatIconModule } from '@angular/material/icon';
+import { MatSnackBar } from '@angular/material/snack-bar';
 import { MatTooltipModule } from '@angular/material/tooltip';
 import { NavigationEnd, Router, RouterLink, RouterLinkActive, RouterOutlet } from '@angular/router';
 import { filter } from 'rxjs';
+import { AtualizacaoService } from '../atualizacao/atualizacao.service';
 import { AuthStore } from '../auth/auth.store';
 import { BreakpointService } from './breakpoint.service';
 
@@ -60,6 +62,8 @@ export class Shell {
   private readonly auth = inject(AuthStore);
   private readonly router = inject(Router);
   private readonly breakpoints = inject(BreakpointService);
+  private readonly atualizacao = inject(AtualizacaoService);
+  private readonly snack = inject(MatSnackBar);
 
   private readonly botaoMenu = viewChild.required<ElementRef<HTMLButtonElement>>('botaoMenu');
 
@@ -67,6 +71,9 @@ export class Shell {
     this.auth.admin() ? [...ITENS_NAV, ITEM_CONFIG_IA] : ITENS_NAV,
   );
   protected readonly estreito = this.breakpoints.estreito;
+  protected readonly avisoAtualizacao = this.atualizacao.aviso;
+  protected readonly verificando = this.atualizacao.verificando;
+  protected readonly versao = this.atualizacao.versao;
   protected readonly expandido = signal(true);
   protected readonly drawerAberto = signal(false);
 
@@ -114,6 +121,30 @@ export class Shell {
 
   protected fecharComEsc(): void {
     if (this.estreito()) this.fecharDrawer();
+  }
+
+  protected async verificarAtualizacoes(): Promise<void> {
+    const resultado = await this.atualizacao.verificar();
+    if (resultado === 'nova-versao') {
+      this.drawerAberto.set(false);
+    } else if (resultado === 'atualizado') {
+      this.snack.open('Você já está na versão mais recente.', 'OK', { duration: 4000 });
+    } else if (resultado === 'indisponivel') {
+      this.snack
+        .open('A atualização automática não está disponível aqui.', 'Recarregar', {
+          duration: 6000,
+        })
+        .onAction()
+        .subscribe(() => this.atualizacao.atualizar());
+    } else {
+      this.snack.open('Não foi possível verificar agora. Confira a conexão.', 'OK', {
+        duration: 5000,
+      });
+    }
+  }
+
+  protected atualizar(): Promise<void> {
+    return this.atualizacao.atualizar();
   }
 
   protected async sair(): Promise<void> {

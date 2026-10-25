@@ -151,6 +151,12 @@
   color: $cp-nav-item;
 }
 
+.cp-nav-footer-versao {
+  margin-top: 6px;
+  font-size: 11px;
+  color: $cp-nav-group;
+}
+
 .cp-nav.rail {
   .cp-nav-label,
   .cp-nav-brand,
@@ -197,6 +203,17 @@
   display: flex;
   flex-direction: column;
   overflow: hidden;
+}
+
+.cp-atualizacao {
+  flex-shrink: 0;
+  align-items: center;
+  border-radius: 0;
+  border-bottom: 1px solid $cp-border;
+}
+
+.cp-atualizacao-texto {
+  flex: 1;
 }
 
 .cp-content {

@@ -81,6 +81,12 @@ com `authGuard`: `/` (painel), `/importar`, `/importar/preview`, `/notas`,
   Functions nunca são cacheados** (não há `dataGroups`). Manifest pt-BR com
   `theme_color` branco (`$cp-surface`, como o header) e `background_color` = `$cp-bg`. O Hosting manda
   `no-cache` para `index.html`, `ngsw-worker.js` e `ngsw.json`.
+- **Atualização** (`core/atualizacao/atualizacao.service.ts`, iniciado por `provideAppInitializer`):
+  a PWA no iOS volta da memória sem navegação, então o `SwUpdate.checkForUpdate` roda ao abrir e
+  quando o app volta a ficar visível (no máximo 1×/min, limite de 20 s). `VERSION_READY` →
+  faixa "Nova versão disponível · Atualizar" no shell (`activateUpdate()` + reload pelo token
+  `RECARREGAR_PAGINA`); `unrecoverable` → faixa "Recarregar". Menu: "Verificar atualizações" e
+  "Versão <hash do main-*.js>" no rodapé. Testes com `src/testing/sw-update-falso.ts`.
 - A lista de ícones do Material Symbols é um **subset** (`icon_names=` no `index.html`,
   em ordem alfabética): ao usar um ícone novo, acrescente o nome lá, senão aparece o
   texto da ligadura.
@@ -224,7 +230,7 @@ erro (`**`) ficam fora dele.
 - No celular, **FAB "Importar nota"** fixo (some em `/importar`, `/sugestoes`, `/listas/:id` e
   na conferência, que têm ação fixa no rodapé; fica em `/listas`).
 - Itens: Painel, Importar nota, Minhas notas, Sugestão de compra, Lista de compras, Preços perto
-  de mim, Produtos, Estabelecimentos (`ITENS_NAV`) e Sair.
+  de mim, Produtos, Estabelecimentos (`ITENS_NAV`), Verificar atualizações e Sair.
 - Telas ainda não implementadas usam `features/em-breve` (título pela `data.secao`
   da rota).
 

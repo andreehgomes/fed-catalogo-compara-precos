@@ -3,6 +3,8 @@ import { TestBed } from '@angular/core/testing';
 import { Router, provideRouter } from '@angular/router';
 import { vi } from 'vitest';
 import { botao, texto } from '../../../testing/dom';
+import { SwUpdateFalso, provideSwUpdateFalso } from '../../../testing/sw-update-falso';
+import { AtualizacaoService } from '../atualizacao/atualizacao.service';
 import { AuthStore } from '../auth/auth.store';
 import { BreakpointService } from './breakpoint.service';
 import { ITEM_CONFIG_IA, ITENS_NAV, Shell } from './shell';
@@ -10,7 +12,8 @@ import { ITEM_CONFIG_IA, ITENS_NAV, Shell } from './shell';
 @Component({ template: 'pagina' })
 class Pagina {}
 
-async function montar(estreito: boolean, admin = false) {
+async function montar(estreito: boolean, admin = false, sw = new SwUpdateFalso()) {
+  const recarregar = vi.fn();
   const bp = { estreito: signal(estreito) };
   const auth = {
     usuario: signal({ displayName: 'Ana Souza', email: 'ana@exemplo.com' }),
@@ -22,6 +25,7 @@ async function montar(estreito: boolean, admin = false) {
       provideRouter([{ path: '**', component: Pagina }]),
       { provide: BreakpointService, useValue: bp },
       { provide: AuthStore, useValue: auth },
+      ...provideSwUpdateFalso(sw, recarregar),
     ],
   });
   const router = TestBed.inject(Router);
@@ -29,21 +33,26 @@ async function montar(estreito: boolean, admin = false) {
   await router.navigateByUrl('/notas');
   fixture.detectChanges();
   await fixture.whenStable();
-  return { fixture, el: fixture.nativeElement as HTMLElement, router, auth, bp };
+  return { fixture, el: fixture.nativeElement as HTMLElement, router, auth, bp, sw, recarregar };
 }
 
 describe('Shell', () => {
   it('lista os itens de navegação da análise', async () => {
     const { el } = await montar(false);
     const rotulos = [...el.querySelectorAll('.cp-nav-label')].map((x) => texto(x));
-    expect(rotulos).toEqual([...ITENS_NAV.map((i) => i.rotulo), 'Sair']);
+    expect(rotulos).toEqual([...ITENS_NAV.map((i) => i.rotulo), 'Verificar atualizações', 'Sair']);
     expect(texto(el.querySelector('.cp-header-avatar'))).toBe('A');
   });
 
   it('administrador vê "Configurações de IA" no fim do menu', async () => {
     const { el } = await montar(false, true);
     const rotulos = [...el.querySelectorAll('.cp-nav-label')].map((x) => texto(x));
-    expect(rotulos).toEqual([...ITENS_NAV.map((i) => i.rotulo), ITEM_CONFIG_IA.rotulo, 'Sair']);
+    expect(rotulos).toEqual([
+      ...ITENS_NAV.map((i) => i.rotulo),
+      ITEM_CONFIG_IA.rotulo,
+      'Verificar atualizações',
+      'Sair',
+    ]);
   });
 
   it('desktop: alterna entre expandido e rail, sem FAB', async () => {
@@ -135,6 +144,91 @@ describe('Shell', () => {
     await Promise.resolve();
     expect(auth.sair).toHaveBeenCalled();
     expect(navegar).toHaveBeenCalledWith('/login');
+  });
+});
+
+describe('Shell: atualização do app', () => {
+  const esperar = () => new Promise((r) => setTimeout(r));
+  const snack = () => texto([...document.querySelectorAll('.mat-mdc-snack-bar-label')].at(-1));
+
+  it('versão nova pronta: faixa "Nova versão disponível" com "Atualizar" ativa e recarrega', async () => {
+    const { fixture, el, sw, recarregar } = await montar(true);
+    TestBed.inject(AtualizacaoService).iniciar();
+    expect(el.querySelector('.cp-atualizacao')).toBeNull();
+    sw.versaoPronta();
+    fixture.detectChanges();
+    const faixa = el.querySelector('.cp-atualizacao')!;
+    expect(faixa.getAttribute('role')).toBe('status');
+    expect(texto(faixa)).toContain('Nova versão disponível.');
+    botao(el, 'Atualizar').click();
+    await esperar();
+    expect(sw.activateUpdate).toHaveBeenCalled();
+    expect(recarregar).toHaveBeenCalled();
+  });
+
+  it('estado irrecuperável: faixa pede "Recarregar"', async () => {
+    const { fixture, el, sw, recarregar } = await montar(false);
+    TestBed.inject(AtualizacaoService).iniciar();
+    sw.unrecoverable.next({ type: 'UNRECOVERABLE_STATE', reason: 'hash' });
+    fixture.detectChanges();
+    expect(texto(el.querySelector('.cp-atualizacao'))).toContain('precisa ser recarregado');
+    botao(el, 'Recarregar').click();
+    await esperar();
+    expect(sw.activateUpdate).not.toHaveBeenCalled();
+    expect(recarregar).toHaveBeenCalled();
+  });
+
+  it('"Verificar atualizações" sem versão nova avisa que está na mais recente', async () => {
+    const { fixture, el, sw } = await montar(false);
+    botao(el, /Verificar atualizações$/).click();
+    await esperar();
+    fixture.detectChanges();
+    expect(sw.checkForUpdate).toHaveBeenCalled();
+    expect(snack()).toBe('Você já está na versão mais recente.');
+    expect(el.querySelector('.cp-atualizacao')).toBeNull();
+  });
+
+  it('"Verificar atualizações" com versão nova fecha o drawer e mostra a faixa', async () => {
+    const sw = new SwUpdateFalso();
+    sw.checkForUpdate.mockResolvedValue(true);
+    const { fixture, el } = await montar(true, false, sw);
+    botao(el, 'Abrir menu').click();
+    fixture.detectChanges();
+    botao(el, /Verificar atualizações$/).click();
+    await esperar();
+    fixture.detectChanges();
+    expect(el.querySelector('.cp-nav')!.classList).not.toContain('expandido');
+    expect(texto(el.querySelector('.cp-atualizacao'))).toContain('Nova versão disponível.');
+  });
+
+  it('"Verificar atualizações" com falha ou sem service worker avisa', async () => {
+    const sw = new SwUpdateFalso();
+    sw.checkForUpdate.mockRejectedValue(new Error('offline'));
+    const { fixture, el, recarregar } = await montar(false, false, sw);
+    botao(el, /Verificar atualizações$/).click();
+    await esperar();
+    expect(snack()).toBe('Não foi possível verificar agora. Confira a conexão.');
+    sw.isEnabled = false;
+    botao(el, /Verificar atualizações$/).click();
+    await esperar();
+    fixture.detectChanges();
+    expect(snack()).toBe('A atualização automática não está disponível aqui.');
+    [...document.querySelectorAll<HTMLButtonElement>('.mat-mdc-snack-bar-action')].at(-1)!.click();
+    await esperar();
+    expect(recarregar).toHaveBeenCalled();
+  });
+
+  it('mostra a versão do build no rodapé do menu', async () => {
+    const script = document.createElement('script');
+    script.setAttribute('src', 'main-XYZ98765.js');
+    script.type = 'text/plain';
+    document.body.append(script);
+    try {
+      const { el } = await montar(false);
+      expect(texto(el.querySelector('.cp-nav-footer-versao'))).toBe('Versão XYZ98765');
+    } finally {
+      script.remove();
+    }
   });
 });
 
