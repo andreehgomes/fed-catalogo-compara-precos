@@ -3,46 +3,142 @@
 // Estrutura e nomes de papel portados do design system do fed-catalogo-confeccoes;
 // os valores são próprios (paleta verde). É a ÚNICA fonte de cor do app: o
 // stylelint bloqueia hex e cor nomeada fora deste arquivo. Os pares texto ×
-// superfície são conferidos por `npm run contraste` (scripts/contraste.mjs).
+// superfície são conferidos nos dois temas por `npm run contraste`
+// (scripts/contraste.mjs). Cor diferente no escuro = token novo, nunca
+// `prefers-color-scheme` ou `[data-tema]` no SCSS de uma tela.
 // ─────────────────────────────────────────────────────────────────────────────
 
-// ── Acento (verde da marca) ──────────────────────────────────────────────────
-$cp-accent: #1f7a4d; // preenchimento: CTA, FAB, foco de input
-$cp-accent-ink: #16603b; // acento sobre branco: preço, link, valor
-$cp-accent-soft: #effaf3; // fundo de chip, opção ativa
-$cp-accent-border: #c6e8d3; // borda de chip, borda de opção ativa
-$cp-accent-hover: #dff3e7; // hover de botão ghost
+// ── Cores: nome: (claro, escuro) ─────────────────────────────────────────────
+// `_tema.scss` (incluído só em `styles.scss`) declara cada par como
+// `--cp-<nome>: light-dark(claro, escuro)`; o `color-scheme` do `<html>` escolhe
+// o lado. Este arquivo é `@use`d por todo componente: não pode emitir CSS. Só
+// cor entra aqui (light-dark() não aceita sombra nem gradiente).
+$cp-cores: (
+  // ── Acento (verde da marca)
+  // preenchimento: CTA, FAB, foco de input
+  accent: (#1f7a4d, #238154),
+  // acento como texto: preço, link, valor
+  accent-ink: (#16603b, #7fd3a3),
+  // fundo de chip, opção ativa
+  accent-soft: (#effaf3, #183626),
+  // borda de chip, borda de opção ativa
+  accent-border: (#c6e8d3, #2c5a40),
+  // hover de botão ghost
+  accent-hover: (#dff3e7, #1f3f2d),
+  // ── Floresta (fundos escuros pontuais: câmera do scanner, ícone da PWA)
+  // fundo da câmera
+  shell-900: (#0a2418, #0a2418),
+  // ícone de ação secundária
+  shell-700: (#15502f, #7fd3a3),
+  // texto e ícone sobre o acento e sobre a floresta
+  on-shell: (#fff, #fff),
+  header-bg: (rgb(255 255 255 / 88%), rgb(23 31 27 / 88%)),
+  // ── Superfícies e bordas
+  // tela do app
+  bg: (#f3f6f3, #0f1512),
+  // cards, header
+  surface: (#fff, #171f1b),
+  // input em repouso (vira surface no foco)
+  surface-input: (#fafcfa, #141b17),
+  // blocos internos, hover de linha
+  surface-subtle: (#f6f9f6, #1d2621),
+  // trilho de progresso e fundo de segmented
+  surface-track: (#e6ede7, #26302a),
+  // borda padrão de card e header
+  border: (#dfe7e1, #2a342e),
+  // borda de input, select, botão ghost
+  border-input: (#d2ddd5, #35413a),
+  // divisória interna de card
+  border-divider: (#e9efeb, #232c27),
+  border-hover: (#c3d0c7, #45524a),
+  scrollbar: (#cdd8d0, #35413a),
+  // ── Rampa de texto (grafite esverdeado; no escuro, nunca branco puro)
+  // base, títulos, valores
+  text: (#18211c, #e6ece8),
+  // bloco informativo
+  text-body: (#3a4640, #c9d3cd),
+  // apoio, "Cancelar"
+  text-secondary: (#4f5c55, #b3bfb8),
+  // subtítulos, metadados
+  text-muted: (#5d6a63, #a1ada6),
+  // rótulos uppercase (10px: precisa de AA)
+  text-label: (#5f6c65, #9eaaa3),
+  text-placeholder: (#76837c, #7f8b84),
+  // ícone desabilitado (não é texto)
+  text-disabled: (#8f9b94, #66726b),
+  // ── Preço (nunca comunicado só por cor: ícone + texto sempre); "mais barato" é o accent-ink
+  // "mais caro" + trending_up
+  pricier: (#a51d13, #ff8a80),
+  pricier-soft: (#f8d7da, #3a1a19),
+  // ── Séries de gráfico (sempre com traço e marcador diferentes, nunca só cor)
+  serie-1: (#16603b, #7fd3a3),
+  serie-2: (#2a65c2, #8ab4f8),
+  serie-3: (#a54600, #f0a860),
+  serie-4: (#7b3fa0, #c9a0f0),
+  serie-5: (#0f6e6a, #5fd0c6),
+  grafico-grade: (#e1e8e3, #2a342e),
+  // ── Semânticas
+  // teal, para não se confundir com o acento
+  success: (#0f6e6a, #5fd0c6),
+  success-soft: (#e0f4f2, #123331),
+  info: (#2a65c2, #8ab4f8),
+  info-soft: (#e3f2fd, #172a45),
+  // "Aguardando SEFAZ", avisos
+  warn: (#a54600, #f0a860),
+  warn-soft: (#ffecb3, #3a2a12),
+  warn-border: (#f5d27a, #6b4a1c),
+  // excluir
+  danger-action: (#d0281b, #ff6b5e),
+  danger-soft: (#f8d7da, #3a1a19),
+  danger-border: (#f1b9bf, #6b2a2a),
+  // ── Cor das sombras (no escuro a sombra quase some: a profundidade vem da superfície e da borda)
+  sombra-fina: (rgb(24 33 28 / 4%), rgb(0 0 0 / 40%)),
+  sombra-card: (rgb(24 33 28 / 30%), rgb(0 0 0 / 55%)),
+  sombra-painel: (rgb(24 33 28 / 35%), rgb(0 0 0 / 60%)),
+  sombra-hover: (rgb(24 33 28 / 40%), rgb(0 0 0 / 65%)),
+  sombra-segmented: (rgb(24 33 28 / 25%), rgb(0 0 0 / 50%)),
+  sombra-acento: (rgb(31 122 77 / 85%), rgb(35 129 84 / 45%)),
+  sombra-acento-fab: (rgb(31 122 77 / 90%), rgb(35 129 84 / 50%)),
+  sombra-forte: (rgb(0 0 0 / 60%), rgb(0 0 0 / 80%)),
+  // fundo do drawer aberto
+  overlay: (rgb(10 36 24 / 55%), rgb(0 0 0 / 60%))
+);
 
-// ── Floresta (fundos escuros pontuais: câmera do scanner, ícone da PWA) ─────
-$cp-shell-900: #0a2418; // fundo da câmera
-$cp-shell-700: #15502f; // ícone de ação secundária
-$cp-on-shell: #fff; // texto e ícone sobre o acento e sobre a floresta
-$cp-header-bg: rgb(255 255 255 / 88%);
+// ── Acento ───────────────────────────────────────────────────────────────────
+$cp-accent: var(--cp-accent);
+$cp-accent-ink: var(--cp-accent-ink);
+$cp-accent-soft: var(--cp-accent-soft);
+$cp-accent-border: var(--cp-accent-border);
+$cp-accent-hover: var(--cp-accent-hover);
+
+// ── Floresta ─────────────────────────────────────────────────────────────────
+$cp-shell-900: var(--cp-shell-900);
+$cp-shell-700: var(--cp-shell-700);
+$cp-on-shell: var(--cp-on-shell);
+$cp-header-bg: var(--cp-header-bg);
 
 // ── Superfícies e bordas ─────────────────────────────────────────────────────
-$cp-bg: #f3f6f3; // tela do app
-$cp-surface: #fff; // cards, header
-$cp-surface-input: #fafcfa; // input em repouso (vira surface no foco)
-$cp-surface-subtle: #f6f9f6; // blocos internos, hover de linha
-$cp-surface-track: #e6ede7; // trilho de progresso e fundo de segmented
+$cp-bg: var(--cp-bg);
+$cp-surface: var(--cp-surface);
+$cp-surface-input: var(--cp-surface-input);
+$cp-surface-subtle: var(--cp-surface-subtle);
+$cp-surface-track: var(--cp-surface-track);
+$cp-border: var(--cp-border);
+$cp-border-input: var(--cp-border-input);
+$cp-border-divider: var(--cp-border-divider);
+$cp-border-hover: var(--cp-border-hover);
+$cp-scrollbar: var(--cp-scrollbar);
 
-$cp-border: #dfe7e1; // borda padrão de card e header
-$cp-border-input: #d2ddd5; // borda de input, select, botão ghost
-$cp-border-divider: #e9efeb; // divisória interna de card
-$cp-border-hover: #c3d0c7; // hover de borda
-$cp-scrollbar: #cdd8d0;
-
-// ── Rampa de texto (grafite esverdeado) ──────────────────────────────────────
-$cp-text: #18211c; // base, títulos, valores
-$cp-text-body: #3a4640; // bloco informativo
-$cp-text-secondary: #4f5c55; // apoio, "Cancelar"
-$cp-text-muted: #5d6a63; // subtítulos, metadados
-$cp-text-label: #5f6c65; // rótulos uppercase (10px: precisa de AA)
-$cp-text-placeholder: #76837c; // placeholder
-$cp-text-disabled: #8f9b94; // ícone desabilitado (não é texto)
+// ── Rampa de texto ───────────────────────────────────────────────────────────
+$cp-text: var(--cp-text);
+$cp-text-body: var(--cp-text-body);
+$cp-text-secondary: var(--cp-text-secondary);
+$cp-text-muted: var(--cp-text-muted);
+$cp-text-label: var(--cp-text-label);
+$cp-text-placeholder: var(--cp-text-placeholder);
+$cp-text-disabled: var(--cp-text-disabled);
 
 // ── Casca clara (menu lateral e telas de conta) ──────────────────────────────
-// Clara porque o texto da logo (public/logo/logo.png) é verde escuro.
 $cp-nav-bg: $cp-surface;
 $cp-nav-border: $cp-border;
 $cp-nav-item: $cp-text-secondary; // itens de navegação
@@ -52,31 +148,31 @@ $cp-nav-item-active-bg: $cp-accent-soft;
 $cp-nav-group: $cp-text-muted; // rótulo de grupo e rodapé do menu
 $cp-gradient-auth: linear-gradient(168deg, $cp-accent-soft 0%, $cp-bg 60%);
 
-// ── Preço (nunca comunicado só por cor: ícone + texto sempre) ────────────────
+// ── Preço ────────────────────────────────────────────────────────────────────
 $cp-cheaper: $cp-accent-ink; // "mais barato" + trending_down
 $cp-cheaper-soft: $cp-accent-soft;
-$cp-pricier: #a51d13; // "mais caro" + trending_up
-$cp-pricier-soft: #f8d7da;
+$cp-pricier: var(--cp-pricier);
+$cp-pricier-soft: var(--cp-pricier-soft);
 
-// ── Séries de gráfico (sempre com traço e marcador diferentes, nunca só cor) ──
-$cp-serie-1: #16603b;
-$cp-serie-2: #2a65c2;
-$cp-serie-3: #a54600;
-$cp-serie-4: #7b3fa0;
-$cp-serie-5: #0f6e6a;
-$cp-grafico-grade: #e1e8e3;
+// ── Séries de gráfico ────────────────────────────────────────────────────────
+$cp-serie-1: var(--cp-serie-1);
+$cp-serie-2: var(--cp-serie-2);
+$cp-serie-3: var(--cp-serie-3);
+$cp-serie-4: var(--cp-serie-4);
+$cp-serie-5: var(--cp-serie-5);
+$cp-grafico-grade: var(--cp-grafico-grade);
 
 // ── Semânticas ───────────────────────────────────────────────────────────────
-$cp-success: #0f6e6a; // teal, para não se confundir com o acento
-$cp-success-soft: #e0f4f2;
-$cp-info: #2a65c2; // informativo
-$cp-info-soft: #e3f2fd;
-$cp-warn: #a54600; // "Aguardando SEFAZ", avisos
-$cp-warn-soft: #ffecb3;
-$cp-warn-border: #f5d27a;
-$cp-danger-action: #d0281b; // excluir
-$cp-danger-soft: #f8d7da;
-$cp-danger-border: #f1b9bf;
+$cp-success: var(--cp-success);
+$cp-success-soft: var(--cp-success-soft);
+$cp-info: var(--cp-info);
+$cp-info-soft: var(--cp-info-soft);
+$cp-warn: var(--cp-warn);
+$cp-warn-soft: var(--cp-warn-soft);
+$cp-warn-border: var(--cp-warn-border);
+$cp-danger-action: var(--cp-danger-action);
+$cp-danger-soft: var(--cp-danger-soft);
+$cp-danger-border: var(--cp-danger-border);
 
 // ── Tipografia ───────────────────────────────────────────────────────────────
 $cp-font: 'Instrument Sans', ui-sans-serif, system-ui, sans-serif;
@@ -97,20 +193,20 @@ $cp-radius-icon: 9px;
 $cp-radius-pill: 999px;
 
 // ── Sombra ───────────────────────────────────────────────────────────────────
-$cp-shadow-hairline: 0 1px 2px rgb(24 33 28 / 4%);
+$cp-shadow-hairline: 0 1px 2px var(--cp-sombra-fina);
 $cp-shadow-card:
-  0 1px 2px rgb(24 33 28 / 4%),
-  0 14px 34px -26px rgb(24 33 28 / 30%);
-$cp-shadow-hover: 0 18px 38px -22px rgb(24 33 28 / 40%);
+  0 1px 2px var(--cp-sombra-fina),
+  0 14px 34px -26px var(--cp-sombra-card);
+$cp-shadow-hover: 0 18px 38px -22px var(--cp-sombra-hover);
 $cp-shadow-panel:
-  0 1px 2px rgb(24 33 28 / 4%),
-  0 20px 50px -34px rgb(24 33 28 / 35%);
-$cp-shadow-accent: 0 12px 26px -12px rgb(31 122 77 / 85%);
-$cp-shadow-accent-fab: 0 14px 28px -12px rgb(31 122 77 / 90%);
-$cp-shadow-drawer: 18px 0 60px -20px rgb(0 0 0 / 60%);
-$cp-shadow-modal: 0 40px 90px -30px rgb(0 0 0 / 60%);
-$cp-shadow-segmented-active: 0 2px 8px -2px rgb(24 33 28 / 25%);
-$cp-overlay: rgb(10 36 24 / 55%); // fundo do drawer aberto
+  0 1px 2px var(--cp-sombra-fina),
+  0 20px 50px -34px var(--cp-sombra-painel);
+$cp-shadow-accent: 0 12px 26px -12px var(--cp-sombra-acento);
+$cp-shadow-accent-fab: 0 14px 28px -12px var(--cp-sombra-acento-fab);
+$cp-shadow-drawer: 18px 0 60px -20px var(--cp-sombra-forte);
+$cp-shadow-modal: 0 40px 90px -30px var(--cp-sombra-forte);
+$cp-shadow-segmented-active: 0 2px 8px -2px var(--cp-sombra-segmented);
+$cp-overlay: var(--cp-overlay); // fundo do drawer aberto
 
 // ── Layout ───────────────────────────────────────────────────────────────────
 $cp-rail-width: 76px;

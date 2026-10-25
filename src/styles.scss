@@ -3,6 +3,7 @@
 @use './app/shared/style/mixins' as *;
 @use './app/shared/style/breakpoints' as *;
 @use './app/shared/style/m3-palette' as m3;
+@use './app/shared/style/tema';
 
 // ─── Ícones ──────────────────────────────────────────────────────────────────
 // `index.html` carrega Material Symbols Rounded. `mat-icon` usa `.material-icons`
@@ -49,7 +50,6 @@ body {
 }
 
 body {
-  color-scheme: light;
   margin: 0;
   background: $cp-bg;
   color: $cp-text;

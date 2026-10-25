@@ -1,0 +1,10 @@
+@use 'sass:list';
+@use 'tokens' as *;
+
+:root {
+  color-scheme: light;
+
+  @each $nome, $par in $cp-cores {
+    --cp-#{$nome}: light-dark(#{list.nth($par, 1)}, #{list.nth($par, 2)});
+  }
+}

@@ -2,23 +2,48 @@ import { readFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 
 const arquivo = fileURLToPath(new URL('../src/app/shared/style/_tokens.scss', import.meta.url));
-const fonte = readFileSync(arquivo, 'utf8');
+const fonte = readFileSync(arquivo, 'utf8').replace(/\r\n/g, '\n');
+
+const TEMAS = ['claro', 'escuro'];
+
+const mapa = /\$cp-cores:\s*\(([\s\S]*?)\n\);/.exec(fonte);
+if (!mapa) throw new Error('Mapa $cp-cores não encontrado em _tokens.scss');
+const cores = new Map();
+for (const [, nome, par] of mapa[1].matchAll(/^\s*([\w-]+):\s*\((.+)\),?$/gm)) {
+  cores.set(nome, separarPar(par));
+}
 
 const tokens = new Map();
 for (const [, nome, valor] of fonte.matchAll(/^\$(cp-[\w-]+):\s*([^;]+);/gm)) {
   tokens.set(nome, valor.trim());
 }
 
-function hex(nome, visitados = new Set()) {
+function separarPar(par) {
+  let nivel = 0;
+  for (let i = 0; i < par.length; i++) {
+    if (par[i] === '(') nivel++;
+    else if (par[i] === ')') nivel--;
+    else if (par[i] === ',' && nivel === 0)
+      return [par.slice(0, i).trim(), par.slice(i + 1).trim()];
+  }
+  throw new Error(`Par sem dois valores: (${par})`);
+}
+
+function hex(nome, tema, visitados = new Set()) {
   const valor = tokens.get(nome);
   if (!valor) throw new Error(`Token $${nome} não encontrado em _tokens.scss`);
   if (valor.startsWith('$')) {
     const alvo = valor.slice(1);
     if (visitados.has(alvo)) throw new Error(`Ciclo em $${nome}`);
-    return hex(alvo, visitados.add(alvo));
+    return hex(alvo, tema, visitados.add(alvo));
   }
-  const m = /^#([0-9a-f]{3}|[0-9a-f]{6})$/i.exec(valor);
-  if (!m) throw new Error(`$${nome} não é uma cor hex: ${valor}`);
+  const variavel = /^var\(--(cp-[\w-]+)\)$/.exec(valor);
+  if (!variavel) throw new Error(`$${nome} não aponta para uma cor de $cp-cores: ${valor}`);
+  const par = cores.get(variavel[1].slice('cp-'.length));
+  if (!par) throw new Error(`--${variavel[1]} não está em $cp-cores`);
+  const cor = par[TEMAS.indexOf(tema)];
+  const m = /^#([0-9a-f]{3}|[0-9a-f]{6})$/i.exec(cor);
+  if (!m) throw new Error(`$${nome} (${tema}) não é uma cor hex: ${cor}`);
   const h = m[1].length === 3 ? [...m[1]].map((c) => c + c).join('') : m[1];
   return `#${h.toLowerCase()}`;
 }
@@ -37,11 +62,11 @@ function razao(a, b) {
 const TEXTO = 4.5;
 const GRANDE = 3;
 
-const superficiesClaras = ['cp-bg', 'cp-surface', 'cp-surface-subtle', 'cp-surface-input'];
+const superficies = ['cp-bg', 'cp-surface', 'cp-surface-subtle', 'cp-surface-input'];
 const textos = ['cp-text', 'cp-text-body', 'cp-text-secondary', 'cp-text-muted', 'cp-text-label'];
 
 const pares = [
-  ...textos.flatMap((t) => superficiesClaras.map((s) => [t, s, TEXTO])),
+  ...textos.flatMap((t) => superficies.map((s) => [t, s, TEXTO])),
   ['cp-text-placeholder', 'cp-surface-input', GRANDE],
   ['cp-accent-ink', 'cp-surface', TEXTO],
   ['cp-accent-ink', 'cp-bg', TEXTO],
@@ -71,28 +96,32 @@ const pares = [
   ['cp-danger-action', 'cp-surface', TEXTO],
   ['cp-danger-action', 'cp-danger-soft', GRANDE],
   ['cp-accent', 'cp-surface', GRANDE],
+  ['cp-accent', 'cp-bg', GRANDE],
   ...[1, 2, 3, 4, 5].map((i) => [`cp-serie-${i}`, 'cp-surface', TEXTO]),
   ['cp-grafico-grade', 'cp-surface', 1],
 ];
 
 let falhas = 0;
-const linhas = pares.map(([frente, fundo, minimo]) => {
-  const r = razao(hex(frente), hex(fundo));
-  const ok = r >= minimo;
-  if (!ok) falhas++;
-  return {
-    frente: `$${frente}`,
-    fundo: `$${fundo}`,
-    razao: r.toFixed(2),
-    minimo:
-      minimo === TEXTO
-        ? '4.5 (texto)'
-        : minimo === GRANDE
-          ? '3.0 (grande/ícone)'
-          : '1.0 (decorativo)',
-    resultado: ok ? 'ok' : 'FALHOU',
-  };
-});
+const linhas = TEMAS.flatMap((tema) =>
+  pares.map(([frente, fundo, minimo]) => {
+    const r = razao(hex(frente, tema), hex(fundo, tema));
+    const ok = r >= minimo;
+    if (!ok) falhas++;
+    return {
+      tema,
+      frente: `$${frente}`,
+      fundo: `$${fundo}`,
+      razao: r.toFixed(2),
+      minimo:
+        minimo === TEXTO
+          ? '4.5 (texto)'
+          : minimo === GRANDE
+            ? '3.0 (grande/ícone)'
+            : '1.0 (decorativo)',
+      resultado: ok ? 'ok' : 'FALHOU',
+    };
+  }),
+);
 
 console.table(linhas);
 
@@ -100,4 +129,4 @@ if (falhas > 0) {
   console.error(`\n${falhas} par(es) abaixo do mínimo WCAG AA.`);
   process.exit(1);
 }
-console.log(`\n${pares.length} pares aprovados em WCAG AA.`);
+console.log(`\n${pares.length} pares aprovados em WCAG AA nos temas ${TEMAS.join(' e ')}.`);

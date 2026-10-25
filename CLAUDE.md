@@ -621,9 +621,18 @@ com prefixo `cp` e paleta verde.
   **teal** para não se confundir com o acento), raios, sombras e layout. **Única
   fonte de cor**: o stylelint (`color-no-hex`, `color-named`) só libera este arquivo
   e o `_m3-palette.scss`.
-- **Contraste:** `npm run contraste` lê os hex dos tokens e confere a lista de pares
-  texto × superfície (WCAG AA, 4.5:1; 3:1 para texto grande/ícone). Ao criar um
-  token de texto ou um par novo, acrescente o par em `scripts/contraste.mjs`.
+- **Cor em variável CSS (tema escuro, plano `docs/plano/tema-escuro-plano.md`):** os valores
+  ficam no mapa `$cp-cores` (`nome: (claro, escuro)`, só cor; sombras usam as cores
+  `sombra-*`) e cada `$cp-x` é `var(--cp-x)`. `_tema.scss`, incluído **só** em `styles.scss`
+  (no `_tokens.scss` o bloco se repetiria em todo componente), declara
+  `--cp-x: light-dark(claro, escuro)` no `:root`; o `color-scheme` do `<html>` escolhe o lado.
+  Cor diferente no escuro = token novo, nunca `prefers-color-scheme`/`[data-tema]` no SCSS de
+  uma tela, e nunca `$cp-*` em função de cor do Sass. O Angular reescreve `var(--x)` dos
+  componentes como `var(--%NS%x)`; o namespace é vazio enquanto ninguém usar
+  `provideCssVarNamespacing` (não usar).
+- **Contraste:** `npm run contraste` lê o mapa `$cp-cores` e confere a lista de pares
+  texto × superfície **nos dois temas** (WCAG AA, 4.5:1; 3:1 para texto grande/ícone). Ao criar
+  um token de texto ou um par novo, acrescente o par em `scripts/contraste.mjs`.
 - **Classes globais** em `src/styles.scss` — `.cp-page` (`--detalhe`, `--form`),
   `.cp-page-header`, `.cp-detail-header`, `.cp-card`, `.cp-block`, `.cp-panel`,
   `.cp-section-top/-title`, `.cp-label`, `.cp-field` (`-compact`, `-prefix`, `-hint`,
