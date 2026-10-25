@@ -367,7 +367,12 @@ describe('NotaDetalhePage', () => {
     const escolher = vi.fn(async () => escolha);
     const api = apiFalsa();
     const excluir = vi.fn(async () => undefined);
-    const historico = { comparar: vi.fn(async () => new Map()), invalidar: vi.fn() };
+    const historico = {
+      comparar: vi.fn(async () => new Map()),
+      invalidar: vi.fn(),
+      gruposDaNota: vi.fn(async () => new Map([['loc:03644587000836:2', 'ean:7891000100103']])),
+    };
+    const adicionarEmLista = vi.fn(async () => 'l1');
     const dialog = { open: vi.fn(() => ({ afterClosed: () => of(confirmar) })) };
     const snack = { open: vi.fn() };
     TestBed.configureTestingModule({
@@ -380,7 +385,7 @@ describe('NotaDetalhePage', () => {
         { provide: MatDialog, useValue: dialog },
         { provide: MatSnackBar, useValue: snack },
         { provide: HistoricoPessoalStore, useValue: historico },
-        { provide: ListasStore, useValue: { listas: signal(listas), escolher } },
+        { provide: ListasStore, useValue: { listas: signal(listas), escolher, adicionarEmLista } },
         {
           provide: LocalizacaoStore,
           useValue: {
@@ -406,6 +411,7 @@ describe('NotaDetalhePage', () => {
       navegar,
       historico,
       escolher,
+      adicionarEmLista,
     };
   }
 
@@ -462,6 +468,66 @@ describe('NotaDetalhePage', () => {
     await fixture.whenStable();
     expect(excluir).not.toHaveBeenCalled();
     expect(historico.invalidar).not.toHaveBeenCalled();
+  });
+
+  it('"Adicionar à lista": começa com a nota inteira marcada e entra pelo grupo', async () => {
+    const { fixture, el, adicionarEmLista } = montar(NOTA);
+    await fixture.whenStable();
+    fixture.detectChanges();
+    expect(el.querySelectorAll('.detalhe-item input[type=checkbox]')).toHaveLength(0);
+    botao(el, /Adicionar à lista$/).click();
+    fixture.detectChanges();
+    expect(texto(el.querySelector('.itens-selecao'))).toContain('2 de 2 itens');
+    botao(el, /Adicionar 2$/).click();
+    await fixture.whenStable();
+    fixture.detectChanges();
+    expect(adicionarEmLista).toHaveBeenCalledWith([
+      expect.objectContaining({
+        texto: 'COCA COLA PET 2L',
+        grupo: 'ean:7894900011517',
+        quantidade: 2,
+      }),
+      expect.objectContaining({
+        texto: 'LEITE INTEGRAL 1L',
+        grupo: 'ean:7891000100103',
+        quantidade: 3,
+        origem: 'nota',
+      }),
+    ]);
+    expect(el.querySelector('.itens-selecao')).toBeNull();
+  });
+
+  it('"Adicionar à lista": um item só; "Todos" desmarca e marca; desistir mantém a seleção', async () => {
+    const { fixture, el, adicionarEmLista, historico } = montar(NOTA);
+    historico.gruposDaNota.mockRejectedValue(new Error('offline'));
+    adicionarEmLista.mockResolvedValue(null as never);
+    await fixture.whenStable();
+    fixture.detectChanges();
+    botao(el, /Adicionar à lista$/).click();
+    fixture.detectChanges();
+    const todos = el.querySelector<HTMLInputElement>('.itens-selecao input')!;
+    todos.click();
+    fixture.detectChanges();
+    expect(botao(el, /Adicionar 0$/).disabled).toBe(true);
+    todos.click();
+    fixture.detectChanges();
+    expect(texto(el.querySelector('.itens-selecao'))).toContain('2 de 2');
+    todos.click();
+    fixture.detectChanges();
+    el.querySelector<HTMLInputElement>('input[aria-label="LEITE INTEGRAL 1L"]')!.click();
+    fixture.detectChanges();
+    expect(todos.indeterminate).toBe(true);
+    botao(el, /Adicionar 1$/).click();
+    await fixture.whenStable();
+    fixture.detectChanges();
+    expect(adicionarEmLista).toHaveBeenCalledWith([
+      expect.objectContaining({ texto: 'LEITE INTEGRAL 1L', grupo: 'loc:03644587000836:2' }),
+    ]);
+    expect(el.querySelector('.itens-selecao')).not.toBeNull();
+    botao(el, 'Cancelar').click();
+    fixture.detectChanges();
+    expect(el.querySelector('.itens-selecao')).toBeNull();
+    expect(adicionarEmLista).toHaveBeenCalledOnce();
   });
 
   it('"Conferir com uma lista" (RF-14): some sem listas; com uma vai direto; com várias pergunta', async () => {

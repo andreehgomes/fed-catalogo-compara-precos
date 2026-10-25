@@ -262,6 +262,23 @@ export function itemDaNota(item: ItemNota, grupo: string): ItemNovo {
   };
 }
 
+/** Itens escolhidos no detalhe da nota: o mesmo grupo na mesma unidade (preços diferentes) vira um. */
+export function itensDaNota(itens: readonly ItemNota[], grupos: Grupos): ItemNovo[] {
+  const porChave = new Map<string, ItemNovo>();
+  for (const item of itens) {
+    const novo = itemDaNota(item, chaveDoGrupo(item.produtoId, grupos));
+    const chave = `${novo.grupo}|${novo.unidade}`;
+    const e = porChave.get(chave);
+    porChave.set(
+      chave,
+      e
+        ? { ...e, quantidade: limitarQuantidade((e.quantidade ?? 0) + (novo.quantidade ?? 0)) }
+        : novo,
+    );
+  }
+  return [...porChave.values()];
+}
+
 function diaMes(d: Date): string {
   return `${String(d.getDate()).padStart(2, '0')}/${String(d.getMonth() + 1).padStart(2, '0')}`;
 }

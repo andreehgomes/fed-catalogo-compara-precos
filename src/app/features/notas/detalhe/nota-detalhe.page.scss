@@ -151,6 +151,51 @@
   margin-bottom: 8px;
 }
 
+// Sticky no topo do scroll do .cp-content: no rodapé ficaria sob o FAB "Importar nota".
+.itens-selecao {
+  position: sticky;
+  top: 0;
+  z-index: 3;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px 12px;
+  margin: 0 -8px 8px;
+  padding: 8px;
+  border: 1px solid $cp-border;
+  border-radius: $cp-radius-card;
+  background: $cp-header-bg;
+  backdrop-filter: blur(14px);
+}
+
+.itens-selecao-todos {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.itens-selecao-contagem {
+  font-size: 13px;
+  font-variant-numeric: tabular-nums;
+  color: $cp-text-muted;
+}
+
+.itens-selecao-acoes {
+  display: flex;
+  gap: 8px;
+  margin-left: auto;
+}
+
+.itens-check {
+  flex-shrink: 0;
+  width: 20px;
+  height: 20px;
+  margin: 2px 0 0;
+  accent-color: $cp-accent;
+}
+
 .itens-filtro-contagem {
   font-variant-numeric: tabular-nums;
   color: $cp-text-muted;

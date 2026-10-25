@@ -26,6 +26,7 @@ import { EmptyState } from '../../../shared/ui/empty-state/empty-state';
 import { FontePrecoInfo } from '../../../shared/ui/fonte-preco/fonte-preco';
 import { Preco } from '../../../shared/ui/preco/preco';
 import { ListasStore } from '../../listas/data-access/listas.store';
+import { itensDaNota } from '../../listas/lista';
 import { LocalizacaoSeletor } from '../../regiao/localizacao/localizacao-seletor';
 import { LocalizacaoStore } from '../../regiao/localizacao/localizacao.store';
 import { formatarDistancia } from '../../regiao/ui/oferta-row';
@@ -37,6 +38,7 @@ import {
   ComparacaoHistorico,
   FILTROS_HISTORICO,
   FiltroHistorico,
+  Grupos,
   JANELA_MELHOR_PRECO_DIAS,
   comValores,
   consolidarItens,
@@ -60,6 +62,7 @@ type TipoDestaque = 'mais-barato' | 'mais-caro';
 const LIMITE_DESTAQUES = 3;
 
 const SEM_HISTORICO: ReadonlyMap<number, ComparacaoHistorico> = new Map();
+const SEM_GRUPOS: Grupos = new Map();
 
 @Component({
   selector: 'cp-nota-detalhe',
@@ -180,6 +183,19 @@ export default class NotaDetalhePage {
     ].filter((g) => g.total > 0);
   });
 
+  protected readonly selecionando = signal(false);
+  protected readonly adicionando = signal(false);
+  private readonly selecionados = signal<ReadonlySet<number>>(new Set());
+  protected readonly escolhidos = computed(() =>
+    this.itensConsolidados().filter((i) => this.selecionados().has(i.n)),
+  );
+  /** O "Todos" vale para os itens do filtro atual. */
+  protected readonly todosVisiveis = computed(() => {
+    const visiveis = this.itensVisiveis();
+    const marcados = visiveis.filter((i) => this.selecionados().has(i.n)).length;
+    return { todos: !!visiveis.length && marcados === visiveis.length, alguns: marcados > 0 };
+  });
+
   constructor() {
     const abertas = inject(NotasAbertasService);
     effect(() => {
@@ -227,6 +243,56 @@ export default class NotaDetalhePage {
     }
     await this.filtrar('todos');
     afterNextRender(rolar, { injector: this.injector });
+  }
+
+  /** Começa com a nota inteira marcada: para um ou outro item, basta desmarcar o resto. */
+  protected selecionarParaLista(): void {
+    this.selecionados.set(new Set(this.itensConsolidados().map((i) => i.n)));
+    this.selecionando.set(true);
+  }
+
+  protected cancelarSelecao(): void {
+    this.selecionando.set(false);
+    this.selecionados.set(new Set());
+  }
+
+  protected selecionado(n: number): boolean {
+    return this.selecionados().has(n);
+  }
+
+  protected alternarItem(n: number): void {
+    this.selecionados.update((atual) => {
+      const novo = new Set(atual);
+      if (!novo.delete(n)) novo.add(n);
+      return novo;
+    });
+  }
+
+  protected alternarTodos(): void {
+    const marcar = !this.todosVisiveis().todos;
+    this.selecionados.update((atual) => {
+      const novo = new Set(atual);
+      for (const i of this.itensVisiveis()) {
+        if (marcar) novo.add(i.n);
+        else novo.delete(i.n);
+      }
+      return novo;
+    });
+  }
+
+  /** Entra pelo grupo de equivalência, para ligar na conferência; sem grupos, pelo próprio produto. */
+  protected async adicionarNaLista(): Promise<void> {
+    const n = this.dados();
+    const escolhidos = this.escolhidos();
+    if (!n || !escolhidos.length) return;
+    this.adicionando.set(true);
+    try {
+      const grupos = await this.historicoStore.gruposDaNota(n).catch(() => SEM_GRUPOS);
+      const id = await this.listas.adicionarEmLista(itensDaNota(escolhidos, grupos));
+      if (id) this.cancelarSelecao();
+    } finally {
+      this.adicionando.set(false);
+    }
   }
 
   /** RF-14: nota importada sem passar pela lista também pode ser conferida. */

@@ -340,7 +340,10 @@ emissao desc` em `firestore.indexes.json`), `obter(chave)` em tempo real, `exclu
   por cursor; marca "Nova" para nota da fila ainda não aberta — guardada no
   `localStorage` (`NotasAbertasService`), porque o cliente não grava nas notas.
 - Detalhe (`/notas/:chave`): link para estabelecimento e produto, copiar chave,
-  exclusão com `<cp-confirm-dialog>` (`shared/ui/confirm-dialog`).
+  exclusão com `<cp-confirm-dialog>` (`shared/ui/confirm-dialog`). "Adicionar à lista" na seção
+  Itens abre a seleção com a nota inteira marcada (barra sticky no topo, porque no rodapé ficaria
+  sob o FAB; "Todos" vale para o filtro atual); entra pelos grupos de `gruposDaNota` (falha → o
+  próprio produto) com `itensDaNota` e `ListasStore.adicionarEmLista`.
 - "Comparado com seu melhor preço" (histórico pessoal; plano
   `docs/plano/melhor-preco-recente-plano.md`): `HistoricoPessoalStore`
   (`data-access/historico-pessoal.store.ts`) lê as notas dos últimos 12 meses (até 20 páginas =
@@ -430,8 +433,8 @@ Até 5 listas (`MAX_LISTAS`), 150 itens (`MAX_ITENS`) e 3 notas por lista, limit
   `HistoricoPessoalStore.gruposDaNota(nota)` resolve os grupos da nota.
 - Tela acesa: `manterTelaAcesa(signal)` (`data-access/tela-acesa.ts`, token `WAKE_LOCK`) enquanto
   há pendentes e a aba está visível.
-- Integrações: "Adicionar à lista" no produto (canônico), "Conferir com uma lista" no detalhe da
-  nota, card `<cp-lista-em-andamento>` no painel (`@defer`).
+- Integrações: "Adicionar à lista" no produto (canônico) e nos itens da nota (`itensDaNota`: mesmo
+  grupo na mesma unidade soma), "Conferir com uma lista" no detalhe da nota, card `<cp-lista-em-andamento>` no painel (`@defer`).
 - Testes: `src/testing/firestore-falso.ts` (Firestore em memória no protocolo do
   `FIRESTORE_API`, com commit `ok|erro|pendente` para simular offline) e `src/testing/listas.ts`
   (providers da feature). e2e `e2e/listas.spec.ts` grava no dv e apaga as listas que criou

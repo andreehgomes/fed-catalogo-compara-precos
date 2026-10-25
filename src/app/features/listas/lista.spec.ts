@@ -38,6 +38,7 @@ import {
   itemDaNota,
   itemDoHistorico,
   itemDoProduto,
+  itensDaNota,
   itensDaSugestao,
   limitarQuantidade,
   limparTexto,
@@ -279,6 +280,31 @@ describe('itens de outras telas', () => {
       origem: 'nota',
     });
     expect(itemDaNota(itemNota(2, 'X', { unidade: ' ' }), 'g').unidade).toBeNull();
+  });
+
+  it('da nota (vários): pelo grupo; o mesmo grupo na mesma unidade soma, em outra unidade não', () => {
+    const grupos = new Map([[locDelta('2'), 'ean:1']]);
+    const itens = itensDaNota(
+      [
+        itemNota(1, 'ARROZ 5KG', { produtoId: 'ean:1', qtd: 2 }),
+        itemNota(2, 'ARROZ TIPO 1 5KG', { qtd: 1 }),
+        itemNota(3, 'BANANA', { qtd: 1.2, unidade: 'KG' }),
+        itemNota(4, 'BANANA', { produtoId: locDelta('3'), qtd: 2 }),
+      ],
+      grupos,
+    );
+    expect(itens.map((i) => [i.texto, i.grupo, i.quantidade, i.unidade])).toEqual([
+      ['ARROZ 5KG', 'ean:1', 3, 'UN'],
+      ['BANANA', locDelta('3'), 1.2, 'KG'],
+      ['BANANA', locDelta('3'), 2, 'UN'],
+    ]);
+    expect(itens.every((i) => i.origem === 'nota')).toBe(true);
+    expect(itensDaNota([], grupos)).toEqual([]);
+    const semQtd = itensDaNota(
+      [itemNota(5, 'OVO', { qtd: 0 }), itemNota(6, 'OVO', { produtoId: locDelta('5'), qtd: 0 })],
+      grupos,
+    );
+    expect(semQtd.map((i) => i.quantidade)).toEqual([null]);
   });
 });
 

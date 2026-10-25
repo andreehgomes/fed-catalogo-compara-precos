@@ -213,7 +213,15 @@
     </section>
 
     <section class="cp-block" aria-labelledby="itens-titulo">
-      <h2 id="itens-titulo" class="cp-section-title">Itens</h2>
+      <div class="cp-section-top">
+        <h2 id="itens-titulo" class="cp-section-title">Itens</h2>
+        @if (!selecionando()) {
+          <button type="button" class="cp-btn-secondary-compact" (click)="selecionarParaLista()">
+            <mat-icon aria-hidden="true">playlist_add</mat-icon>
+            Adicionar à lista
+          </button>
+        }
+      </div>
       @if (historico.hasValue()) {
         <div class="cp-segmented itens-filtro" role="group" aria-label="Filtrar itens">
           @for (f of filtros; track f.valor) {
@@ -227,9 +235,48 @@
           }
         </div>
       }
+      @if (selecionando()) {
+        <div class="itens-selecao" role="group" aria-label="Adicionar à lista">
+          <label class="itens-selecao-todos">
+            <input
+              type="checkbox"
+              class="itens-check"
+              [checked]="todosVisiveis().todos"
+              [indeterminate]="todosVisiveis().alguns && !todosVisiveis().todos"
+              (change)="alternarTodos()"
+            />
+            Todos
+          </label>
+          <span class="itens-selecao-contagem" role="status">
+            {{ escolhidos().length }} de {{ itensConsolidados().length }}
+            {{ itensConsolidados().length === 1 ? 'item' : 'itens' }}
+          </span>
+          <div class="itens-selecao-acoes">
+            <button type="button" class="cp-btn-ghost" (click)="cancelarSelecao()">Cancelar</button>
+            <button
+              type="button"
+              class="cp-btn-primary-compact"
+              [disabled]="!escolhidos().length || adicionando()"
+              (click)="adicionarNaLista()"
+            >
+              <mat-icon aria-hidden="true">playlist_add</mat-icon>
+              Adicionar {{ escolhidos().length }}
+            </button>
+          </div>
+        </div>
+      }
       <ul class="cp-list" aria-labelledby="itens-titulo">
         @for (item of itensVisiveis(); track item.n) {
           <li class="cp-list-row detalhe-item" [id]="'item-' + item.n" tabindex="-1">
+            @if (selecionando()) {
+              <input
+                type="checkbox"
+                class="itens-check"
+                [attr.aria-label]="item.descricao"
+                [checked]="selecionado(item.n)"
+                (change)="alternarItem(item.n)"
+              />
+            }
             <div class="item-principal">
               <a class="item-nome" [routerLink]="['/produtos', item.produtoId]">{{
                 item.descricao
