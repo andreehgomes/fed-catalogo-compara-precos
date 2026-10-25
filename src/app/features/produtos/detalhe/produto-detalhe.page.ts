@@ -11,6 +11,7 @@ import {
 import { MatDialog } from '@angular/material/dialog';
 import { MatIconModule } from '@angular/material/icon';
 import { MatSnackBar } from '@angular/material/snack-bar';
+import { MatTooltipModule } from '@angular/material/tooltip';
 import { RouterLink } from '@angular/router';
 import type { Estabelecimento, Produto } from '@shared/model';
 import { firstValueFrom } from 'rxjs';
@@ -49,6 +50,7 @@ interface DadosProduto {
     FontePrecoInfo,
     GraficoHistorico,
     MatIconModule,
+    MatTooltipModule,
     PrecosPerto,
     RouterLink,
   ],
@@ -111,6 +113,23 @@ export default class ProdutoDetalhePage {
     const canonico = v.produto.vinculadoA ?? v.produto.id;
     const produto = v.equivalentes.find((p) => p.id === canonico) ?? v.produto;
     await this.listas.adicionarEmLista([itemDoProduto(produto)]);
+  }
+
+  /** A correção vale para a base (D-09) e acerta as notas do usuário: o histórico relê. */
+  protected async corrigirNome(): Promise<void> {
+    const v = this.valor();
+    if (!v) return;
+    const { RenomearProdutoDialog } = await import('../renomear/renomear-produto-dialog');
+    const { id, descricao, nome } = v.produto;
+    const ref = this.dialog.open(RenomearProdutoDialog, {
+      data: { id, descricao, ...(nome ? { nome } : {}) },
+      maxWidth: '480px',
+      width: '95vw',
+    });
+    if (!(await firstValueFrom(ref.afterClosed()))) return;
+    this.historico.invalidar();
+    this.dados.reload();
+    this.snack.open('Nome atualizado.', 'OK', { duration: 3000 });
   }
 
   protected async vincular(): Promise<void> {

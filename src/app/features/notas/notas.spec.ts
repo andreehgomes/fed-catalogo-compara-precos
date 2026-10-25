@@ -432,6 +432,19 @@ describe('NotaDetalhePage', () => {
     expect(texto(el)).toContain('4126 0903 6445 8700');
   });
 
+  it('item com nome legível mostra o nome e a descrição da nota; sem nome, só a descrição', async () => {
+    const comNome = { ...NOTA, itens: [{ ...ITENS[0], nome: 'Coca-Cola 2 L' }, ITENS[1]] };
+    const { fixture, el } = montar(comNome);
+    await fixture.whenStable();
+    fixture.detectChanges();
+    expect(texto(el.querySelector('#item-1 a.item-nome'))).toBe('Coca-Cola 2 L');
+    expect(texto(el.querySelector('#item-1 .cp-descricao-original'))).toBe(
+      'Na nota: COCA COLA PET 2L',
+    );
+    expect(texto(el.querySelector('#item-2 a.item-nome'))).toBe('LEITE INTEGRAL 1L');
+    expect(el.querySelector('#item-2 .cp-descricao-original')).toBeNull();
+  });
+
   it('lançamentos repetidos do mesmo produto e preço aparecem numa linha só', async () => {
     const repetida = { ...NOTA, itens: [...ITENS, { ...ITENS[0], n: 3 }] };
     const { fixture, el } = montar(repetida);

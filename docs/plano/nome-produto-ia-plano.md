@@ -30,9 +30,12 @@ A NFC-e traz a descrição cortada em ~20 caracteres e cheia de abreviações ("
 | Blocos vistos em mais de um mercado | 1 de 90 (`COCA COLA\|0.2L`) |
 | Chamadas à IA | 1, em 01/10, **falhou**: log `etapa: vinculo, erro: ia-erro, custoUsd: 0`; `controle/iaVinculo_2026-10 = { chamadas: 1, custoUsd: 0 }` |
 
-Custo zero = a API recusou antes de cobrar tokens. Causa provável: a chave do secret
-`ANTHROPIC_API_KEY` sem crédito no Console da Anthropic (a assinatura Claude Pro não vale para a
-API). O log não diz o motivo porque `vincularNota` grava só `ia-erro`.
+Custo zero = a API recusou antes de cobrar tokens. O log não diz o motivo porque `vincularNota`
+gravava só `ia-erro` (corrigido na tarefa 2.1). Hipóteses: chave de uma organização do Console sem
+saldo, chave inválida ou erro passageiro. O plano **Max 5x do usuário inclui US$ 100/mês de
+créditos de API**, mas só na organização do Console **vinculada** em claude.ai → Configurações →
+Faturamento → "Créditos de API" (ver
+[créditos para assinantes](https://platform.claude.com/docs/pt-BR/about-claude/api-credits-for-subscribers)).
 
 ### O que será construído
 
@@ -53,7 +56,7 @@ os produtos que já existem.
 | D-02 | **Só o que falta:** lê `produtos/{produtoIdDe(…)}` dos itens; produto com `nome` empresta o nome ao item sem chamar a IA. Só os itens sem nome vão para a IA. Produto com `nomeOrigem: 'manual'` nunca é sobrescrito. |
 | D-03 | **Falha nunca derruba a importação** (igual ao CNPJ): sem resposta, o item fica sem `nome`, a tela mostra a descrição, as etiquetas voltam para a regra (`etiquetar`) e a próxima nota com o mesmo produto tenta de novo. Log `etapa: 'nome'` só com contagens e o motivo do erro. |
 | D-04 | **Saída da IA** por item: `{ i, nome, tipo, marca, variantes[], tamanho: { quantidade, unidade } \| null, granel }`, validada por zod. A IA recebe só as descrições, com números curtos, como no vínculo. O **tamanho da regex vence** quando a descrição tem um conteúdo legível (`extrairConteudo`) e a IA diz outro: a regex não alucina número. |
-| D-05 | **Etiquetas da IA no formato atual** (`Etiquetas` de `shared/etiquetas.ts`, com `origem: 'ia' \| 'regra'`), então `decidirPorEtiquetas` e `vincularNota` seguem iguais. Bloco: `MARCA\|tamanho` com marca e tamanho; **`GRANEL\|TIPO`** para item a granel sem marca; senão `null`. |
+| D-05 | **Etiquetas da IA no formato atual** (`Etiquetas` de `shared/etiquetas.ts`, com `origem: 'ia' \| 'regra'`), então `decidirPorEtiquetas` e `vincularNota` seguem iguais. Bloco: `MARCA\|tamanho` com marca e tamanho; a granel, **`MARCA\|GRANEL`** com marca (linguiça Siqueirense × Sadia não podem cair no mesmo bloco sem variante) ou **`GRANEL\|TIPO`** sem marca; senão `null`. |
 | D-06 | **Granel liga pela regra:** dois produtos a granel do mesmo tipo e **sem variante dos dois lados** ligam direto ("Cebola Kg" × "FEIRA CEBOLA KG"). Com variante de um lado ("cebola roxa"), segue a regra atual (dúvida → IA do vínculo). |
 | D-07 | **Sem trava de custo** (decisão do usuário, uso só dele): sai a checagem de `IA_TETO_MENSAL_USD` em `vincularNota`. O gasto continua registrado, agora em `controle/ia_AAAA-MM` com `{ custoUsd, chamadas, porEtapa: { nome, vinculo } }`, para acompanhar. |
 | D-08 | **Motivo do erro no log:** `erroIa(e)` traduz o erro do SDK em `ia-<status>` (`ia-400`, `ia-401`, `ia-429`, `ia-529`), `ia-timeout` ou `ia-conexao`, mais o `tipo` da API (`authentication_error`, `invalid_request_error`…). Nunca a chave, a mensagem livre nem as descrições. Vale para o vínculo e para o nome. |
@@ -85,8 +88,11 @@ os produtos que já existem.
 
 ## Pré-condições
 
-1. **Crédito na API da Anthropic** para a chave do secret `ANTHROPIC_API_KEY` do dv
-   (console.anthropic.com → Billing). Sem isso tudo funciona, mas sem nome e sem IA no vínculo.
+1. **Saldo na organização da chave:** a chave do secret `ANTHROPIC_API_KEY` precisa ser de uma
+   organização do Console com saldo — a vinculada ao plano Max (créditos mensais em
+   platform.claude.com/settings/billing → "Promotional credits") ou com créditos comprados. Sem
+   saldo a API responde `ia-400` (`invalid_request_error`, "credit balance is too low"); tudo
+   funciona, mas sem nome e sem IA no vínculo.
 2. **Deploy pelo usuário:** `npm run deploy:functions:dev` depois das fases 2 a 4.
 3. ADC local (`gcloud auth application-default login`, já feito em 24/10) para o script da fase 6.
 
@@ -121,7 +127,7 @@ os produtos que já existem.
 - `etiquetasDaIa(r: NomeIa, descricao: string): Etiquetas` (D-04/D-05): marca e tipo em
   maiúsculas sem acento (`semAcento`, como a regra), variantes pelo `sinonimo` da regra,
   tamanho no formato de `formatarTamanho` (`0.5L`, `1kg`), com a regex vencendo quando
-  `extrairConteudo(descricao)` acha outro valor; bloco `MARCA|tamanho`, `GRANEL|TIPO` ou `null`;
+  `extrairConteudo(descricao)` acha outro valor; bloco `MARCA|tamanho`, `MARCA|GRANEL`, `GRANEL|TIPO` ou `null`;
   `origem: 'ia'`.
 - Exportar de `shared/etiquetas.ts` o que for preciso (`sinonimo` e `formatarTamanho`, hoje
   privados), sem duplicar.
@@ -146,7 +152,7 @@ export interface NomeIa {
 **Arquivo(s) a modificar:** `shared/etiquetas.ts`, `functions/test/etiquetas-gabarito.spec.ts`
 (ou spec própria em `shared/`)
 
-**O que fazer:** D-06. Quando o alvo e o único candidato `igual` são do mesmo bloco `GRANEL|…` e
+**O que fazer:** D-06. Quando o alvo e o único candidato `igual` são do mesmo bloco a granel (`MARCA|GRANEL` ou `GRANEL|TIPO`) e
 nenhum dos dois tem variante, devolver `ligar`. O `Candidato` passa a levar o `bloco` (ou um
 `granel: boolean`) para a regra saber. Os outros casos não mudam.
 
@@ -383,7 +389,7 @@ prévia confere o nome legível (`getByText`) e a descrição original.
 **Arquivo(s) a modificar:** `docs/qualidade/functions-dv-checklist.md`, `CLAUDE.md`
 
 **O que fazer:**
-- Checklist: crédito na Anthropic; secret nas functions novas; importar uma nota e ver os nomes na
+- Checklist: organização da chave vinculada ao Max e com saldo; secret nas functions novas; importar uma nota e ver os nomes na
   prévia; conferir `controle/ia_AAAA-MM`; forçar erro (chave inválida num projeto de teste não é
   necessário: basta conferir o log de uma falha real) e ver `ia-<status>`; renomear um produto e
   reimportar.

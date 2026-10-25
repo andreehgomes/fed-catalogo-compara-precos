@@ -280,6 +280,9 @@ describe('itens de outras telas', () => {
       origem: 'nota',
     });
     expect(itemDaNota(itemNota(2, 'X', { unidade: ' ' }), 'g').unidade).toBeNull();
+    expect(
+      itemDaNota(itemNota(3, 'DET YPE 500ML', { nome: 'Detergente Ypê 500 ml' }), 'g').texto,
+    ).toBe('Detergente Ypê 500 ml');
   });
 
   it('da nota (vários): pelo grupo; o mesmo grupo na mesma unidade soma, em outra unidade não', () => {
@@ -415,6 +418,20 @@ describe('autocompletar', () => {
     expect(autocompletar('deter', indice).map((s) => s.descricao)).toEqual([
       'DETERGENTE LIQUIDO 1L',
     ]);
+  });
+
+  it('com nome legível casa e mostra pelo nome, sem perder a descrição', () => {
+    const comNome = new Map(
+      [...indice].map(([g, cs]) => [
+        g,
+        g === LEITE ? cs.map((c) => ({ ...c, nome: 'Leite Integral Parmalat 1 L' })) : cs,
+      ]),
+    );
+    expect(autocompletar('parmalat', comNome)[0]).toMatchObject({
+      grupo: LEITE,
+      descricao: 'Leite Integral Parmalat 1 L',
+    });
+    expect(autocompletar('leite', comNome)[0].grupo).toBe(LEITE);
   });
 
   it('texto curto, só medida ou sem nada parecido: nada', () => {

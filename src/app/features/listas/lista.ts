@@ -11,6 +11,7 @@ import type {
   VinculoItemLista,
 } from '@shared/model';
 import { normalizarDescricao, tokensSemMedida } from '@shared/normalizar';
+import { nomeDoItem } from '@shared/nome-produto';
 import { jaccard } from '@shared/similaridade';
 import {
   CompraPessoal,
@@ -227,9 +228,11 @@ export function itensDaSugestao(selecionados: readonly ItemDaLista[]): ItemNovo[
   }));
 }
 
-export function itemDoProduto(produto: Pick<Produto, 'id' | 'descricao' | 'vinculadoA'>): ItemNovo {
+export function itemDoProduto(
+  produto: Pick<Produto, 'id' | 'descricao' | 'nome' | 'vinculadoA'>,
+): ItemNovo {
   return {
-    texto: limparTexto(produto.descricao),
+    texto: limparTexto(nomeDoItem(produto)),
     grupo: produto.vinculadoA ?? produto.id,
     quantidade: null,
     unidade: null,
@@ -242,7 +245,7 @@ export function itemDoProduto(produto: Pick<Produto, 'id' | 'descricao' | 'vincu
 export function itemDoHistorico(grupo: string, compras: readonly CompraPessoal[]): ItemNovo {
   const q = quantidadeSugerida(ocasioes(compras));
   return {
-    texto: limparTexto(compras[0].descricao),
+    texto: limparTexto(nomeDoItem(compras[0])),
     grupo,
     quantidade: limitarQuantidade(q.valor),
     unidade: q.unidade,
@@ -253,7 +256,7 @@ export function itemDoHistorico(grupo: string, compras: readonly CompraPessoal[]
 
 export function itemDaNota(item: ItemNota, grupo: string): ItemNovo {
   return {
-    texto: limparTexto(item.descricao),
+    texto: limparTexto(nomeDoItem(item)),
     grupo,
     quantidade: limitarQuantidade(item.qtd),
     unidade: unidadeNormalizada(item.unidade).slice(0, 10) || null,
@@ -391,7 +394,11 @@ export function autocompletar(
   const achados: { grupo: string; compras: readonly CompraPessoal[]; score: number }[] = [];
   for (const [grupo, compras] of indice) {
     if (!compras.length) continue;
-    const score = semelhancaPorPrefixo(digitados, tokensSemMedida(compras[0].descricao));
+    const { descricao, nome } = compras[0];
+    const score = Math.max(
+      semelhancaPorPrefixo(digitados, tokensSemMedida(descricao)),
+      nome ? semelhancaPorPrefixo(digitados, tokensSemMedida(nome)) : 0,
+    );
     if (score > 0) achados.push({ grupo, compras, score });
   }
   return achados
@@ -399,12 +406,12 @@ export function autocompletar(
       (a, b) =>
         b.score - a.score ||
         b.compras.length - a.compras.length ||
-        a.compras[0].descricao.localeCompare(b.compras[0].descricao),
+        nomeDoItem(a.compras[0]).localeCompare(nomeDoItem(b.compras[0])),
     )
     .slice(0, SUGESTOES_AUTOCOMPLETAR)
     .map(({ grupo, compras }) => ({
       grupo,
-      descricao: compras[0].descricao,
+      descricao: nomeDoItem(compras[0]),
       quantidade: quantidadeSugerida(ocasioes(compras)),
     }));
 }
@@ -579,7 +586,7 @@ export function vinculoDe(
     chave: nota.chave,
     n: par.nota.n,
     produtoId: par.nota.produtoId,
-    descricao: par.nota.descricao.slice(0, 200),
+    descricao: nomeDoItem(par.nota).slice(0, 200),
     qtd: par.nota.qtd,
     unidade: par.nota.unidade.slice(0, 10),
     vlTotal: par.nota.vlTotal,

@@ -109,9 +109,33 @@ describe('decidirPorEtiquetas', () => {
   });
 
   it('igual com dúvida, vários iguais ou sem variante → IA, sem os conflitos', () => {
-    expect(decidirPorEtiquetas(alvo(['COCO']), [c('a', ['COCO']), c('b', []), c('x', ['LIMAO'])]))
-      .toEqual({ tipo: 'ia', candidatos: [c('a', ['COCO']), c('b', [])] });
-    expect(decidirPorEtiquetas(alvo([]), [c('a', [])])).toEqual({ tipo: 'ia', candidatos: [c('a', [])] });
+    expect(
+      decidirPorEtiquetas(alvo(['COCO']), [c('a', ['COCO']), c('b', []), c('x', ['LIMAO'])]),
+    ).toEqual({ tipo: 'ia', candidatos: [c('a', ['COCO']), c('b', [])] });
+    expect(decidirPorEtiquetas(alvo([]), [c('a', [])])).toEqual({
+      tipo: 'ia',
+      candidatos: [c('a', [])],
+    });
+  });
+
+  it('a granel do mesmo bloco e sem variante dos dois lados → ligar; com variante → IA', () => {
+    const granel = (id: string, variantes: string[], bloco = 'GRANEL|CEBOLA'): Candidato => ({
+      ...c(id, variantes),
+      bloco,
+    });
+    const cebola = { tipo: 'CEBOLA', variantes: [], bloco: 'GRANEL|CEBOLA' };
+    expect(decidirPorEtiquetas(cebola, [granel('a', [])])).toEqual({ tipo: 'ligar', id: 'a' });
+    expect(decidirPorEtiquetas(cebola, [granel('a', ['ROXA'])])).toEqual({
+      tipo: 'ia',
+      candidatos: [granel('a', ['ROXA'])],
+    });
+    expect(decidirPorEtiquetas(cebola, [granel('a', [], 'GRANEL|ALHO')])).toEqual({
+      tipo: 'ia',
+      candidatos: [granel('a', [], 'GRANEL|ALHO')],
+    });
+    expect(
+      decidirPorEtiquetas({ ...cebola, bloco: 'YPE|0.5L' }, [granel('a', [], 'YPE|0.5L')]),
+    ).toEqual({ tipo: 'ia', candidatos: [granel('a', [], 'YPE|0.5L')] });
   });
 
   it('Coca Cola 2L Zero com e sem "REFR" liga pela regra', () => {

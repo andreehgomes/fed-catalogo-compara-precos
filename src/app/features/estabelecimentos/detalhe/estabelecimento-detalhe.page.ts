@@ -65,7 +65,9 @@ import { EstabelecimentosService } from '../data-access/estabelecimentos.service
                 <li>
                   <a class="cp-list-row" [routerLink]="['/produtos', p.produtoId]">
                     <span class="item-principal">
-                      <span class="item-nome">{{ p.produto?.descricao ?? p.produtoId }}</span>
+                      <span class="item-nome">{{
+                        p.produto?.nome || p.produto?.descricao || p.produtoId
+                      }}</span>
                       <cp-fonte-preco fonte="comunidade" [data]="p.preco.emissao" />
                     </span>
                     <span class="item-lado">

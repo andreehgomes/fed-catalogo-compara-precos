@@ -9,9 +9,12 @@ export interface Etiquetas {
   variantes: string[];
   /**
    * `marca|tamanho`; null se faltar um dos dois (o item não é comparado). O tipo fica fora:
-   * muito mercado cadastra sem ele ("COCA COLA 2L ZERO").
+   * muito mercado cadastra sem ele ("COCA COLA 2L ZERO"). Das etiquetas da IA também saem
+   * `MARCA|GRANEL` e `GRANEL|TIPO` (`shared/nome-produto.ts`).
    */
   bloco: string | null;
+  /** Ausente = regra (`etiquetar`), como nos produtos gravados antes da IA. */
+  origem?: 'ia' | 'regra';
 }
 
 export type Relacao = 'igual' | 'conflito' | 'duvida';
@@ -21,14 +24,20 @@ export interface Candidato {
   descricao: string;
   tipo: string | null;
   variantes: string[];
+  bloco?: string | null;
 }
 
-export type AlvoEtiquetas = Pick<Etiquetas, 'tipo' | 'variantes'>;
+export type AlvoEtiquetas = Pick<Etiquetas, 'tipo' | 'variantes'> & { bloco?: string | null };
+
+/** Marca do bloco de quem é vendido a granel: `MARCA|GRANEL` ou `GRANEL|TIPO`. */
+export const GRANEL = 'GRANEL';
+
+function ehGranel(bloco: string | null | undefined): boolean {
+  return !!bloco?.split('|').includes(GRANEL);
+}
 
 export type DecisaoEtiquetas =
-  | { tipo: 'ligar'; id: string }
-  | { tipo: 'nenhum' }
-  | { tipo: 'ia'; candidatos: Candidato[] };
+  { tipo: 'ligar'; id: string } | { tipo: 'nenhum' } | { tipo: 'ia'; candidatos: Candidato[] };
 
 export const MAX_CANDIDATOS_IA = 5;
 
@@ -136,28 +145,167 @@ const ABREV_TIPO: Readonly<Record<string, string>> = {
 };
 
 export const TIPOS: ReadonlySet<string> = new Set([
-  'ABSORVENTE', 'ACHOCOLATADO', 'ACUCAR', 'ADOCANTE', 'AGUA', 'AGUA SANITARIA', 'ALHO',
-  'ALVEJANTE', 'AMACIANTE', 'AMENDOIM', 'ARROZ', 'ATUM', 'AVEIA', 'AZEITE', 'AZEITONA',
-  'BALA', 'BANANINHA', 'BARRA', 'BATATA', 'BEBIDA', 'BISCOITO', 'BOLACHA', 'BOLO',
-  'BROCOLIS', 'BUCHA', 'CACAU', 'CAFE', 'CALDO', 'CANELA', 'CAPPUCCINO', 'CARNE', 'CATCHUP',
-  'CENOURA', 'CERA', 'CEREAL', 'CERVEJA', 'CHA', 'CHICLETE', 'CHOCOLATE', 'CODORNA',
-  'COLORAU', 'CONDICIONADOR', 'CREME', 'CREME DENTAL', 'CREME LEITE', 'CREMOSO',
-  'DESINFETANTE', 'DESODORANTE', 'DETERGENTE', 'DOCE', 'DOCE LEITE', 'ENERGETICO',
-  'ENXAGUANTE', 'ERVILHA', 'ESPONJA', 'EXTRATO', 'FARINHA', 'FAROFA', 'FEIJAO', 'FERMENTO',
-  'FILE', 'FILTRO', 'FILTRO PAPEL', 'FLOCAO', 'FOSFORO', 'FRALDA', 'FRANGO', 'FUBA',
-  'GEL DENTAL', 'GELATINA', 'GELEIA', 'GORDURA', 'GRANOLA', 'GUARANA', 'HAMBURGUER',
-  'HASTE', 'INSETICIDA', 'IOGURTE', 'ISQUEIRO', 'LAMPADA', 'LASANHA', 'LAVA ROUPAS',
-  'LEITE', 'LEITE CONDENSADO', 'LEITE PO', 'LENCO', 'LIMPADOR', 'LIMPADOR CASA', 'LINGUICA',
-  'LUSTRA MOVEIS', 'MACARRAO', 'MACARRAO INSTANTANEO', 'MAIONESE', 'MANTEIGA', 'MARGARINA',
-  'MASSA', 'MILHO', 'MISTURA', 'MOLHO', 'MORTADELA', 'MOSTARDA', 'NECTAR', 'OLEO',
-  'OLEO SOJA', 'ODORIZADOR', 'OVOS', 'PALMITO', 'PANO', 'PAO', 'PAPEL ALUMINIO',
-  'PAPEL HIGIENICO', 'PAPEL TOALHA', 'PAPRICA', 'PASSATA', 'PEITO', 'PILHA', 'PIPOCA',
-  'PIMENTA', 'PIZZA', 'POLPA', 'PRESUNTO', 'PUDIM', 'QUEIJO', 'REFRESCO', 'REFRIGERANTE',
-  'REPOLHO', 'REQUEIJAO', 'SABAO', 'SABAO BARRA', 'SABAO PO', 'SABONETE', 'SACO', 'SAL',
-  'SALGADINHO', 'SALSICHA', 'SAPOLIO', 'SARDINHA', 'SHAMPOO', 'SOPA', 'SORVETE', 'SUCO',
-  'TAPIOCA', 'TEMPERO', 'TORRADA', 'TRAVESSA', 'TIGELA', 'VINAGRE', 'VINHO', 'WAFER',
-  'ESCOVA', 'ESCOVA DENTAL', 'FIO DENTAL', 'COTONETE', 'GUARDANAPO', 'COPO',
-  'VELA', 'CARVAO', 'RACAO', 'LEITE FERMENTADO', 'BEBIDA LACTEA', 'COCO RALADO',
+  'ABSORVENTE',
+  'ACHOCOLATADO',
+  'ACUCAR',
+  'ADOCANTE',
+  'AGUA',
+  'AGUA SANITARIA',
+  'ALHO',
+  'ALVEJANTE',
+  'AMACIANTE',
+  'AMENDOIM',
+  'ARROZ',
+  'ATUM',
+  'AVEIA',
+  'AZEITE',
+  'AZEITONA',
+  'BALA',
+  'BANANINHA',
+  'BARRA',
+  'BATATA',
+  'BEBIDA',
+  'BISCOITO',
+  'BOLACHA',
+  'BOLO',
+  'BROCOLIS',
+  'BUCHA',
+  'CACAU',
+  'CAFE',
+  'CALDO',
+  'CANELA',
+  'CAPPUCCINO',
+  'CARNE',
+  'CATCHUP',
+  'CENOURA',
+  'CERA',
+  'CEREAL',
+  'CERVEJA',
+  'CHA',
+  'CHICLETE',
+  'CHOCOLATE',
+  'CODORNA',
+  'COLORAU',
+  'CONDICIONADOR',
+  'CREME',
+  'CREME DENTAL',
+  'CREME LEITE',
+  'CREMOSO',
+  'DESINFETANTE',
+  'DESODORANTE',
+  'DETERGENTE',
+  'DOCE',
+  'DOCE LEITE',
+  'ENERGETICO',
+  'ENXAGUANTE',
+  'ERVILHA',
+  'ESPONJA',
+  'EXTRATO',
+  'FARINHA',
+  'FAROFA',
+  'FEIJAO',
+  'FERMENTO',
+  'FILE',
+  'FILTRO',
+  'FILTRO PAPEL',
+  'FLOCAO',
+  'FOSFORO',
+  'FRALDA',
+  'FRANGO',
+  'FUBA',
+  'GEL DENTAL',
+  'GELATINA',
+  'GELEIA',
+  'GORDURA',
+  'GRANOLA',
+  'GUARANA',
+  'HAMBURGUER',
+  'HASTE',
+  'INSETICIDA',
+  'IOGURTE',
+  'ISQUEIRO',
+  'LAMPADA',
+  'LASANHA',
+  'LAVA ROUPAS',
+  'LEITE',
+  'LEITE CONDENSADO',
+  'LEITE PO',
+  'LENCO',
+  'LIMPADOR',
+  'LIMPADOR CASA',
+  'LINGUICA',
+  'LUSTRA MOVEIS',
+  'MACARRAO',
+  'MACARRAO INSTANTANEO',
+  'MAIONESE',
+  'MANTEIGA',
+  'MARGARINA',
+  'MASSA',
+  'MILHO',
+  'MISTURA',
+  'MOLHO',
+  'MORTADELA',
+  'MOSTARDA',
+  'NECTAR',
+  'OLEO',
+  'OLEO SOJA',
+  'ODORIZADOR',
+  'OVOS',
+  'PALMITO',
+  'PANO',
+  'PAO',
+  'PAPEL ALUMINIO',
+  'PAPEL HIGIENICO',
+  'PAPEL TOALHA',
+  'PAPRICA',
+  'PASSATA',
+  'PEITO',
+  'PILHA',
+  'PIPOCA',
+  'PIMENTA',
+  'PIZZA',
+  'POLPA',
+  'PRESUNTO',
+  'PUDIM',
+  'QUEIJO',
+  'REFRESCO',
+  'REFRIGERANTE',
+  'REPOLHO',
+  'REQUEIJAO',
+  'SABAO',
+  'SABAO BARRA',
+  'SABAO PO',
+  'SABONETE',
+  'SACO',
+  'SAL',
+  'SALGADINHO',
+  'SALSICHA',
+  'SAPOLIO',
+  'SARDINHA',
+  'SHAMPOO',
+  'SOPA',
+  'SORVETE',
+  'SUCO',
+  'TAPIOCA',
+  'TEMPERO',
+  'TORRADA',
+  'TRAVESSA',
+  'TIGELA',
+  'VINAGRE',
+  'VINHO',
+  'WAFER',
+  'ESCOVA',
+  'ESCOVA DENTAL',
+  'FIO DENTAL',
+  'COTONETE',
+  'GUARDANAPO',
+  'COPO',
+  'VELA',
+  'CARVAO',
+  'RACAO',
+  'LEITE FERMENTADO',
+  'BEBIDA LACTEA',
+  'COCO RALADO',
 ]);
 
 /** Sinônimos e abreviações de variante: a mesma variante escrita de vários jeitos. */
@@ -210,22 +358,111 @@ const SINONIMOS: Readonly<Record<string, string>> = {
 
 /** Variantes e descrições comuns que nunca são marca (a marca é a 1ª palavra fora delas). */
 const VARIANTES_CONHECIDAS: ReadonlySet<string> = new Set([
-  'TRADICIONAL', 'DESNATADO', 'INTEGRAL', 'SEMIDESNATADO', 'ZERO', 'ZEROLACTOSE', 'LIGHT',
-  'DIET', 'SEMGAS', 'COMGAS', 'SEMACUCAR', 'SEMGLUTEN', 'EXTRAFORTE', 'LAVANDA', 'COCO',
-  'LIMAO', 'LARANJA', 'UVA', 'MORANGO', 'CHOCOLATE', 'BAUNILHA', 'NEUTRO',
-  'ORIGINAL', 'FORMA', 'FORNO', 'CARIOCA', 'PRETO', 'BRANCO', 'VERDE', 'VERMELHO',
-  'CAVALO', 'OURO', 'VACUO', 'ALMOFADA', 'LATA', 'PET', 'PACOTE', 'SACHE', 'POUCH', 'CAIXA',
-  'GARRAFA', 'RETORNAVEL', 'REFIL', 'KIT', 'PACK', 'DEFUMADA', 'DOCE', 'PICANTE', 'MENTA',
-  'HORTELA', 'TRIPLE', 'MUSSARELA', 'PRATO', 'PO', 'LIQUIDO', 'CREMOSO', 'CREMOSA',
-  'MINERAL', 'FLORES', 'PINHO', 'CAMPESTRE', 'LEVE', 'MOIDO', 'GRAOS',
-  'FATIADO', 'RALADO', 'SUAVE', 'FORTE', 'AMERICANO', 'FRANCES', 'SOJA',
+  'TRADICIONAL',
+  'DESNATADO',
+  'INTEGRAL',
+  'SEMIDESNATADO',
+  'ZERO',
+  'ZEROLACTOSE',
+  'LIGHT',
+  'DIET',
+  'SEMGAS',
+  'COMGAS',
+  'SEMACUCAR',
+  'SEMGLUTEN',
+  'EXTRAFORTE',
+  'LAVANDA',
+  'COCO',
+  'LIMAO',
+  'LARANJA',
+  'UVA',
+  'MORANGO',
+  'CHOCOLATE',
+  'BAUNILHA',
+  'NEUTRO',
+  'ORIGINAL',
+  'FORMA',
+  'FORNO',
+  'CARIOCA',
+  'PRETO',
+  'BRANCO',
+  'VERDE',
+  'VERMELHO',
+  'CAVALO',
+  'OURO',
+  'VACUO',
+  'ALMOFADA',
+  'LATA',
+  'PET',
+  'PACOTE',
+  'SACHE',
+  'POUCH',
+  'CAIXA',
+  'GARRAFA',
+  'RETORNAVEL',
+  'REFIL',
+  'KIT',
+  'PACK',
+  'DEFUMADA',
+  'DOCE',
+  'PICANTE',
+  'MENTA',
+  'HORTELA',
+  'TRIPLE',
+  'MUSSARELA',
+  'PRATO',
+  'PO',
+  'LIQUIDO',
+  'CREMOSO',
+  'CREMOSA',
+  'MINERAL',
+  'FLORES',
+  'PINHO',
+  'CAMPESTRE',
+  'LEVE',
+  'MOIDO',
+  'GRAOS',
+  'FATIADO',
+  'RALADO',
+  'SUAVE',
+  'FORTE',
+  'AMERICANO',
+  'FRANCES',
+  'SOJA',
 ]);
 
 /** Palavras que não distinguem o produto: somem das variantes. */
 const NEUTROS: ReadonlySet<string> = new Set([
-  'UHT', 'LONGA', 'VIDA', 'LON', 'VID', 'MIN', 'COD', 'NR', 'NO', 'UN', 'UND', 'UNID', 'L',
-  'ML', 'G', 'GR', 'GRS', 'KG', 'KGS', 'LTS', 'LT', 'M', 'CM', 'LITRO', 'LITROS', 'UNIDADES',
-  'NA', 'AO', 'SEM', 'TIPO',
+  'UHT',
+  'LONGA',
+  'VIDA',
+  'LON',
+  'VID',
+  'MIN',
+  'COD',
+  'NR',
+  'NO',
+  'UN',
+  'UND',
+  'UNID',
+  'L',
+  'ML',
+  'G',
+  'GR',
+  'GRS',
+  'KG',
+  'KGS',
+  'LTS',
+  'LT',
+  'M',
+  'CM',
+  'LITRO',
+  'LITROS',
+  'UNIDADES',
+  'NA',
+  'AO',
+  'SEM',
+  'TIPO',
 ]);
 
 const RE_DIGITO = /\d/;
@@ -242,7 +479,7 @@ function tokensBrutos(descricao: string): string[] {
 
 function juntar(ts: string[], regras: readonly (readonly [string, string])[]): string[] {
   const saida: string[] = [];
-  for (let i = 0; i < ts.length; ) {
+  for (let i = 0; i < ts.length;) {
     const regra = regras.find(([de]) => {
       const partes = de.split(' ');
       return partes.every((p, k) => ts[i + k] === p);
@@ -258,7 +495,7 @@ function juntar(ts: string[], regras: readonly (readonly [string, string])[]): s
   return saida;
 }
 
-function sinonimo(t: string): string {
+export function sinonimo(t: string): string {
   return SINONIMOS[t] ?? ABREVIACOES[t] ?? t;
 }
 
@@ -269,7 +506,7 @@ function ehMedida(t: string): boolean {
 /** A NFC-e perde a vírgula de "1,5L": "1 5L" viraria 5 L e juntaria 1,5 L com 2,5 L. */
 const DECIMAL_SEM_VIRGULA = /(?<![\d.,])(\d) (\d)\s*(L|LT|LTS|KG)(?![A-Z])/i;
 
-function formatarTamanho(descricao: string): string | null {
+export function formatarTamanho(descricao: string): string | null {
   const c = extrairConteudo(descricao.replace(DECIMAL_SEM_VIRGULA, '$1.$2$3'));
   return c ? `${c.quantidade}${c.unidadeBase}` : null;
 }
@@ -285,11 +522,7 @@ export function etiquetar(descricao: string): Etiquetas {
   const tipo = iTipo >= 0 ? ts[iTipo] : null;
   const resto = ts.filter((_, i) => i !== iTipo);
   const iMarca = resto.findIndex(
-    (t) =>
-      t.length >= 2 &&
-      !ehMedida(t) &&
-      !TIPOS.has(t) &&
-      !VARIANTES_CONHECIDAS.has(sinonimo(t)),
+    (t) => t.length >= 2 && !ehMedida(t) && !TIPOS.has(t) && !VARIANTES_CONHECIDAS.has(sinonimo(t)),
   );
   const marca = iMarca >= 0 ? resto[iMarca] : null;
   const variantes = [
@@ -332,7 +565,8 @@ export function compararVariantes(a: readonly string[], b: readonly string[]): R
  * Regra grátis antes da IA. Liga só quando há exatamente um candidato com as mesmas
  * variantes e nenhum em dúvida; conflito claro descarta; o resto vai para a IA. Sem
  * variante nenhuma não liga: a mesma loja vende produtos diferentes como "GEL D CLOSE UP
- * 90G" (gabarito), e a descrição não diz qual.
+ * 90G" (gabarito), e a descrição não diz qual. A granel é a exceção: "Cebola Kg" e "FEIRA
+ * CEBOLA KG", do mesmo bloco e sem variante dos dois lados, são o mesmo produto.
  */
 /** Tipos diferentes dos dois lados são produtos diferentes; tipo faltando não decide. */
 export function compararEtiquetas(a: AlvoEtiquetas, b: AlvoEtiquetas): Relacao {
@@ -349,7 +583,8 @@ export function decidirPorEtiquetas(
   const comRelacao = candidatos.map((c) => ({ c, r: compararEtiquetas(alvo, c) }));
   const iguais = comRelacao.filter((x) => x.r === 'igual');
   const duvidas = comRelacao.filter((x) => x.r === 'duvida');
-  if (iguais.length === 1 && !duvidas.length && variantes.length)
+  const granel = ehGranel(alvo.bloco) && iguais[0]?.c.bloco === alvo.bloco;
+  if (iguais.length === 1 && !duvidas.length && (variantes.length || granel))
     return { tipo: 'ligar', id: iguais[0].c.id };
   if (!iguais.length && !duvidas.length) return { tipo: 'nenhum' };
   const ordenados = [...iguais, ...duvidas]

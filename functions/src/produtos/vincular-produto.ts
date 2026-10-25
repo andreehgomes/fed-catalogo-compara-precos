@@ -19,7 +19,7 @@ export const MAX_SALTOS = 10;
 
 const ID_VALIDO = /^(ean:\d{8,14}|loc:\d{14}:[A-Z0-9._-]+)$/;
 
-function idValido(id: unknown): id is ProdutoId {
+export function idValido(id: unknown): id is ProdutoId {
   return typeof id === 'string' && ID_VALIDO.test(id);
 }
 

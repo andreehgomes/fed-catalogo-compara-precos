@@ -1,12 +1,21 @@
 import type { NfceParsed } from '@shared/model';
 import { completarEmitente } from '../cnpj/completar-emitente';
+import { nomearItens } from '../nome/nomear-itens';
 import type { UrlValidada } from './allowlist';
 import { classificarResposta } from './classificar-resposta';
 import type { Contexto } from './contexto';
 import { ErroNegocio, LayoutInesperadoError } from './erros';
 
-/** Busca a página, classifica pelo conteúdo e interpreta. Lança `ErroNegocio` com o código. */
-export async function obterNotaDaSefaz(ctx: Contexto, alvo: UrlValidada): Promise<NfceParsed> {
+/**
+ * Busca a página, classifica pelo conteúdo e interpreta. Lança `ErroNegocio` com o código.
+ * Nome fantasia e nome legível dos itens em paralelo; `nomear: false` quando só o emitente
+ * interessa (reimportação).
+ */
+export async function obterNotaDaSefaz(
+  ctx: Contexto,
+  alvo: UrlValidada,
+  opcoes: { nomear?: boolean } = {},
+): Promise<NfceParsed> {
   const adaptador = ctx.adaptador(alvo.qr.uf);
   const resposta = await ctx.buscar(alvo.url);
   const classe = classificarResposta({
@@ -29,5 +38,9 @@ export async function obterNotaDaSefaz(ctx: Contexto, alvo: UrlValidada): Promis
   }
   if (nota.chave !== alvo.qr.chave)
     throw new LayoutInesperadoError('Chave da página difere da URL');
-  return { ...nota, emitente: await completarEmitente(ctx, nota.emitente) };
+  const [emitente, nomeada] = await Promise.all([
+    completarEmitente(ctx, nota.emitente),
+    opcoes.nomear === false ? nota : nomearItens(ctx, nota),
+  ]);
+  return { ...nomeada, emitente };
 }

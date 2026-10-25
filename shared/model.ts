@@ -34,6 +34,10 @@ export interface ItemNfce {
   unidade: string;
   vlUnit: number;
   vlTotal: number;
+  /** Nome legível dado pela IA (ou corrigido pelo usuário); ausente se a IA não respondeu. */
+  nome?: string;
+  /** Etiquetas da IA, só entre a prévia e a gravação nas Functions (nunca na nota nem no cliente). */
+  etiquetas?: Etiquetas;
 }
 
 export interface Emitente {
@@ -164,6 +168,10 @@ export interface Produto {
   bloco?: string | null;
   /** Produtos que a IA achou possíveis mas não soube escolher (até 3). */
   candidatosVinculo?: ProdutoId[];
+  /** Nome legível da descrição abreviada da NFC-e. */
+  nome?: string;
+  /** `manual` (corrigido pelo usuário) nunca é sobrescrito pela IA. */
+  nomeOrigem?: 'ia' | 'manual';
 }
 
 export type StatusLista = 'aberta' | 'aguardando-nota';
@@ -265,6 +273,18 @@ export type ConfirmarResposta = { ok: true; chave: string } | { ok: false; erro:
 
 export type EnfileirarResposta =
   { ok: true; chave: string; proximaTentativa: DataIso } | { ok: false; erro: ErroImportacao };
+
+export interface RenomearProdutoEntrada {
+  id?: string;
+  nome?: string;
+}
+
+export type CodigoErroRenomear =
+  'produto-invalido' | 'produto-inexistente' | 'nome-invalido' | 'rate-limit';
+
+export type RenomearProdutoResposta =
+  | { ok: true; nome: string; notasAtualizadas: number }
+  | { ok: false; erro: { codigo: CodigoErroRenomear } };
 
 export interface DefinirApelidoEntrada {
   cnpj?: string;

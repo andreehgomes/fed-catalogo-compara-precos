@@ -42,7 +42,7 @@ export async function atualizarNaReimportacao(
 
     const emitente =
       falta === 'sefaz' || !estab
-        ? (await obterNotaDaSefaz(ctx, alvo)).emitente
+        ? (await obterNotaDaSefaz(ctx, alvo, { nomear: false })).emitente
         : await completarEmitente(ctx, {
             cnpj,
             nome: estab.nome,

@@ -34,12 +34,7 @@
     }
   </section>
 
-  <section
-    #topoLista
-    class="cp-block"
-    aria-live="polite"
-    [attr.aria-busy]="lista().isLoading()"
-  >
+  <section #topoLista class="cp-block" aria-live="polite" [attr.aria-busy]="lista().isLoading()">
     <h2 class="cp-section-title">{{ consulta() ? 'Resultados' : 'Todos os produtos' }}</h2>
 
     @if (lista().isLoading()) {
@@ -47,7 +42,9 @@
     } @else if (lista().error()) {
       <cp-empty-state
         icone="cloud_off"
-        [titulo]="consulta() ? 'Não foi possível buscar agora' : 'Não foi possível carregar os produtos'"
+        [titulo]="
+          consulta() ? 'Não foi possível buscar agora' : 'Não foi possível carregar os produtos'
+        "
       />
     } @else if (itens().length) {
       <ul class="cp-list" [attr.aria-label]="consulta() ? 'Produtos encontrados' : 'Produtos'">
@@ -55,7 +52,7 @@
           <li>
             <a class="cp-list-row" [routerLink]="['/produtos', p.id]">
               <div class="item-principal">
-                <span class="item-nome">{{ p.descricao }}</span>
+                <span class="item-nome">{{ p.nome || p.descricao }}</span>
                 <span class="item-detalhe">
                   @if (p.ean) {
                     EAN {{ p.ean }} ·
@@ -77,20 +74,12 @@
 
       @if (!consulta() && (pagina() > 0 || temProxima())) {
         <nav class="cp-pagination" aria-label="Páginas de produtos">
-          <button
-            type="button"
-            [disabled]="pagina() === 0"
-            (click)="irPara(pagina() - 1)"
-          >
+          <button type="button" [disabled]="pagina() === 0" (click)="irPara(pagina() - 1)">
             <mat-icon aria-hidden="true">chevron_left</mat-icon>
             Anterior
           </button>
           <span aria-current="page">Página {{ pagina() + 1 }}</span>
-          <button
-            type="button"
-            [disabled]="!temProxima()"
-            (click)="irPara(pagina() + 1)"
-          >
+          <button type="button" [disabled]="!temProxima()" (click)="irPara(pagina() + 1)">
             Próxima
             <mat-icon aria-hidden="true">chevron_right</mat-icon>
           </button>

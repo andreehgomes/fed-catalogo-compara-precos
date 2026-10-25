@@ -6,6 +6,7 @@ import type { ConsultarCnpj } from '../src/cnpj/consultar-cnpj';
 import type { Contexto } from '../src/importar/contexto';
 import type { RespostaSefaz } from '../src/importar/fetch-sefaz';
 import type { RegistroImportacao } from '../src/importar/log';
+import type { NormalizarNomes } from '../src/nome/ia-nome';
 import type { ClassificarVinculos } from '../src/vinculo/ia';
 import { adaptadorPara } from '../src/parsers';
 import { RepositorioMemoria } from './fakes/repositorio-memoria';
@@ -80,6 +81,7 @@ export interface ContextoTeste extends Contexto {
   htmlRegistrado: string[];
   buscar: ReturnType<typeof vi.fn<(url: string) => Promise<RespostaSefaz>>>;
   classificarVinculos: ReturnType<typeof vi.fn<ClassificarVinculos>>;
+  normalizarNomes: ReturnType<typeof vi.fn<NormalizarNomes>>;
   consultarCnpj: ReturnType<typeof vi.fn<ConsultarCnpj>>;
 }
 
@@ -117,6 +119,11 @@ export function criarContexto(
     logs,
     esperar: async () => undefined,
     classificarVinculos: vi.fn<ClassificarVinculos>(async () => ({ decisoes: [], custoUsd: 0 })),
+    normalizarNomes: vi.fn<NormalizarNomes>(async () => ({
+      nomes: new Map(),
+      custoUsd: 0,
+      chamadas: 0,
+    })),
     consultarCnpj: vi.fn<ConsultarCnpj>(async () => ({
       status: 'ok',
       fonte: 'brasilapi',

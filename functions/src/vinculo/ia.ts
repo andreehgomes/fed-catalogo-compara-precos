@@ -95,9 +95,9 @@ export function traduzirDecisoes(itens: readonly ItemIa[], saida: SaidaIa): Resp
   return decisoes;
 }
 
-export interface MensagemIa {
+export interface MensagemIa<T = SaidaIa> {
   stop_reason: string | null;
-  parsed_output: SaidaIa | null;
+  parsed_output: T | null;
   usage: { input_tokens: number; output_tokens: number };
 }
 

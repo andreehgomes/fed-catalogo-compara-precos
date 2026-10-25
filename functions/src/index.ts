@@ -2,7 +2,7 @@ import { ANTHROPIC_API_KEY, EM_DEV, OPCOES_CALLABLE } from './config';
 import { logger } from 'firebase-functions';
 import { HttpsError, onCall, type CallableRequest } from 'firebase-functions/v2/https';
 import { onSchedule } from 'firebase-functions/v2/scheduler';
-import type { DefinirApelidoEntrada, PreviewEntrada } from '@shared/model';
+import type { DefinirApelidoEntrada, PreviewEntrada, RenomearProdutoEntrada } from '@shared/model';
 import { RepositorioFirestore } from './dados/repositorio-firestore';
 import { executarDefinirApelido } from './estabelecimentos/definir-apelido';
 import { executarConfirmacao } from './importar/confirmar-nfce';
@@ -10,11 +10,14 @@ import { contextoPadrao, type Contexto } from './importar/contexto';
 import { executarPreview } from './importar/preview-nfce';
 import { executarEnfileirar, executarRetentar } from './pendentes/enfileirar';
 import { executarReprocessamento } from './pendentes/reprocessar-pendentes';
+import { executarRenomearProduto } from './produtos/renomear-produto';
 import { executarDesvincular, executarVincular } from './produtos/vincular-produto';
+import { criarNormalizador, type NormalizarNomes } from './nome/ia-nome';
 import { criarClassificador, type ClassificarVinculos } from './vinculo/ia';
 
 let ctx: Contexto | null = null;
 let classificador: ClassificarVinculos | null = null;
+let normalizador: NormalizarNomes | null = null;
 
 /** O secret só existe nas funções que o declaram, então o cliente nasce na 1ª chamada. */
 const classificarVinculos: ClassificarVinculos = (itens) => {
@@ -22,10 +25,19 @@ const classificarVinculos: ClassificarVinculos = (itens) => {
   return classificador(itens);
 };
 
+const normalizarNomes: NormalizarNomes = (itens) => {
+  normalizador ??= criarNormalizador(ANTHROPIC_API_KEY.value());
+  return normalizador(itens);
+};
+
 function contexto(): Contexto {
-  ctx ??= contextoPadrao(new RepositorioFirestore(), classificarVinculos, (html, motivo) => {
-    if (EM_DEV) logger.warn('html-layout-inesperado', { motivo, html: html.slice(0, 20_000) });
-  });
+  ctx ??= contextoPadrao(
+    new RepositorioFirestore(),
+    { classificarVinculos, normalizarNomes },
+    (html, motivo) => {
+      if (EM_DEV) logger.warn('html-layout-inesperado', { motivo, html: html.slice(0, 20_000) });
+    },
+  );
   return ctx;
 }
 
@@ -35,8 +47,10 @@ function uidDe(req: CallableRequest): string {
   return uid;
 }
 
-export const previewNfce = onCall(OPCOES_CALLABLE, (req: CallableRequest<PreviewEntrada>) =>
-  executarPreview(uidDe(req), req.data, contexto()),
+/** A prévia dá nome aos itens pela IA (`nomearItens`): precisa do secret e de mais tempo. */
+export const previewNfce = onCall(
+  { ...OPCOES_CALLABLE, timeoutSeconds: 120, secrets: [ANTHROPIC_API_KEY] },
+  (req: CallableRequest<PreviewEntrada>) => executarPreview(uidDe(req), req.data, contexto()),
 );
 
 /** A gravação chama a IA do vínculo (até ~25 s). */
@@ -67,6 +81,12 @@ export const desvincularProduto = onCall(
     uidDe(req);
     return executarDesvincular(req.data, contexto());
   },
+);
+
+export const renomearProduto = onCall(
+  OPCOES_CALLABLE,
+  (req: CallableRequest<RenomearProdutoEntrada>) =>
+    executarRenomearProduto(uidDe(req), req.data, contexto()),
 );
 
 export const definirApelido = onCall(

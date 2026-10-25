@@ -134,7 +134,7 @@
                     <button
                       type="button"
                       class="cp-btn-ghost"
-                      [attr.aria-label]="'Não adicionar ' + n.descricao"
+                      [attr.aria-label]="'Não adicionar ' + (n.nome || n.descricao)"
                       (click)="store.alternarAdicionado(n.n)"
                     >
                       Desfazer
@@ -161,7 +161,9 @@
                       <button
                         type="button"
                         class="cp-btn-secondary-compact"
-                        [attr.aria-label]="'Sim, ' + p.item.texto + ' é ' + p.nota.descricao"
+                        [attr.aria-label]="
+                          'Sim, ' + p.item.texto + ' é ' + (p.nota.nome || p.nota.descricao)
+                        "
                         (click)="store.confirmar(p.item.id)"
                       >
                         Sim
@@ -169,7 +171,9 @@
                       <button
                         type="button"
                         class="cp-btn-ghost"
-                        [attr.aria-label]="'Não, ' + p.item.texto + ' não é ' + p.nota.descricao"
+                        [attr.aria-label]="
+                          'Não, ' + p.item.texto + ' não é ' + (p.nota.nome || p.nota.descricao)
+                        "
                         (click)="store.desfazer(p.item.id)"
                       >
                         Não
@@ -224,8 +228,8 @@
                       <button
                         type="button"
                         class="cp-btn-ghost"
-                        [attr.aria-label]="n.descricao + ' estava na lista como…'"
-                        (click)="estavaNaLista(n.n, n.descricao)"
+                        [attr.aria-label]="(n.nome || n.descricao) + ' estava na lista como…'"
+                        (click)="estavaNaLista(n.n, n.nome || n.descricao)"
                       >
                         <mat-icon aria-hidden="true">link</mat-icon>
                         Estava na lista como…
@@ -234,7 +238,7 @@
                     <button
                       type="button"
                       class="cp-btn-ghost"
-                      [attr.aria-label]="'Adicionar à lista: ' + n.descricao"
+                      [attr.aria-label]="'Adicionar à lista: ' + (n.nome || n.descricao)"
                       (click)="store.alternarAdicionado(n.n)"
                     >
                       <mat-icon aria-hidden="true">playlist_add</mat-icon>

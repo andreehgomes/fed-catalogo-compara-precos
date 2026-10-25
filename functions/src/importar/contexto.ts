@@ -1,6 +1,7 @@
 import { criarConsultaCnpj, type ConsultarCnpj } from '../cnpj/consultar-cnpj';
 import type { Repositorio } from '../dados/repositorio';
 import { adaptadorPara, type AdaptadorUf } from '../parsers';
+import type { NormalizarNomes } from '../nome/ia-nome';
 import type { ClassificarVinculos } from '../vinculo/ia';
 import { buscarSefaz, type RespostaSefaz } from './fetch-sefaz';
 import { logImportacao, type RegistroImportacao } from './log';
@@ -15,6 +16,8 @@ export interface Contexto {
   esperar: (ms: number) => Promise<void>;
   /** IA que decide os vínculos em dúvida; lança em qualquer falha. */
   classificarVinculos: ClassificarVinculos;
+  /** IA que dá nome legível e etiquetas às descrições; lança só se nenhuma parte respondeu. */
+  normalizarNomes: NormalizarNomes;
   /** Nome fantasia pelo CNPJ (BrasilAPI → minhareceita); lança se as duas falharem. */
   consultarCnpj: ConsultarCnpj;
   /** Em dev, guarda o HTML de layout inesperado no log para diagnóstico (RF-10). */
@@ -23,7 +26,7 @@ export interface Contexto {
 
 export function contextoPadrao(
   repo: Repositorio,
-  classificarVinculos: ClassificarVinculos,
+  ia: Pick<Contexto, 'classificarVinculos' | 'normalizarNomes'>,
   registrarHtml?: Contexto['registrarHtml'],
 ): Contexto {
   return {
@@ -33,7 +36,7 @@ export function contextoPadrao(
     adaptador: adaptadorPara,
     log: (r) => logImportacao(r),
     esperar: (ms) => new Promise((res) => setTimeout(res, ms)),
-    classificarVinculos,
+    ...ia,
     consultarCnpj: criarConsultaCnpj({ fetch: (...a) => fetch(...a), agora: Date.now }),
     registrarHtml,
   };

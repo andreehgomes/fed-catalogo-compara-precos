@@ -94,7 +94,10 @@ export async function executarPreview(
       resultado: 'sucesso',
       qtdItens: nota.itens.length,
     });
-    return apelido?.apelido ? { ok: true, nota, apelido: apelido.apelido } : { ok: true, nota };
+    const paraCliente = { ...nota, itens: nota.itens.map(({ etiquetas: _e, ...i }) => i) };
+    return apelido?.apelido
+      ? { ok: true, nota: paraCliente, apelido: apelido.apelido }
+      : { ok: true, nota: paraCliente };
   } catch (e) {
     const erro = paraErroImportacao(e);
     ctx.log({

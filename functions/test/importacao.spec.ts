@@ -436,13 +436,10 @@ describe('log estruturado (RNF-30)', () => {
     ctxFora.log = (r) => logImportacao(r, logger);
     await executarPreview(UID_B, { url: URL_QR }, ctxFora);
 
-    expect(logger.info).toHaveBeenCalledTimes(4);
-    expect(logger.info.mock.calls.map((c) => c[1].etapa)).toEqual([
-      'cnpj',
-      'preview',
-      'vinculo',
-      'confirmacao',
-    ]);
+    expect(logger.info).toHaveBeenCalledTimes(5);
+    const etapas = logger.info.mock.calls.map((c) => c[1].etapa);
+    expect([...etapas.slice(0, 2)].sort()).toEqual(['cnpj', 'nome']);
+    expect(etapas.slice(2)).toEqual(['preview', 'vinculo', 'confirmacao']);
     expect(logger.warn).toHaveBeenCalledTimes(1);
     expect(logger.warn.mock.calls[0][1]).toMatchObject({
       etapa: 'preview',
@@ -455,7 +452,7 @@ describe('log estruturado (RNF-30)', () => {
     expect(tudo).not.toContain(UID_B);
     expect(tudo).not.toContain('03644587000836');
     expect(tudo).not.toContain('BOX');
-    expect(logger.info.mock.calls[1][1]).toMatchObject({
+    expect(logger.info.mock.calls[2][1]).toMatchObject({
       uf: 'PR',
       qtdItens: 3,
       resultado: 'sucesso',

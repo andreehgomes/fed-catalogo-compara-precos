@@ -1,10 +1,11 @@
 /**
- * Retroativo do vínculo automático (etiquetas + IA) sobre os produtos já importados. Manual,
- * fora do `npm test`, rodado pelo usuário contra um projeto com ADC
+ * Retroativo do nome legível e do vínculo automático (etiquetas + IA) sobre os produtos já
+ * importados. Manual, fora do `npm test`, rodado pelo usuário contra um projeto com ADC
  * (`gcloud auth application-default login`). Lê todos os `produtos`, roda
  * `reprocessarVinculos` num repositório em memória e, com `--gravar`, grava só os documentos
- * que mudaram (produtos e o gasto do mês em `controle/ia_AAAA-MM`). Não rode durante
- * importações: um produto alterado no meio é sobrescrito pela versão lida no início.
+ * que mudaram (produtos e o gasto do mês em `controle/ia_AAAA-MM`) e o `nome` dos itens nas
+ * notas de todos os usuários. Não rode durante importações: um produto ou nota alterado no meio
+ * é sobrescrito pela versão lida no início.
  *
  *   functions/node_modules/.bin/esbuild functions/scripts/reprocessar-vinculos.ts --bundle \
  *     --platform=node --format=cjs --alias:@shared=./shared --external:firebase-admin \
@@ -12,20 +13,21 @@
  *     --outfile=functions/lib/reprocessar-vinculos.cjs
  *   GOOGLE_CLOUD_PROJECT=fed-catalogo-compara-precos-dv node functions/lib/reprocessar-vinculos.cjs
  *
- * Padrão: `--simular` (nada é gravado e a IA não é chamada). `--com-ia` chama a IA também na
- * simulação (custa centavos e soma no teto do mês só se gravar). `--gravar` aplica, com IA;
- * `--gravar --sem-ia` aplica só a regra das etiquetas.
- * Chave da IA: `ANTHROPIC_API_KEY` ou o arquivo `~/.anthropic_api_key` (créditos do Console da
- * Anthropic; a assinatura Claude Pro não vale para a API).
+ * Padrão: `--simular` (nada é gravado e a IA não é chamada). `--com-ia` chama a IA (nome e
+ * vínculo) também na simulação, para ver os nomes antes de gravar (custa centavos). `--gravar`
+ * aplica, com IA; `--gravar --sem-ia` aplica só a regra das etiquetas.
+ * Chave da IA: `ANTHROPIC_API_KEY` ou o arquivo `~/.anthropic_api_key`; consome o saldo da
+ * organização do Console da chave (os créditos mensais do plano Max valem na organização vinculada).
  */
 import { existsSync, readFileSync } from 'node:fs';
 import { homedir } from 'node:os';
 import { resolve } from 'node:path';
 import { applicationDefault, initializeApp } from 'firebase-admin/app';
 import { getFirestore } from 'firebase-admin/firestore';
-import type { Produto } from '@shared/model';
+import type { Nota, Produto } from '@shared/model';
 import { LIMITE_LOTE, type Dados } from '../src/dados/repositorio';
 import { contextoPadrao } from '../src/importar/contexto';
+import { criarNormalizador, type NormalizarNomes } from '../src/nome/ia-nome';
 import { criarClassificador, type ClassificarVinculos } from '../src/vinculo/ia';
 import { reprocessarVinculos } from '../src/vinculo/reprocessar-vinculos';
 import { caminhoGastoIa } from '../src/vinculo/vincular-nota';
@@ -40,6 +42,7 @@ function chave(): string {
 }
 
 const semIa: ClassificarVinculos = async () => ({ decisoes: [], custoUsd: 0 });
+const semNome: NormalizarNomes = async () => ({ nomes: new Map(), custoUsd: 0, chamadas: 0 });
 
 async function main() {
   const args = process.argv.slice(2);
@@ -65,7 +68,10 @@ async function main() {
   );
 
   const ctx = {
-    ...contextoPadrao(memoria, usarIa ? criarClassificador(chave()) : semIa),
+    ...contextoPadrao(memoria, {
+      classificarVinculos: usarIa ? criarClassificador(chave()) : semIa,
+      normalizarNomes: usarIa ? criarNormalizador(chave()) : semNome,
+    }),
     agora: () => agora,
     log: () => undefined,
   };
@@ -78,6 +84,8 @@ async function main() {
     (memoria.docs.get(`produtos/${String(id)}`)?.['descricao'] as string) ?? String(id);
   for (const [c, d] of mudaram) {
     const anterior = JSON.parse(antes.get(c) ?? '{}') as Dados;
+    if (d['nome'] && d['nome'] !== anterior['nome'])
+      console.info(`nome  ${String(d['descricao'])} → ${String(d['nome'])}`);
     if (d['vinculadoA'] && d['vinculadoA'] !== anterior['vinculadoA'])
       console.info(
         `liga  ${String(d['descricao'])} → ${desc(d['vinculadoA'])} [${String(d['vinculoMotivo'])}]`,
@@ -88,8 +96,31 @@ async function main() {
       );
   }
 
+  const nomes = new Map(
+    [...memoria.docs]
+      .filter(([c, d]) => c.startsWith('produtos/') && d['nome'])
+      .map(([, d]) => [String(d['id']), String(d['nome'])]),
+  );
+  const notas = (await db.collectionGroup('notas').get()).docs.flatMap((doc) => {
+    if (doc.ref.parent.parent?.parent.id !== 'usuarios') return [];
+    const itens = (doc.data() as Nota).itens ?? [];
+    if (!itens.some((i) => nomes.has(i.produtoId) && i.nome !== nomes.get(i.produtoId))) return [];
+    return [
+      {
+        ref: doc.ref,
+        itens: itens.map((i) =>
+          nomes.has(i.produtoId) ? { ...i, nome: nomes.get(i.produtoId) } : i,
+        ),
+      },
+    ];
+  });
+
   console.info(
     [
+      `sem nome: ${r.semNome}${usarIa ? '' : ' (iriam para a IA)'}`,
+      `nomeados pela IA: ${r.nomeados}${r.erroNome ? ` (falha: ${r.erroNome})` : ''}`,
+      `chamadas de nome: ${r.chamadasNome}, custo US$ ${r.custoNomeUsd.toFixed(4)}`,
+      `notas com nome novo nos itens: ${notas.length}`,
       `etiquetas preenchidas: ${r.etiquetasPreenchidas}`,
       `loc: sem vínculo com bloco: ${r.semVinculo} (em ${r.lojas} loja(s))`,
       `ligados pela regra: ${r.etiquetas}`,
@@ -109,7 +140,13 @@ async function main() {
     for (const [c, d] of mudaram.slice(i, i + LIMITE_LOTE)) lote.set(db.doc(c), d);
     await lote.commit();
   }
-  console.info(`Gravado: ${mudaram.length} documento(s).`);
+  for (let i = 0; i < notas.length; i += LIMITE_LOTE) {
+    const lote = db.batch();
+    for (const n of notas.slice(i, i + LIMITE_LOTE))
+      lote.set(n.ref, { itens: n.itens }, { merge: true });
+    await lote.commit();
+  }
+  console.info(`Gravado: ${mudaram.length} produto(s)/controle e ${notas.length} nota(s).`);
 }
 
 main().catch((e) => {

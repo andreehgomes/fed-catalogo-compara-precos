@@ -137,7 +137,7 @@
                   <li>
                     <button type="button" class="cp-list-row destaque" (click)="irPara(d.item.n)">
                       <span class="item-principal">
-                        <span class="destaque-nome">{{ d.item.descricao }}</span>
+                        <span class="destaque-nome">{{ d.item.nome || d.item.descricao }}</span>
                         <span class="item-detalhe">
                           {{ d.item.qtd | number: '1.0-3' }} {{ d.item.unidade }} ·
                           {{ d.c.valorAtual | currency }}{{ d.sufixo }} ·
@@ -272,15 +272,18 @@
               <input
                 type="checkbox"
                 class="itens-check"
-                [attr.aria-label]="item.descricao"
+                [attr.aria-label]="item.nome || item.descricao"
                 [checked]="selecionado(item.n)"
                 (change)="alternarItem(item.n)"
               />
             }
             <div class="item-principal">
               <a class="item-nome" [routerLink]="['/produtos', item.produtoId]">{{
-                item.descricao
+                item.nome || item.descricao
               }}</a>
+              @if (item.nome && item.nome !== item.descricao) {
+                <span class="cp-descricao-original">Na nota: {{ item.descricao }}</span>
+              }
               <span class="item-detalhe">
                 {{ item.qtd | number: '1.0-3' }} {{ item.unidade }} × {{ item.vlUnit | currency }}
               </span>

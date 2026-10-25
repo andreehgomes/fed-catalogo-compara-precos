@@ -3,7 +3,7 @@ import type { ApelidoEstabelecimento, Estabelecimento, NfceParsed, Nota } from '
 import type { Contexto } from './contexto';
 import { operacoesDeNome } from '../estabelecimentos/propagar-nome';
 import { vincularNota } from '../vinculo/vincular-nota';
-import { montarNota, publicarPrecos } from './publicar-precos';
+import { etiquetasDaNota, montarNota, publicarPrecos } from './publicar-precos';
 
 interface DocImportada {
   importadaEm: string;
@@ -88,7 +88,11 @@ export async function gravarNota(
   const gravada = nota as Nota | null;
   if (resultado.apelidoNovo && gravada) await propagarApelido(ctx, uid, gravada);
   if (resultado.publicou && gravada)
-    await vincularNota(ctx, gravada, await publicarPrecos(ctx.repo, gravada));
+    await vincularNota(
+      ctx,
+      gravada,
+      await publicarPrecos(ctx.repo, gravada, etiquetasDaNota(parsed)),
+    );
   return resultado;
 }
 

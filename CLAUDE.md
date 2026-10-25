@@ -482,10 +482,12 @@ null`) e decide com `decidirPorEtiquetas`: tipos diferentes dos dois lados → c
   respeitado. Medição no gabarito real: `functions/test/etiquetas-gabarito.spec.ts`;
   avaliação da IA real (manual, custa centavos): `functions/scripts/avaliar-ia-vinculo.ts`.
   Retroativo manual: `functions/scripts/reprocessar-vinculos.ts` (`reprocessarVinculos` em
-  `vinculo/reprocessar-vinculos.ts`: preenche `etiquetas`/`bloco` dos produtos antigos e passa os
-  `loc:` sem vínculo pelo `vincularNota`, loja por loja, em rodadas de até 80; roda em memória e
-  grava só o que mudou). `--simular` padrão sem IA, `--com-ia` na simulação, `--gravar` (com IA)
-  ou `--gravar --sem-ia`. A chave da IA usa créditos do Console da Anthropic, não o Claude Pro.
+  `vinculo/reprocessar-vinculos.ts`: produtos sem nome (nunca os manuais) vão para a IA de nome,
+  que troca as etiquetas pelas dela; os outros sem etiquetas ganham as da regra; e os `loc:` sem
+  vínculo passam pelo `vincularNota`, loja por loja, em rodadas de até 80; roda em memória e grava
+  só o que mudou, mais o `nome` dos itens nas notas de todos os usuários). `--simular` padrão sem IA, `--com-ia` na simulação, `--gravar` (com IA)
+  ou `--gravar --sem-ia`. A chave da IA consome o saldo da organização do Console
+  onde foi criada (créditos mensais do plano Max só na organização vinculada em claude.ai → Faturamento).
 - `produtos/{id}.cnpjs` (até 50) é mantido pela publicação de preços, para contar
   estabelecimentos sem consulta extra.
 - Estabelecimentos: lista por `atualizadoEm desc` (30 por página, busca por nome no

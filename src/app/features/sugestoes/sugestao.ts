@@ -1,4 +1,5 @@
 import type { DataIso, UnidadeBase } from '@shared/model';
+import { nomeDoItem } from '@shared/nome-produto';
 import { baseDoGranel, quantidadeNaUnidadeBase } from '@shared/unidade';
 import {
   BaseComparacao,
@@ -311,7 +312,7 @@ export function sugerir(
     const faixa = faixaDePreco(compras);
     r.push({
       grupo,
-      descricao: faixa.ultimoPago.compra.descricao,
+      descricao: nomeDoItem(faixa.ultimoPago.compra),
       estado,
       confianca: confianca(oc, intervalos(oc)),
       cicloDias,

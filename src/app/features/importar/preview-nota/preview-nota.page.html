@@ -46,7 +46,10 @@
         @for (item of itens(); track item.n) {
           <li class="cp-list-row">
             <div class="item-principal">
-              <span class="item-nome">{{ item.descricao }}</span>
+              <span class="item-nome">{{ item.nome || item.descricao }}</span>
+              @if (item.nome && item.nome !== item.descricao) {
+                <span class="cp-descricao-original">Na nota: {{ item.descricao }}</span>
+              }
               <span class="item-detalhe">
                 {{ item.qtd | number: '1.0-3' }} {{ item.unidade }} × {{ item.vlUnit | currency }}
               </span>

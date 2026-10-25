@@ -52,8 +52,8 @@ export function sugerir(
     <div class="vincular">
       <h2 mat-dialog-title class="cp-section-title">Este produto é o mesmo que…</h2>
       <p class="cp-field-hint">
-        "{{ dados.produto.descricao }}". Ao ligar, a comparação passa a considerar os dois juntos
-        para todos os usuários.
+        "{{ dados.produto.nome || dados.produto.descricao }}". Ao ligar, a comparação passa a
+        considerar os dois juntos para todos os usuários.
       </p>
       @if (sugestoesEan().length) {
         <ul class="cp-list" aria-label="Códigos de barras encontrados no Menor Preço">
@@ -89,7 +89,7 @@ export function sugerir(
                 (click)="escolherProduto(c)"
               >
                 <span class="item-principal">
-                  <span class="item-nome">{{ c.descricao }}</span>
+                  <span class="item-nome">{{ c.nome || c.descricao }}</span>
                   <span class="item-detalhe">{{
                     c.ean ? 'EAN ' + c.ean : 'Sem código de barras'
                   }}</span>
@@ -116,7 +116,7 @@ export function sugerir(
               (click)="escolherProduto(c)"
             >
               <span class="item-principal">
-                <span class="item-nome">{{ c.descricao }}</span>
+                <span class="item-nome">{{ c.nome || c.descricao }}</span>
                 <span class="item-detalhe">{{
                   c.ean ? 'EAN ' + c.ean : 'Sem código de barras'
                 }}</span>

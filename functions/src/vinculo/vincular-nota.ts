@@ -43,7 +43,7 @@ async function candidatosDe(ctx: Contexto, novo: Produto, cnpj: string): Promise
 
 function comoCandidato(p: Produto): Candidato {
   const { tipo, variantes } = p.etiquetas ?? etiquetar(p.descricao);
-  return { id: p.id, descricao: p.descricao, tipo, variantes };
+  return { id: p.id, descricao: p.descricao, tipo, variantes, bloco: p.bloco ?? null };
 }
 
 /** Parte em até 2 chamadas em paralelo: nota grande não pode estourar a saída da IA. */

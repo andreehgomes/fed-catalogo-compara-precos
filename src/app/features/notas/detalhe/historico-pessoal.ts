@@ -20,6 +20,8 @@ export interface CompraPessoal {
   emissao: string;
   produtoId: ProdutoId;
   descricao: string;
+  /** Nome legível do item da nota, quando a IA deu um (só exibição). */
+  nome?: string;
   qtd: number;
   unidade: string;
   vlUnit: number;
@@ -168,6 +170,7 @@ export function indexarCompras(
         emissao: nota.emissao,
         produtoId: item.produtoId,
         descricao: item.descricao,
+        ...(item.nome ? { nome: item.nome } : {}),
         qtd: item.qtd,
         unidade: item.unidade,
         vlUnit: item.vlUnit,

@@ -1,5 +1,6 @@
 import { Injectable, inject } from '@angular/core';
 import type { ItemLista, ItemNota, ListaCompras, Nota } from '@shared/model';
+import { nomeDoItem } from '@shared/nome-produto';
 import type { DocumentReference, Query, WriteBatch } from 'firebase/firestore';
 import { Observable } from 'rxjs';
 import { AuthStore } from '../../../core/auth/auth.store';
@@ -262,7 +263,7 @@ export class ListasService {
     for (const f of deFora) {
       const item = itemDe(
         {
-          texto: f.nota.descricao,
+          texto: nomeDoItem(f.nota),
           grupo: f.grupo,
           quantidade: f.nota.qtd,
           unidade: f.nota.unidade,

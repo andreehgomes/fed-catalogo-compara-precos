@@ -1,6 +1,12 @@
 import { Injectable, inject } from '@angular/core';
 import { normalizarGtin, tokens } from '@shared/index';
-import type { Estabelecimento, Preco, Produto, ProdutoId } from '@shared/model';
+import type {
+  Estabelecimento,
+  Preco,
+  Produto,
+  ProdutoId,
+  RenomearProdutoResposta,
+} from '@shared/model';
 import type { DocumentSnapshot } from 'firebase/firestore';
 import { CHAMAR_FUNCTION } from '../../../core/firebase/callable';
 import { FIRESTORE_API } from '../../../core/firebase/firestore-api';
@@ -192,6 +198,10 @@ export class ProdutosService {
 
   desvincular(id: string): Promise<RespostaVinculo> {
     return this.chamar<RespostaVinculo>('desvincularProduto', { id });
+  }
+
+  renomear(id: string, nome: string): Promise<RenomearProdutoResposta> {
+    return this.chamar<RenomearProdutoResposta>('renomearProduto', { id, nome });
   }
 
   private desde(): string {

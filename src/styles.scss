@@ -820,6 +820,15 @@ button.cp-list-row {
   color: $cp-accent-ink;
 }
 
+// A descrição abreviada da NFC-e, discreta abaixo do nome legível do produto.
+.cp-descricao-original {
+  display: block;
+  font-size: 12px;
+  font-weight: 400;
+  color: $cp-text-muted;
+  overflow-wrap: anywhere;
+}
+
 .cp-price-unit {
   font-size: 12px;
   font-weight: 500;

@@ -1,4 +1,5 @@
 import { Injectable, computed, inject, linkedSignal, resource, signal } from '@angular/core';
+import { nomeDoItem } from '@shared/nome-produto';
 import { AuthStore } from '../../../core/auth/auth.store';
 import { RELOGIO } from '../../../core/relogio';
 import { ListasService } from '../../listas/data-access/listas.service';
@@ -77,7 +78,7 @@ export class SugestoesStore {
     if (!d) return [];
     return [...this.dispensados.nunca()].flatMap((grupo) => {
       const c = d.indice.get(grupo)?.[0];
-      return c ? [{ grupo, descricao: c.descricao }] : [];
+      return c ? [{ grupo, descricao: nomeDoItem(c) }] : [];
     });
   });
   readonly horaDeRepor = computed(() => this.repor().slice(0, ITENS_NO_PAINEL));

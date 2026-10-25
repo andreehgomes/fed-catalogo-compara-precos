@@ -20,6 +20,7 @@ import { NotasService } from '../notas/data-access/notas.service';
 import { PendentesService } from '../notas/data-access/pendentes.service';
 import { ProdutosService } from '../produtos/data-access/produtos.service';
 import ProdutoDetalhePage from '../produtos/detalhe/produto-detalhe.page';
+import { RenomearProdutoDialog } from '../produtos/renomear/renomear-produto-dialog';
 import { VincularDialog } from '../produtos/vincular/vincular-dialog';
 import { LocalizacaoStore } from '../regiao/localizacao/localizacao.store';
 import PainelPage from './painel.page';
@@ -219,6 +220,47 @@ describe('ProdutoDetalhePage', () => {
     expect(texto(el)).toContain('Suas notas');
     expect(texto(el)).toContain('Comunidade');
     expect(() => botao(el, /Este produto é o mesmo que/)).toThrow();
+  });
+
+  it('nome legível no título com a descrição da nota; "Corrigir nome" relê o produto', async () => {
+    const s = servico([
+      produto('ean:7891000100103', {
+        descricao: 'LEITE ITALAC 1L INTEG',
+        nome: 'Leite Integral Italac 1 L',
+      }),
+    ]);
+    const dialog = { open: vi.fn(() => ({ afterClosed: () => of('Leite Italac Integral') })) };
+    const historico = { invalidar: vi.fn() };
+    base([
+      { provide: HistoricoPessoalStore, useValue: historico },
+      { provide: ProdutosService, useValue: s },
+      { provide: NotasService, useValue: { chaves: vi.fn(async () => new Set()) } },
+      { provide: MatDialog, useValue: dialog },
+      {
+        provide: LocalizacaoStore,
+        useValue: { pronta: signal(false), geohash: signal(null), raioKm: signal(2) },
+      },
+    ]);
+    const { el, fixture } = await renderizar(ProdutoDetalhePage, { id: 'ean:7891000100103' });
+    expect(texto(el.querySelector('h1'))).toBe('Leite Integral Italac 1 L');
+    expect(texto(el.querySelector('.cp-detail-header'))).toContain(
+      'Na nota: LEITE ITALAC 1L INTEG',
+    );
+    botao(el, 'Corrigir nome').click();
+    await vi.waitFor(() => expect(historico.invalidar).toHaveBeenCalledOnce());
+    await fixture.whenStable();
+    expect(dialog.open).toHaveBeenCalledWith(
+      RenomearProdutoDialog,
+      expect.objectContaining({
+        data: {
+          id: 'ean:7891000100103',
+          descricao: 'LEITE ITALAC 1L INTEG',
+          nome: 'Leite Integral Italac 1 L',
+        },
+      }),
+    );
+    expect(historico.invalidar).toHaveBeenCalledOnce();
+    expect(s.equivalentes).toHaveBeenCalledTimes(2);
   });
 
   it('"Adicionar à lista" leva o canônico (RF-04)', async () => {
@@ -577,5 +619,62 @@ describe('RenomearDialog', () => {
     digitar(porRotulo(el, CAMPO), '*');
     fixture.detectChanges();
     expect(botao(el, 'Salvar').disabled).toBe(true);
+  });
+});
+
+describe('RenomearProdutoDialog', () => {
+  function montar(dados: Record<string, unknown>, renomear: ReturnType<typeof vi.fn>) {
+    const fechar = vi.fn();
+    base([
+      {
+        provide: MAT_DIALOG_DATA,
+        useValue: { id: 'ean:1', descricao: 'Det Ype 500ml Coco', ...dados },
+      },
+      { provide: MatDialogRef, useValue: { close: fechar } },
+      { provide: ProdutosService, useValue: { renomear } },
+    ]);
+    return fechar;
+  }
+
+  it('começa com o nome atual, salva o nome limpo e fecha', async () => {
+    const renomear = vi.fn(async () => ({
+      ok: true,
+      nome: 'Detergente Ypê Coco',
+      notasAtualizadas: 1,
+    }));
+    const fechar = montar({ nome: 'Detergente Ype' }, renomear);
+    const { el, fixture } = await renderizar(RenomearProdutoDialog);
+    const campo = porRotulo(el, 'Nome');
+    expect(campo.value).toBe('Detergente Ype');
+    expect(texto(el)).toContain('Na nota: Det Ype 500ml Coco');
+    digitar(campo, '  Detergente   Ypê Coco ');
+    fixture.detectChanges();
+    botao(el, 'Salvar').click();
+    await fixture.whenStable();
+    expect(renomear).toHaveBeenCalledWith('ean:1', 'Detergente Ypê Coco');
+    expect(fechar).toHaveBeenCalledWith('Detergente Ypê Coco');
+  });
+
+  it('sem nome começa pela descrição; nome inválido desabilita e mostra o erro', async () => {
+    const renomear = vi.fn();
+    montar({}, renomear);
+    const { el, fixture } = await renderizar(RenomearProdutoDialog);
+    const campo = porRotulo(el, 'Nome');
+    expect(campo.value).toBe('Det Ype 500ml Coco');
+    digitar(campo, '12');
+    fixture.detectChanges();
+    expect(botao(el, 'Salvar').disabled).toBe(true);
+    expect(texto(el.querySelector('[role=alert]'))).toContain('Esse nome não serve');
+  });
+
+  it('erro do servidor fica no diálogo, que continua aberto', async () => {
+    const renomear = vi.fn(async () => ({ ok: false, erro: { codigo: 'rate-limit' } }));
+    const fechar = montar({}, renomear);
+    const { el, fixture } = await renderizar(RenomearProdutoDialog);
+    botao(el, 'Salvar').click();
+    await fixture.whenStable();
+    fixture.detectChanges();
+    expect(fechar).not.toHaveBeenCalled();
+    expect(texto(el.querySelector('[role=alert]'))).toContain('Muitas alterações seguidas');
   });
 });

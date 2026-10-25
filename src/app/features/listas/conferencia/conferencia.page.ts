@@ -47,7 +47,7 @@ export default class ConferenciaPage {
   protected async estavaNaNota(itemId: string, texto: string): Promise<void> {
     const opcoes = (this.store.ajustes()?.foraDaLista ?? []).map((n) => ({
       id: String(n.n),
-      rotulo: n.descricao,
+      rotulo: n.nome || n.descricao,
       detalhe: `${n.qtd} ${n.unidade}`,
     }));
     const n = await this.escolher(`"${texto}" estava na nota como…`, opcoes);

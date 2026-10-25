@@ -6,6 +6,7 @@ import { Preco } from '../../../../shared/ui/preco/preco';
 
 export interface LadoDaNota {
   descricao: string;
+  nome?: string;
   qtd: number;
   unidade: string;
   vlTotal: number;
@@ -27,7 +28,7 @@ export interface LadoDaNota {
               <span class="cp-sr-only">na nota como</span>
               <mat-icon class="par-seta" aria-hidden="true">subdirectory_arrow_right</mat-icon>
             }
-            {{ n.descricao }} · {{ n.qtd | number: '1.0-3' }} {{ n.unidade }}
+            {{ n.nome || n.descricao }} · {{ n.qtd | number: '1.0-3' }} {{ n.unidade }}
           </span>
         }
         @if (como() === 'texto') {

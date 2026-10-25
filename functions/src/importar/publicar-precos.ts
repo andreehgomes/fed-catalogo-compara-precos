@@ -1,5 +1,6 @@
 import { etiquetar } from '@shared/etiquetas';
 import { produtoIdDe, normalizarGtin } from '@shared/gtin';
+import type { Etiquetas } from '@shared/etiquetas';
 import type { NfceParsed, Nota, Observacao, Preco, Produto, ProdutoId } from '@shared/model';
 import { normalizarDescricao, tokens } from '@shared/normalizar';
 import { extrairConteudo, precoPorUnidadeBase } from '@shared/unidade';
@@ -24,7 +25,7 @@ export function montarNota(
     total: nota.total,
     desconto: nota.desconto,
     qtdItens: nota.itens.length,
-    itens: nota.itens.map((i) => ({
+    itens: nota.itens.map(({ etiquetas: _e, ...i }) => ({
       ...i,
       ean: normalizarGtin(i.ean),
       produtoId: produtoIdDe(i.ean, nota.emitente.cnpj, i.codigo),
@@ -46,12 +47,34 @@ function atualizarUltima(atual: Observacao | null, nova: Observacao): Observacao
   return !atual || nova.emissao >= atual.emissao ? nova : atual;
 }
 
+/** Etiquetas que a IA deu na prévia, por produto (a nota gravada não as leva). */
+export function etiquetasDaNota(nota: NfceParsed): Map<ProdutoId, Etiquetas> {
+  const mapa = new Map<ProdutoId, Etiquetas>();
+  for (const i of nota.itens)
+    if (i.etiquetas) mapa.set(produtoIdDe(i.ean, nota.emitente.cnpj, i.codigo), i.etiquetas);
+  return mapa;
+}
+
+/** `manual` fica; o resto é da IA (o nome veio da prévia ou já estava no produto). */
+function nomeDoProduto(
+  atual: Produto | null,
+  nomeItem: string | undefined,
+): Pick<Produto, 'nome' | 'nomeOrigem'> {
+  if (atual?.nomeOrigem === 'manual') return { nome: atual.nome, nomeOrigem: 'manual' };
+  const nome = nomeItem ?? atual?.nome;
+  return nome ? { nome, nomeOrigem: 'ia' } : {};
+}
+
 /**
  * Publica os preços anônimos da nota: upsert de `produtos/{id}` e `precos/{chave}_{n}`.
  * Nenhum documento leva uid ou referência ao usuário (RNF-24). Ids determinísticos: rodar
  * de novo não duplica. Devolve os produtos criados agora.
  */
-export async function publicarPrecos(repo: Repositorio, nota: Nota): Promise<ProdutoId[]> {
+export async function publicarPrecos(
+  repo: Repositorio,
+  nota: Nota,
+  etiquetasIa: ReadonlyMap<ProdutoId, Etiquetas> = new Map(),
+): Promise<ProdutoId[]> {
   const ids = [...new Set(nota.itens.map((i) => i.produtoId))];
   const existentes = await repo.obterVarios<Produto>(ids.map((id) => `produtos/${id}`));
   const existentesPorId = new Map(ids.map((id, k) => [id, existentes[k]]));
@@ -62,7 +85,9 @@ export async function publicarPrecos(repo: Repositorio, nota: Nota): Promise<Pro
     const obs: Observacao = { cnpj: nota.cnpj, vlUnit: item.vlUnit, emissao: nota.emissao };
     const atual = produtos.get(item.produtoId) ?? null;
     const conteudo = extrairConteudo(item.descricao);
-    const etiquetas = etiquetar(item.descricao);
+    const etiquetas =
+      etiquetasIa.get(item.produtoId) ??
+      (atual?.etiquetas?.origem === 'ia' ? atual.etiquetas : etiquetar(item.descricao));
     const produto: Produto = {
       ...atual,
       id: item.produtoId,
@@ -77,6 +102,7 @@ export async function publicarPrecos(repo: Repositorio, nota: Nota): Promise<Pro
       cnpjs: [...new Set([...(atual?.cnpjs ?? []), nota.cnpj])].slice(-LIMITE_CNPJS),
       etiquetas,
       bloco: etiquetas.bloco,
+      ...nomeDoProduto(atual, item.nome),
     };
     produtos.set(item.produtoId, produto);
     const preco: Preco = {
