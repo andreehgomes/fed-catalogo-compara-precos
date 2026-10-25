@@ -57,6 +57,21 @@ test.describe('importar nota (callables interceptadas)', () => {
     expect(chamadas.map((c) => c.nome)).toEqual(['previewNfce', 'confirmarNfce']);
   });
 
+  test('prévia com nome legível mostra o nome e a descrição da nota', async ({ page }) => {
+    const comNome = {
+      ...NOTA,
+      itens: [{ ...NOTA.itens[0], nome: 'Leite UHT Integral 1 L' }],
+    };
+    await mockCallables(page, { previewNfce: { ok: true, nota: comNome } });
+    await entrar(page);
+    await page.goto('/importar');
+    await page.getByLabel('Colar link do QR').fill(URL_QR);
+    await page.getByRole('button', { name: 'Importar link' }).click();
+    await expect(page).toHaveURL(/\/importar\/preview$/);
+    await expect(page.getByText('Leite UHT Integral 1 L')).toBeVisible();
+    await expect(page.getByText('Na nota: LEITE UHT INT 1L')).toBeVisible();
+  });
+
   test('loja sem nome fantasia: campo do apelido vai na confirmação', async ({ page }) => {
     const chamadas = await mockCallables(page, {
       previewNfce: { ok: true, nota: { ...NOTA, emitente: { ...NOTA.emitente, fantasia: '' } } },

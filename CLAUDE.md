@@ -155,9 +155,10 @@ no target `test`, relativo a `src/`).
   barato perto?"**. Não é usado no vínculo de produtos: para os IPs das Functions (Google
   Cloud) e sob volume a API devolve dados sintéticos (a tela `/regiao` detecta e mostra
   como indisponível, motivo `bloqueado`).
-- **Claude API (Anthropic)** — só nas Functions, no vínculo automático, com o secret
-  `ANTHROPIC_API_KEY` (Secret Manager, em `confirmarNfce` e `reprocessarPendentes`). Recebe
-  só descrições de produto.
+- **Claude API (Anthropic)** — só nas Functions, no nome legível dos produtos e no vínculo
+  automático, com o secret `ANTHROPIC_API_KEY` (Secret Manager, em `previewNfce`, `confirmarNfce` e
+  `reprocessarPendentes`). Recebe só descrições de produto. A chave consome o saldo da organização do
+  Console onde foi criada (o plano Max do usuário dá US$ 100/mês na organização vinculada).
 - **BrasilAPI → minhareceita.org (cadastro da Receita)** — só nas Functions, só pelo CNPJ
   do emitente, para o nome fantasia. Do payload só sai `nome_fantasia` (o QSA é descartado).
 
@@ -247,13 +248,14 @@ Instale as dependências **de dentro da pasta** (`cd functions && npm install`):
   `enforceAppCheck: true`.
 - **Callables:** `previewNfce({url}|{chave})`, `confirmarNfce({chave, apelido?})`,
   `enfileirarNfce({url}|{chave})`, `retentarPendente({chave})`, `vincularProduto`,
-  `desvincularProduto` e `definirApelido({cnpj, apelido})` (`confirmarNfce` com `timeoutSeconds: 120`, por
-  causa da IA). **Agendada:** `reprocessarPendentes` (a cada 15 min, até 20 por execução,
+  `desvincularProduto`, `renomearProduto({id, nome})` e `definirApelido({cnpj, apelido})`
+  (`previewNfce` e `confirmarNfce` com `timeoutSeconds: 120`, por causa da IA). **Agendada:** `reprocessarPendentes` (a cada 15 min, até 20 por execução,
   1 s entre fetches, timeout 540 s). Callables respondem `{ ok: true, … }` ou
   `{ ok: false, erro: ErroImportacao }`; só erro inesperado vira exceção.
 - **Regras de negócio** recebem um `Contexto` (`importar/contexto.ts`): repositório,
-  relógio (`agora`), `buscar`, adaptador por UF, `log`, `esperar` e `classificarVinculos`
-  (IA; fake nos testes, nenhum teste chama a API). Todo acesso ao
+  relógio (`agora`), `buscar`, adaptador por UF, `log`, `esperar`, `classificarVinculos` e
+  `normalizarNomes` (IA; fakes nos testes, nenhum teste chama a API; `contextoPadrao(repo, { classificarVinculos,
+  normalizarNomes })`). Todo acesso ao
   Firestore passa por `dados/repositorio.ts`; `repositorio-firestore.ts` é o real e
   `test/fakes/repositorio-memoria.ts` o fake (transação com commit no fim). **Sem
   emulador.**
@@ -299,6 +301,21 @@ Instale as dependências **de dentro da pasta** (`cd functions && npm install`):
   o apelido. O apelido nunca vai para o log.
 - **Fila:** backoff 15 min → 1 h → 6 h → 24 h; `falhou` após 7 dias (ou erro definitivo);
   `retentarPendente` reabre a janela (`retentadaEm`).
+- **Nome legível do produto** (plano `docs/plano/nome-produto-ia-plano.md`): `nomearItens`
+  (`functions/src/nome/`), no fim de `obterNotaDaSefaz` em paralelo ao `completarEmitente` (prévia
+  e fila; a reimportação passa `nomear: false`). Produto que já tem `nome` empresta o nome; os outros
+  vão numa chamada (`nome/ia-nome.ts`: `IA_MODELO_NOME` = o do vínculo, effort `low`, fallback,
+  partes de 40, 3 em paralelo; parte que falha só fica sem nome) que devolve `NomeIa` (nome, tipo,
+  marca, variantes, tamanho, granel). `etiquetasDaIa` (`shared/nome-produto.ts`) converte para o
+  formato da regra (o tamanho da regex vence; bloco `MARCA|tamanho`, `MARCA|GRANEL` ou
+  `GRANEL|TIPO`). O item leva `nome` e `etiquetas` até a gravação; a nota gravada e a resposta da
+  prévia ficam **sem** `etiquetas`. `publicarPrecos` grava `nome`/`nomeOrigem: 'ia'` e as etiquetas
+  da IA, nunca troca etiquetas da IA pelas da regra nem um nome `manual`. Falha nunca derruba a
+  importação: log `etapa: 'nome'` com contagens e `erroIa`. Correção: `renomearProduto`
+  (`produtos/renomear-produto.ts`, `limparNomeProduto`, rate limit da importação) grava
+  `nomeOrigem: 'manual'` e o `nome` dos itens nas notas **do uid** (busca por `cnpjs` do produto);
+  log `etapa: 'nome-manual'`. É correção da base compartilhada (só o usuário usa o app hoje; revisitar
+  com outros usuários).
 - Log (`importar/log.ts`): só `chavePrefixo` (UF + AAMM).
 - **App Check no front:** ativado pela factory do token `FUNCTIONS`
   (`core/firebase/app-check.ts`), com debug token no `localhost`. Checklist do dv em
@@ -453,6 +470,14 @@ Até 5 listas (`MAX_LISTAS`), 150 itens (`MAX_ITENS`) e 3 notas por lista, limit
   (o id do preço é `{chave}_{n}`). `<cp-grafico-historico>` (SVG próprio, até 5 séries
   - "Outros", traço e marcador diferentes por série, tabela `cp-sr-only`) e
     `<cp-precos-perto>` em `@defer (on viewport)`. Cores das séries: `$cp-serie-1..5`.
+- **Nome legível no front:** `item.nome || item.descricao` (ou `nomeDoItem` de
+  `shared/nome-produto.ts` nas regras puras) em toda exibição de item de nota e de produto (prévia,
+  detalhe da nota e destaques, lista de compras e conferência, sugestões, painel, produtos,
+  estabelecimento, diálogo de vínculo), com `.cp-descricao-original` ("Na nota: …") onde há espaço.
+  Comparações (tokens, conteúdo, conciliação, Menor Preço) seguem sobre a **descrição**; o
+  autocompletar da lista casa pelos dois. "Corrigir nome" (lápis no cabeçalho do produto,
+  `renomear/renomear-produto-dialog.ts` por `import()`, Signal Forms) chama
+  `ProdutosService.renomear`, invalida o `HistoricoPessoalStore` e relê o produto.
 - Vínculo (RF-18): callable `vincularProduto` (`functions/src/produtos/`) — o EAN vira o
   canônico, `ean:` × `ean:` diferente é recusado, cadeia seguida até a raiz sem ciclo,
   quem apontava para a origem é reapontado, rate limit da importação. Diálogo

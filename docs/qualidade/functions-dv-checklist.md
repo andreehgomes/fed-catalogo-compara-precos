@@ -47,9 +47,9 @@ depois `npm run deploy:functions:dev`. O deploy apaga `vincularProdutosAuto`, `i
 | 8 | Importar uma nota de um mercado novo, com produtos já vistos em outro mercado | produtos novos com `etiquetas` e `bloco` (ou `bloco: null`); os de mesma variante ligados na hora (`vinculoMotivo: 'etiquetas'`), os em dúvida decididos pela IA (`vinculoMotivo: 'ia'`) ou com `candidatosVinculo` | [ ] |
 | 9 | Tempo do "Confirmar importação" nesse cenário | abaixo de 30 s | [ ] |
 | 10 | Consulta `produtos` por `bloco` + `vinculadoA == null` | roda sem pedir índice composto (sem erro `FAILED_PRECONDITION` nos logs) | [ ] |
-| 11 | `controle/iaVinculo_AAAA-MM` depois de algumas importações | `custoUsd` e `chamadas` somando; no máximo 1 chamada por nota (2 com mais de 40 dúvidas) | [ ] |
-| 12 | Teto: baixar `IA_TETO_MENSAL_USD` (em `functions/src/vinculo/config-ia.ts`) para 0,01, publicar e importar | log `vinculo` com `erro: 'teto-ia'`; nenhuma chamada nova | [ ] |
-| 13 | Chave inválida no secret | importação conclui normalmente; log `vinculo` com `resultado: 'falha'` e produtos sem vínculo | [ ] |
+| 11 | `controle/ia_AAAA-MM` depois de algumas importações | `custoUsd` e `chamadas` somando, com `porEtapa.vinculo` e `porEtapa.nome`; no vínculo, no máximo 1 chamada por nota (2 com mais de 40 dúvidas). Sem teto de gasto | [ ] |
+| 12 | Chave sem saldo (organização do Console sem créditos) | log com `erro: 'ia-400'` e `tipoErro: 'invalid_request_error'`; importação conclui | [ ] |
+| 13 | Chave inválida no secret | importação conclui normalmente; logs `vinculo` e `nome` com `erro: 'ia-401'`, `tipoErro: 'authentication_error'`; produtos sem vínculo e sem nome | [ ] |
 | 14 | Produto com `candidatosVinculo` no app | "Este produto é o mesmo que…" mostra "Possíveis equivalentes" e o vínculo com um deles funciona | [ ] |
 | 15 | "Desfazer vínculo" num produto ligado automaticamente | `vinculoBloqueado: true`; aparecer em outra nota não religa nem apaga o campo | [ ] |
 | 16 | Logs `importacao` da etapa `vinculo` | só contagens e `chavePrefixo`; nenhuma descrição, CNPJ ou uid | [ ] |
@@ -82,3 +82,23 @@ CONDOR SUPER CENTER LTDA (76.189.406/0001-26), sem nome fantasia na Receita.
 | 27 | "Renomear" → "Usar o nome oficial" | documento do apelido apagado; notas voltam para o nome fantasia ou a razão social | [ ] |
 | 28 | "Renomear" numa loja com nome fantasia (ex.: BOX ATACADISTA) | aceita; o detalhe mostra "Nome na Receita: BOX ATACADISTA" | [ ] |
 | 29 | Logs `importacao` das etapas `confirmacao` e `apelido` | só contagens (`notasAtualizadas`, `removido`) e `chavePrefixo`; nenhum apelido, CNPJ ou uid | [ ] |
+
+## Nome legível do produto (IA)
+
+Plano: `docs/plano/nome-produto-ia-plano.md`. Pré-requisitos: a chave do secret `ANTHROPIC_API_KEY`
+é de uma organização do Console com saldo (a vinculada ao plano Max em claude.ai → Configurações →
+Faturamento → "Créditos de API"; créditos em platform.claude.com/settings/billing) e
+`npm run deploy:functions:dev` (`previewNfce` com o secret e 120 s, `renomearProduto`).
+
+| # | Cenário | Esperado | OK |
+|---|---|---|---|
+| 30 | Prévia de uma nota com produtos novos | cada item com o nome legível e "Na nota: …" abaixo; log `importacao` da etapa `nome` com `contagens.ia` > 0 e nenhuma descrição, CNPJ ou chave completa | [ ] |
+| 31 | Tempo da prévia com ~90 itens novos | abaixo de 60 s (a callable tem 120 s) | [ ] |
+| 32 | Confirmar a nota | `produtos/{id}` com `nome`, `nomeOrigem: 'ia'`, `etiquetas.origem: 'ia'`; a nota em `usuarios/{uid}/notas` com `itens[].nome` e **sem** `etiquetas` | [ ] |
+| 33 | Segunda nota com os mesmos produtos | etapa `nome` com `contagens.daBase` = itens repetidos e nenhuma chamada nova para eles | [ ] |
+| 34 | Hortifruti de dois mercados ("Cebola Kg" × "FEIRA CEBOLA KG") | os dois com `bloco: 'GRANEL\|CEBOLA'` e ligados (`vinculoMotivo: 'etiquetas'`) | [ ] |
+| 35 | Página do produto → lápis "Corrigir nome" → salvar | snackbar "Nome atualizado."; título e notas do usuário com o nome novo; `nomeOrigem: 'manual'` | [ ] |
+| 36 | Reimportar/importar outra nota com o produto renomeado | o nome manual continua | [ ] |
+| 37 | Lista de compras: "Adicionar à lista" num item com nome | o item entra com o nome legível; o autocompletar acha pelo nome | [ ] |
+| 38 | Retroativo: `node functions/lib/reprocessar-vinculos.cjs --com-ia` e depois `--gravar` (ver o cabeçalho do script) | linhas `nome … → …` na simulação; com `--gravar`, produtos e `itens[].nome` das notas antigas atualizados | [ ] |
+
