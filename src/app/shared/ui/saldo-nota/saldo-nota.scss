@@ -25,14 +25,18 @@
   }
 
   &--grande {
-    font-size: 20px;
-    font-weight: 700;
+    align-items: flex-start;
     gap: 4px;
+    font-size: 16px;
+    font-weight: 700;
+    line-height: 1.25;
+    white-space: normal;
 
     mat-icon {
-      width: 22px;
-      height: 22px;
-      font-size: 22px;
+      flex-shrink: 0;
+      width: 20px;
+      height: 20px;
+      font-size: 20px;
     }
   }
 }
