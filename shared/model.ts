@@ -1,4 +1,5 @@
 import type { Etiquetas } from './etiquetas';
+import type { ConfigIa } from './modelos-ia';
 
 export type Uf = 'PR';
 
@@ -278,6 +279,25 @@ export interface RenomearProdutoEntrada {
   id?: string;
   nome?: string;
 }
+
+export interface GastoIa {
+  custoUsd: number;
+  chamadas: number;
+}
+
+/** `controle/ia_AAAA-MM`: gasto do mês com a Claude API, no total e por etapa. */
+export interface GastoIaMes extends GastoIa {
+  porEtapa?: Partial<Record<'nome' | 'vinculo', GastoIa>>;
+}
+
+export type CodigoErroConfigIa = 'nao-autorizado' | 'modelo-invalido';
+
+export type ObterConfigIaResposta =
+  | { ok: true; config: ConfigIa; gasto: GastoIaMes | null }
+  | { ok: false; erro: { codigo: CodigoErroConfigIa } };
+
+export type DefinirConfigIaResposta =
+  { ok: true; config: ConfigIa } | { ok: false; erro: { codigo: CodigoErroConfigIa } };
 
 export type CodigoErroRenomear =
   'produto-invalido' | 'produto-inexistente' | 'nome-invalido' | 'rate-limit';

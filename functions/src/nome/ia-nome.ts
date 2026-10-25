@@ -2,7 +2,9 @@ import Anthropic from '@anthropic-ai/sdk';
 import { betaZodOutputFormat } from '@anthropic-ai/sdk/helpers/beta/zod';
 import { z } from 'zod';
 import { limparNomeProduto, type NomeIa } from '@shared/nome-produto';
-import { IA_MODELO_NOME, IA_TIMEOUT_MS } from '../vinculo/config-ia';
+import { MODELO_IA_PADRAO, type IdModeloIa } from '@shared/modelos-ia';
+import { parametrosDoModelo } from '../ia/modelos';
+import { IA_TIMEOUT_MS } from '../vinculo/config-ia';
 import { IaSemDecisaoError, custoUsd, type MensagemIa } from '../vinculo/ia';
 
 export const MAX_ITENS_POR_PARTE = 40;
@@ -23,7 +25,7 @@ export interface RespostaNomes {
 }
 
 /** Lança só se nenhuma parte respondeu; quem chama segue sem nome. */
-export type NormalizarNomes = (itens: ItemNome[]) => Promise<RespostaNomes>;
+export type NormalizarNomes = (itens: ItemNome[], modelo: IdModeloIa) => Promise<RespostaNomes>;
 
 export const SISTEMA_NOME = `Você recebe descrições de produtos de supermercado brasileiros copiadas de notas fiscais: abreviadas e muitas vezes cortadas no fim (DET=detergente, REFR=refrigerante, REQ=requeijão, SAB=sabonete, SAB PO=sabão em pó, CR D=creme dental, GE D=gel dental, TRAD=tradicional, DESN=desnatado, INTEG=integral, S G=sem gás, C G=com gás, BDJ=bandeja, S OSSO=sem osso, C PELE=com pele, ACG=açougue, KG=vendido por quilo, UN=unidade).
 Para cada item devolva:
@@ -75,8 +77,9 @@ export function traduzirNomes(itens: readonly ItemNome[], saida: SaidaNome): Map
 export function interpretarMensagemNomes(
   itens: readonly ItemNome[],
   msg: MensagemIa<SaidaNome>,
+  modelo: IdModeloIa = MODELO_IA_PADRAO,
 ): { nomes: Map<number, NomeIa>; custoUsd: number } {
-  const custo = custoUsd(msg.usage);
+  const custo = custoUsd(msg.usage, modelo);
   if (msg.stop_reason !== 'end_turn') throw new IaSemDecisaoError(`stop:${msg.stop_reason}`, custo);
   if (!msg.parsed_output) throw new IaSemDecisaoError('sem-json', custo);
   return { nomes: traduzirNomes(itens, msg.parsed_output), custoUsd: custo };
@@ -119,17 +122,15 @@ export async function normalizarEmPartes(
 
 export function criarNormalizador(apiKey: string): NormalizarNomes {
   const cliente = new Anthropic({ apiKey, timeout: IA_TIMEOUT_MS, maxRetries: 1 });
-  return (itens) =>
+  return (itens, modelo) =>
     normalizarEmPartes(itens, async (parte) => {
       const msg = await cliente.beta.messages.parse({
-        model: IA_MODELO_NOME,
+        ...parametrosDoModelo(modelo),
         max_tokens: 8000,
-        betas: ['server-side-fallback-2026-07-01'],
-        fallbacks: 'default',
         output_config: { effort: 'low', format: betaZodOutputFormat(SaidaNome) },
         system: SISTEMA_NOME,
         messages: [{ role: 'user', content: montarMensagemNomes(parte) }],
       });
-      return interpretarMensagemNomes(parte, msg);
+      return interpretarMensagemNomes(parte, msg, modelo);
     });
 }

@@ -1,4 +1,4 @@
-import { ANTHROPIC_API_KEY, EM_DEV, OPCOES_CALLABLE } from './config';
+import { ADMIN_UIDS, ANTHROPIC_API_KEY, EM_DEV, OPCOES_CALLABLE } from './config';
 import { logger } from 'firebase-functions';
 import { HttpsError, onCall, type CallableRequest } from 'firebase-functions/v2/https';
 import { onSchedule } from 'firebase-functions/v2/scheduler';
@@ -10,6 +10,7 @@ import { contextoPadrao, type Contexto } from './importar/contexto';
 import { executarPreview } from './importar/preview-nfce';
 import { executarEnfileirar, executarRetentar } from './pendentes/enfileirar';
 import { executarReprocessamento } from './pendentes/reprocessar-pendentes';
+import { executarDefinirConfigIa, executarObterConfigIa } from './ia/configurar-ia';
 import { executarRenomearProduto } from './produtos/renomear-produto';
 import { executarDesvincular, executarVincular } from './produtos/vincular-produto';
 import { criarNormalizador, type NormalizarNomes } from './nome/ia-nome';
@@ -20,14 +21,14 @@ let classificador: ClassificarVinculos | null = null;
 let normalizador: NormalizarNomes | null = null;
 
 /** O secret só existe nas funções que o declaram, então o cliente nasce na 1ª chamada. */
-const classificarVinculos: ClassificarVinculos = (itens) => {
+const classificarVinculos: ClassificarVinculos = (itens, modelo) => {
   classificador ??= criarClassificador(ANTHROPIC_API_KEY.value());
-  return classificador(itens);
+  return classificador(itens, modelo);
 };
 
-const normalizarNomes: NormalizarNomes = (itens) => {
+const normalizarNomes: NormalizarNomes = (itens, modelo) => {
   normalizador ??= criarNormalizador(ANTHROPIC_API_KEY.value());
-  return normalizador(itens);
+  return normalizador(itens, modelo);
 };
 
 function contexto(): Contexto {
@@ -87,6 +88,16 @@ export const renomearProduto = onCall(
   OPCOES_CALLABLE,
   (req: CallableRequest<RenomearProdutoEntrada>) =>
     executarRenomearProduto(uidDe(req), req.data, contexto()),
+);
+
+export const obterConfigIa = onCall(OPCOES_CALLABLE, (req: CallableRequest) =>
+  executarObterConfigIa(uidDe(req), ADMIN_UIDS.value(), contexto()),
+);
+
+export const definirConfigIa = onCall(
+  OPCOES_CALLABLE,
+  (req: CallableRequest<{ modeloNome?: string; modeloVinculo?: string }>) =>
+    executarDefinirConfigIa(uidDe(req), ADMIN_UIDS.value(), req.data, contexto()),
 );
 
 export const definirApelido = onCall(

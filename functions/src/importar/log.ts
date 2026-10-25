@@ -9,7 +9,8 @@ export type EtapaImportacao =
   | 'cnpj'
   | 'apelido'
   | 'nome'
-  | 'nome-manual';
+  | 'nome-manual'
+  | 'config-ia';
 
 export interface RegistroImportacao {
   etapa: EtapaImportacao;
@@ -20,6 +21,8 @@ export interface RegistroImportacao {
   erro?: string;
   /** `error.type` da Claude API quando a falha veio dela. */
   tipoErro?: string;
+  /** Modelo da Claude API usado na etapa (`nome`, `vinculo`). */
+  modelo?: string;
   chave?: string;
   /** Só contagens (vínculo automático), nunca descrição ou CNPJ. */
   contagens?: Record<string, number>;

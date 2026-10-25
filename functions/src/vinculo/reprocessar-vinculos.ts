@@ -2,6 +2,7 @@ import { etiquetar, type Etiquetas } from '@shared/etiquetas';
 import type { Produto, ProdutoId } from '@shared/model';
 import { etiquetasDaIa } from '@shared/nome-produto';
 import type { Contexto } from '../importar/contexto';
+import { obterModelos } from '../ia/config-ia-firestore';
 import { erroIa } from './ia';
 import {
   MAX_ITENS_POR_CHAMADA,
@@ -101,7 +102,11 @@ async function nomear(
   resumo.semNome = semNome.length;
   if (!semNome.length) return daIa;
   try {
-    const r = await ctx.normalizarNomes(semNome.map((p, k) => ({ i: k + 1, d: p.descricao })));
+    const { modeloNome } = await obterModelos(ctx);
+    const r = await ctx.normalizarNomes(
+      semNome.map((p, k) => ({ i: k + 1, d: p.descricao })),
+      modeloNome,
+    );
     resumo.chamadasNome = r.chamadas;
     resumo.custoNomeUsd = r.custoUsd;
     if (r.erro) resumo.erroNome = erroIa(r.erro).erro;

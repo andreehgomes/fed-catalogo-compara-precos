@@ -13,6 +13,7 @@ import { existsSync, readFileSync } from 'node:fs';
 import { homedir } from 'node:os';
 import { resolve } from 'node:path';
 import { decidirPorEtiquetas, etiquetar, type Candidato } from '@shared/etiquetas';
+import { MODELO_IA_PADRAO } from '@shared/modelos-ia';
 import { criarClassificador, type ItemIa } from '../src/vinculo/ia';
 import { MAX_ITENS_POR_CHAMADA } from '../src/vinculo/vincular-nota';
 
@@ -38,7 +39,10 @@ function chave(): string {
 
 async function main() {
   const gabarito = JSON.parse(
-    readFileSync(resolve('functions/test/fixtures/vinculo/gabarito-menor-preco-2026-09.json'), 'utf8'),
+    readFileSync(
+      resolve('functions/test/fixtures/vinculo/gabarito-menor-preco-2026-09.json'),
+      'utf8',
+    ),
   ) as { grupos: { ofertas: Oferta[] }[] };
 
   let itens = 0;
@@ -70,7 +74,12 @@ async function main() {
         const id = `${o.desc}|${c.map((x) => x.d).join('|')}`;
         const atual = duvidas.get(id);
         if (atual) atual.gtins.push(o.gtin);
-        else duvidas.set(id, { item: { i: duvidas.size + 1, d: o.desc, c }, gtinsPorRaiz, gtins: [o.gtin] });
+        else
+          duvidas.set(id, {
+            item: { i: duvidas.size + 1, d: o.desc, c },
+            gtinsPorRaiz,
+            gtins: [o.gtin],
+          });
       }
     });
   }
@@ -80,7 +89,7 @@ async function main() {
   const lotes: ItemIa[][] = [];
   for (let k = 0; k < lista.length; k += MAX_ITENS_POR_CHAMADA)
     lotes.push(lista.slice(k, k + MAX_ITENS_POR_CHAMADA).map((d) => d.item));
-  const respostas = await Promise.all(lotes.map((l) => classificar(l)));
+  const respostas = await Promise.all(lotes.map((l) => classificar(l, MODELO_IA_PADRAO)));
 
   let ligadosIa = 0;
   let acertosIa = 0;

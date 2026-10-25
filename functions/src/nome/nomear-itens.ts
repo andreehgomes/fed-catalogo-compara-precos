@@ -2,6 +2,7 @@ import { produtoIdDe } from '@shared/gtin';
 import type { ItemNfce, NfceParsed, Produto, ProdutoId } from '@shared/model';
 import { etiquetasDaIa } from '@shared/nome-produto';
 import type { Contexto } from '../importar/contexto';
+import { obterModelos } from '../ia/config-ia-firestore';
 import { erroIa, type ErroIa } from '../vinculo/ia';
 import { registrarGasto } from '../vinculo/vincular-nota';
 
@@ -14,6 +15,7 @@ export async function nomearItens(ctx: Contexto, nota: NfceParsed): Promise<Nfce
   const inicio = Date.now();
   const contagens = { itens: nota.itens.length, daBase: 0, ia: 0, semNome: 0, chamadas: 0 };
   let falha: ErroIa | undefined;
+  let modelo: string | undefined;
   let itens: ItemNfce[] = nota.itens;
   try {
     const ids = nota.itens.map((i) => produtoIdDe(i.ean, nota.emitente.cnpj, i.codigo));
@@ -29,7 +31,12 @@ export async function nomearItens(ctx: Contexto, nota: NfceParsed): Promise<Nfce
     if (faltam.size) {
       const lista = [...faltam];
       try {
-        const r = await ctx.normalizarNomes(lista.map(([, d], k) => ({ i: k + 1, d })));
+        const { modeloNome } = await obterModelos(ctx);
+        modelo = modeloNome;
+        const r = await ctx.normalizarNomes(
+          lista.map(([, d], k) => ({ i: k + 1, d })),
+          modeloNome,
+        );
         contagens.chamadas = r.chamadas;
         if (r.erro) falha = erroIa(r.erro);
         for (const [i, n] of r.nomes) {
@@ -67,6 +74,7 @@ export async function nomearItens(ctx: Contexto, nota: NfceParsed): Promise<Nfce
     chave: nota.chave,
     ...(falha ? { erro: falha.erro } : {}),
     ...(falha?.tipo ? { tipoErro: falha.tipo } : {}),
+    ...(modelo ? { modelo } : {}),
     contagens,
   });
   return { ...nota, itens };

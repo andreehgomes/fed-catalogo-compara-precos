@@ -1,5 +1,5 @@
 import { initializeApp } from 'firebase-admin/app';
-import { defineSecret } from 'firebase-functions/params';
+import { defineList, defineSecret } from 'firebase-functions/params';
 import { setGlobalOptions } from 'firebase-functions/v2';
 
 export const REGIAO = 'southamerica-east1';
@@ -19,3 +19,6 @@ export const EM_DEV = process.env['GCLOUD_PROJECT']?.endsWith('-dv') ?? false;
 
 /** Chave da Claude API do vínculo por IA (`firebase functions:secrets:set ANTHROPIC_API_KEY`). */
 export const ANTHROPIC_API_KEY = defineSecret('ANTHROPIC_API_KEY');
+
+/** Quem pode trocar o modelo de IA pelo app (`functions/.env.<projeto>`; uid não é segredo). */
+export const ADMIN_UIDS = defineList('ADMIN_UIDS');

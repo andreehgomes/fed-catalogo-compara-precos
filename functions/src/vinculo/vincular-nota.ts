@@ -2,6 +2,7 @@ import { decidirPorEtiquetas, etiquetar, type Candidato } from '@shared/etiqueta
 import type { Nota, Produto, ProdutoId } from '@shared/model';
 import type { Contexto } from '../importar/contexto';
 import { vincular } from '../produtos/vincular-produto';
+import { obterModelos } from '../ia/config-ia-firestore';
 import { IaSemDecisaoError, erroIa, type ErroIa, type ItemIa, type RespostaIa } from './ia';
 
 export const MAX_ITENS_POR_CHAMADA = 40;
@@ -97,6 +98,7 @@ export async function vincularNota(
     chamadasIa: 0,
     custoUsd: 0,
   };
+  let modelo: string | undefined;
   const log = (resultado: 'sucesso' | 'falha', falha?: ErroIa) =>
     ctx.log({
       etapa: 'vinculo',
@@ -106,6 +108,7 @@ export async function vincularNota(
       chave: nota.chave,
       ...(falha ? { erro: falha.erro } : {}),
       ...(falha?.tipo ? { tipoErro: falha.tipo } : {}),
+      ...(modelo ? { modelo } : {}),
       contagens: { ...resumo },
     });
 
@@ -143,8 +146,12 @@ export async function vincularNota(
       return resumo;
     }
 
+    const { modeloVinculo } = await obterModelos(ctx);
+    modelo = modeloVinculo;
     const chamadas = lotes(itensIa);
-    const respostas = await Promise.allSettled(chamadas.map((l) => ctx.classificarVinculos(l)));
+    const respostas = await Promise.allSettled(
+      chamadas.map((l) => ctx.classificarVinculos(l, modeloVinculo)),
+    );
     resumo.chamadasIa = chamadas.length;
     let falha: ErroIa | undefined;
     const aceitas: RespostaIa[] = [];

@@ -5,7 +5,9 @@ import Anthropic, {
 } from '@anthropic-ai/sdk';
 import { betaZodOutputFormat } from '@anthropic-ai/sdk/helpers/beta/zod';
 import { z } from 'zod';
-import { IA_MODELO, IA_TIMEOUT_MS, IA_USD_POR_MTOK } from './config-ia';
+import { MODELO_IA_PADRAO, custoDoModelo, type IdModeloIa } from '@shared/modelos-ia';
+import { parametrosDoModelo } from '../ia/modelos';
+import { IA_TIMEOUT_MS } from './config-ia';
 
 /** Item em dúvida: `i` é o número na nota, `d` a descrição e `c` os candidatos (id real). */
 export interface ItemIa {
@@ -20,7 +22,7 @@ export interface RespostaIa {
   custoUsd: number;
 }
 
-export type ClassificarVinculos = (itens: ItemIa[]) => Promise<RespostaIa>;
+export type ClassificarVinculos = (itens: ItemIa[], modelo: IdModeloIa) => Promise<RespostaIa>;
 
 /** A IA respondeu sem decisão utilizável (recusa, corte, JSON inválido). */
 export class IaSemDecisaoError extends Error {
@@ -68,10 +70,11 @@ export function montarMensagem(itens: readonly ItemIa[]): string {
     .join('\n');
 }
 
-export function custoUsd(uso: { input_tokens: number; output_tokens: number }): number {
-  return (
-    (uso.input_tokens * IA_USD_POR_MTOK.entrada + uso.output_tokens * IA_USD_POR_MTOK.saida) / 1e6
-  );
+export function custoUsd(
+  uso: { input_tokens: number; output_tokens: number },
+  modelo: IdModeloIa = MODELO_IA_PADRAO,
+): number {
+  return custoDoModelo(modelo, uso);
 }
 
 /** Traduz `c{k}` para o id real; item ou candidato desconhecido é descartado. */
@@ -101,29 +104,32 @@ export interface MensagemIa<T = SaidaIa> {
   usage: { input_tokens: number; output_tokens: number };
 }
 
-export function interpretarMensagem(itens: readonly ItemIa[], msg: MensagemIa): RespostaIa {
-  const custo = custoUsd(msg.usage);
+export function interpretarMensagem(
+  itens: readonly ItemIa[],
+  msg: MensagemIa,
+  modelo: IdModeloIa = MODELO_IA_PADRAO,
+): RespostaIa {
+  const custo = custoUsd(msg.usage, modelo);
   if (msg.stop_reason !== 'end_turn') throw new IaSemDecisaoError(`stop:${msg.stop_reason}`, custo);
   if (!msg.parsed_output) throw new IaSemDecisaoError('sem-json', custo);
   return { decisoes: traduzirDecisoes(itens, msg.parsed_output), custoUsd: custo };
 }
 
 /**
- * Uma chamada para todos os itens em dúvida da nota. Recusa vai para o fallback do servidor;
- * qualquer outra falha lança e quem chama deixa os itens sem vínculo.
+ * Uma chamada para todos os itens em dúvida da nota, no modelo da configuração. Recusa vai
+ * para o fallback do servidor (quando o modelo tem); qualquer outra falha lança e quem chama
+ * deixa os itens sem vínculo.
  */
 export function criarClassificador(apiKey: string): ClassificarVinculos {
   const cliente = new Anthropic({ apiKey, timeout: IA_TIMEOUT_MS, maxRetries: 1 });
-  return async (itens) => {
+  return async (itens, modelo) => {
     const msg = await cliente.beta.messages.parse({
-      model: IA_MODELO,
+      ...parametrosDoModelo(modelo),
       max_tokens: 4000,
-      betas: ['server-side-fallback-2026-07-01'],
-      fallbacks: 'default',
       output_config: { effort: 'low', format: betaZodOutputFormat(SaidaIa) },
       system: SISTEMA_IA,
       messages: [{ role: 'user', content: montarMensagem(itens) }],
     });
-    return interpretarMensagem(itens, msg);
+    return interpretarMensagem(itens, msg, modelo);
   };
 }
