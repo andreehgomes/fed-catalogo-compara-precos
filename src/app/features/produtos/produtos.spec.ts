@@ -1,7 +1,7 @@
 import { signal } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
 import { Router, provideRouter } from '@angular/router';
-import type { Estabelecimento, Nota, Preco, Produto, ProdutoId } from '@shared/model';
+import type { Estabelecimento, Preco, Produto, ProdutoId } from '@shared/model';
 import { vi } from 'vitest';
 import { botao, texto } from '../../../testing/dom';
 import { AuthStore } from '../../core/auth/auth.store';
@@ -10,7 +10,6 @@ import { FIRESTORE_API, FirestoreApi } from '../../core/firebase/firestore-api';
 import { FIRESTORE } from '../../core/firebase/firestore.token';
 import { GraficoHistorico } from '../../shared/ui/grafico-historico/grafico-historico';
 import { EstabelecimentosService } from '../estabelecimentos/data-access/estabelecimentos.service';
-import { economiaPotencial, totalDe, variacao } from '../painel/painel.calculos';
 import ProdutosBuscaPage, { CatalogoProdutosEstado } from './busca/produtos-busca.page';
 import {
   PrecoComId,
@@ -616,51 +615,5 @@ describe('EstabelecimentosService', () => {
       ['loc:A:1', 5, 'ARROZ 5KG'],
       ['loc:A:2', 3, null],
     ]);
-  });
-});
-
-describe('painel: cálculos (seed de notas em 2 meses)', () => {
-  const nota = (total: number, itens: Nota['itens'] = []): Nota => ({
-    chave: String(total),
-    cnpj: 'A',
-    estabelecimentoNome: 'A',
-    estabelecimentoCidade: '',
-    emissao: hoje,
-    total,
-    desconto: 0,
-    qtdItens: itens.length,
-    itens,
-    importadaEm: hoje,
-  });
-  const item = (produtoId: string, vlUnit: number, qtd: number) => ({
-    n: 1,
-    descricao: '',
-    codigo: '',
-    ean: null,
-    qtd,
-    unidade: 'UN',
-    vlUnit,
-    vlTotal: vlUnit * qtd,
-    produtoId: produtoId as ProdutoId,
-    precoPorUnidadeBase: null,
-  });
-
-  it('total, variação e economia conferem com o cálculo manual', () => {
-    const setembro = [
-      nota(100, [item('p1', 5, 2), item('p2', 3, 1)]),
-      nota(50.5, [item('p3', 10, 1)]),
-    ];
-    const agosto = [nota(120)];
-    const produtos = new Map<string, Produto>([
-      ['p1', produto('p1', { menorPreco: { cnpj: 'B', vlUnit: 4.2, emissao: hoje } })],
-      ['p2', produto('p2', { menorPreco: { cnpj: 'A', vlUnit: 3, emissao: hoje } })],
-      ['p3', produto('p3', { menorPreco: { cnpj: 'C', vlUnit: 9.5, emissao: hoje } })],
-    ]);
-    expect(totalDe(setembro)).toBe(150.5);
-    expect(variacao(150.5, totalDe(agosto))).toBe(25.4);
-    expect(variacao(10, 0)).toBeNull();
-    expect(economiaPotencial(setembro, produtos)).toBe(
-      Math.round(((5 - 4.2) * 2 + (10 - 9.5) * 1) * 100) / 100,
-    );
   });
 });

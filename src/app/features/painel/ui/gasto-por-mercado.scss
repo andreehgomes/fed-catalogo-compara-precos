@@ -1,0 +1,17 @@
+@use '../../../shared/style/tokens' as *;
+
+.barra {
+  display: block;
+  height: 6px;
+  margin-top: 4px;
+  border-radius: $cp-radius-pill;
+  background: $cp-surface-track;
+  overflow: hidden;
+
+  > span {
+    display: block;
+    height: 100%;
+    border-radius: inherit;
+    background: $cp-serie-1;
+  }
+}

@@ -1,0 +1,134 @@
+<section class="cp-block" aria-labelledby="grafico-meses-titulo">
+  <div class="cp-section-top">
+    <h2 id="grafico-meses-titulo" class="cp-section-title">
+      {{ porCompra() ? 'Gastos por compra' : 'Gastos por mês' }}
+    </h2>
+    <div class="cp-segmented" role="group" aria-label="O que mostrar no gráfico">
+      <button type="button" [attr.aria-pressed]="modo() === 'gasto'" (click)="mudar('gasto')">
+        Gasto
+      </button>
+      <button type="button" [attr.aria-pressed]="modo() === 'saldo'" (click)="mudar('saldo')">
+        Saldo
+      </button>
+    </div>
+  </div>
+
+  @if (modo() === 'saldo' && vazio()) {
+    <p class="grafico-vazio">
+      O saldo aparece quando você compra de novo um produto que já está nas suas notas.
+    </p>
+  } @else {
+    <figure class="grafico" [class.grafico--saldo]="modo() === 'saldo'">
+      <svg
+        [attr.viewBox]="'0 0 ' + largura() + ' ' + altura"
+        [attr.aria-label]="
+          (modo() === 'saldo' ? 'Saldo contra seu melhor preço por ' : 'Gastos por ') +
+          (porCompra() ? 'compra' : 'mês')
+        "
+        role="group"
+      >
+        <defs>
+          <pattern
+            id="cp-grafico-meses-parcial"
+            patternUnits="userSpaceOnUse"
+            width="6"
+            height="6"
+            patternTransform="rotate(45)"
+          >
+            <rect width="3" height="6" fill="currentColor" />
+          </pattern>
+        </defs>
+        <line
+          class="eixo"
+          [attr.x1]="margem.esq"
+          [attr.x2]="largura() - margem.dir"
+          [attr.y1]="desenho().zero"
+          [attr.y2]="desenho().zero"
+        />
+        @for (b of desenho().barras; track b.id) {
+          <a
+            [routerLink]="b.link"
+            [queryParams]="b.query"
+            [attr.aria-label]="b.aria"
+            [class]="'barra barra--' + b.tipo"
+            [class.barra--destaque]="b.destaque"
+          >
+            <title>{{ b.aria }}</title>
+            <rect
+              [attr.x]="b.x"
+              [attr.y]="b.y"
+              [attr.width]="b.w"
+              [attr.height]="b.h"
+              rx="3"
+              [attr.fill]="b.parcial ? 'url(#cp-grafico-meses-parcial)' : null"
+            />
+            @if (b.rotuloValor) {
+              <text class="valor" [attr.x]="b.cx" [attr.y]="b.yValor" text-anchor="middle">
+                {{ b.rotuloValor }}
+              </text>
+            }
+            <text class="rotulo" [attr.x]="b.cx" [attr.y]="altura - 8" text-anchor="middle">
+              {{ b.rotulo }}
+            </text>
+          </a>
+        }
+        @if (desenho().media; as y) {
+          <line
+            class="media"
+            [attr.x1]="margem.esq"
+            [attr.x2]="largura() - margem.dir"
+            [attr.y1]="y"
+            [attr.y2]="y"
+          />
+        }
+      </svg>
+      <figcaption class="legenda">
+        @if (modo() === 'saldo') {
+          <span class="item item--mais-caro">▲ gastou a mais que o seu melhor preço</span>
+          <span class="item item--mais-barato">▼ economizou</span>
+        } @else {
+          @if (desenho().media && media(); as m) {
+            <span class="item item--media">Média dos meses fechados: {{ m | currency }}</span>
+          }
+          @if (desenho().barras.at(-1)?.parcial) {
+            <span class="item item--parcial">Mês atual até hoje</span>
+          }
+        }
+      </figcaption>
+    </figure>
+  }
+
+  <table class="cp-sr-only">
+    <caption>
+      {{
+        porCompra() ? 'Gasto e saldo por compra' : 'Gasto e saldo por mês'
+      }}
+    </caption>
+    <thead>
+      <tr>
+        <th scope="col">{{ porCompra() ? 'Compra' : 'Mês' }}</th>
+        <th scope="col">Gasto</th>
+        <th scope="col">Saldo contra seu melhor preço</th>
+      </tr>
+    </thead>
+    <tbody>
+      @if (porCompra()) {
+        @for (c of compras(); track c.chave) {
+          <tr>
+            <th scope="row">{{ c.mercado }} em {{ c.emissao | date: 'dd/MM/yyyy' }}</th>
+            <td>{{ c.total | currency }}</td>
+            <td>{{ c.saldo | currency }}</td>
+          </tr>
+        }
+      } @else {
+        @for (b of barras(); track b.mes) {
+          <tr>
+            <th scope="row">{{ b.mes + '-01T12:00:00' | date: 'MMMM yyyy' }}</th>
+            <td>{{ b.total | currency }}</td>
+            <td>{{ b.saldo | currency }}</td>
+          </tr>
+        }
+      }
+    </tbody>
+  </table>
+</section>

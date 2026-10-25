@@ -19,17 +19,25 @@
   }
 }
 
-.painel-variacao {
-  display: inline-flex;
-  align-items: center;
-  gap: 4px;
-  font-size: 12px;
-  color: $cp-text-muted;
+.painel-placeholder {
+  min-height: 240px;
 
-  mat-icon {
-    font-size: 14px;
-    width: 14px;
-    height: 14px;
+  &--grafico {
+    min-height: 300px;
+  }
+}
+
+.painel-grade {
+  @include cp-grid(320px, auto-fit, 16px);
+
+  align-items: start;
+}
+
+.cp-info-block--erro {
+  align-items: center;
+
+  span {
+    flex: 1;
   }
 }
 

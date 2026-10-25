@@ -25,21 +25,23 @@
     <div aria-hidden="true"></div>
   }
 
-  @if (dados.isLoading()) {
+  @if (store.ultimas.isLoading()) {
     <div class="painel-skeleton" role="status">
       <span class="cp-sr-only">Carregando o painel…</span>
       <div class="cp-skeleton" aria-hidden="true"></div>
       <div class="cp-skeleton" aria-hidden="true"></div>
     </div>
-  } @else if (dados.error()) {
+  } @else if (store.ultimas.error()) {
     <cp-empty-state
       icone="cloud_off"
       titulo="Não foi possível carregar o painel"
       texto="Verifique a conexão."
     >
-      <button type="button" class="cp-btn-primary" (click)="dados.reload()">Tentar de novo</button>
+      <button type="button" class="cp-btn-primary" (click)="store.ultimas.reload()">
+        Tentar de novo
+      </button>
     </cp-empty-state>
-  } @else if (semNotas()) {
+  } @else if (store.semNotas()) {
     <section class="cp-block" aria-labelledby="comeco-titulo">
       <h2 id="comeco-titulo" class="cp-section-title">Como funciona</h2>
       <ol class="painel-passos">
@@ -58,37 +60,31 @@
       </ol>
       <a class="cp-btn-primary" routerLink="/importar">Importar primeira nota</a>
     </section>
-  } @else if (valor(); as v) {
-    <section class="cp-summary painel-resumo" aria-label="Resumo do mês">
-      <div>
-        <span class="cp-summary-label">Gasto no mês</span>
-        <span class="cp-summary-value">{{ v.total | currency }}</span>
-        @if (v.variacao !== null) {
-          <span class="painel-variacao">
-            <mat-icon aria-hidden="true">{{
-              v.variacao > 0 ? 'arrow_upward' : 'arrow_downward'
-            }}</mat-icon>
-            {{ v.variacao > 0 ? '+' : '' }}{{ v.variacao | number: '1.0-1' }}% em relação ao mês
-            passado ({{ v.totalAnterior | currency }})
-          </span>
-        }
+  } @else {
+    @if (store.janela.isLoading()) {
+      <div class="painel-skeleton" role="status">
+        <span class="cp-sr-only">Carregando o resumo…</span>
+        <div class="cp-skeleton" aria-hidden="true"></div>
       </div>
-      <div>
-        <span class="cp-summary-label">Notas no mês</span>
-        <span class="cp-summary-value">{{ v.qtdNotasMes }}</span>
+    } @else if (store.janela.error()) {
+      <div class="cp-info-block cp-info-block--erro" role="alert">
+        <mat-icon aria-hidden="true">cloud_off</mat-icon>
+        <span>Não foi possível carregar o resumo e os gráficos.</span>
+        <button type="button" class="cp-btn-ghost" (click)="store.janela.reload()">
+          Tentar de novo
+        </button>
       </div>
-      <div>
-        <span class="cp-summary-label">Economia possível</span>
-        <span class="cp-summary-value">{{ v.economia | currency }}</span>
-        <span class="painel-variacao">
-          @if (v.economia > 0) {
-            você pagou a mais que o menor preço conhecido
-          } @else {
-            você pagou o menor preço conhecido
-          }
-        </span>
-      </div>
-    </section>
+    } @else if (store.mes(); as mes) {
+      <cp-resumo-mes
+        [mes]="mes"
+        [mesAtual]="store.mesAtual()"
+        [resumo]="store.resumo()"
+        [variacao]="store.variacao()"
+        [podeEscolher]="store.podeEscolher()"
+        [escolha]="store.escolha()"
+        (escolher)="store.escolher($event)"
+      />
+    }
 
     <section class="cp-block">
       <div class="cp-section-top">
@@ -96,21 +92,52 @@
         <a class="cp-btn-ghost" routerLink="/notas">Ver todas</a>
       </div>
       <ul class="cp-list" aria-label="Últimas notas">
-        @for (n of v.ultimas; track n.chave) {
+        @for (n of store.ultimas.value(); track n.chave) {
           <li>
             <a class="cp-list-row" [routerLink]="['/notas', n.chave]">
               <span class="item-principal">
                 <span class="item-nome">{{ n.estabelecimentoNome }}</span>
-                <span class="item-detalhe"
-                  >{{ n.emissao | date: 'dd/MM/yyyy' }} · {{ n.qtdItens }} itens</span
-                >
+                <span class="item-detalhe">
+                  {{ n.emissao | date: 'dd/MM/yyyy' }} · {{ n.qtdItens }}
+                  {{ n.qtdItens === 1 ? 'item' : 'itens' }}
+                </span>
               </span>
-              <span class="cp-price">{{ n.total | currency }}</span>
+              <span class="item-lado">
+                <span class="cp-price">{{ n.total | currency }}</span>
+                @if (store.saldos().has(n.chave)) {
+                  <cp-saldo-nota [saldo]="store.saldos().get(n.chave)!" />
+                }
+              </span>
             </a>
           </li>
         }
       </ul>
     </section>
+
+    @if (store.janela.hasValue() && store.mes(); as mes) {
+      @defer (on viewport) {
+        <cp-grafico-meses
+          [barras]="store.barras()"
+          [compras]="store.barrasCompra()"
+          [porCompra]="store.porCompra()"
+          [media]="store.media()"
+          [mesReferencia]="mes"
+        />
+      } @placeholder {
+        <div class="painel-placeholder painel-placeholder--grafico" aria-hidden="true"></div>
+      }
+
+      @defer (on viewport) {
+        <cp-destaques-precos [destaques]="store.destaques()" />
+        <div class="painel-grade">
+          <cp-precos-que-subiram [altas]="store.altas()" />
+          <cp-gasto-por-mercado [mercados]="store.mercados()" [mes]="mes" />
+          <cp-onde-mais-gasta [gastos]="store.maioresGastos()" />
+        </div>
+      } @placeholder {
+        <div class="painel-placeholder" aria-hidden="true"></div>
+      }
+    }
 
     @defer (on viewport) {
       <cp-hora-de-repor />

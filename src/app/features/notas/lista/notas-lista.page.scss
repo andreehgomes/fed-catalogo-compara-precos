@@ -74,28 +74,3 @@
   align-items: flex-end;
   gap: 2px;
 }
-
-.notas-saldo {
-  display: inline-flex;
-  align-items: center;
-  gap: 3px;
-  font-size: 12px;
-  font-weight: 600;
-  color: $cp-text-muted;
-  white-space: nowrap;
-  font-variant-numeric: tabular-nums;
-
-  mat-icon {
-    width: 16px;
-    height: 16px;
-    font-size: 16px;
-  }
-
-  &--mais-caro {
-    color: $cp-pricier;
-  }
-
-  &--mais-barato {
-    color: $cp-cheaper;
-  }
-}

@@ -1,0 +1,85 @@
+@use '../../../shared/style/tokens' as *;
+
+.grafico {
+  margin: 0;
+
+  > svg {
+    width: 100%;
+    height: auto;
+  }
+}
+
+.grafico-vazio {
+  margin: 0;
+  font-size: 13px;
+  color: $cp-text-muted;
+}
+
+.eixo {
+  stroke: $cp-grafico-grade;
+  stroke-width: 1;
+}
+
+.media {
+  stroke: $cp-text-muted;
+  stroke-width: 1.5;
+  stroke-dasharray: 5 4;
+}
+
+.barra {
+  color: $cp-serie-1;
+  fill: currentcolor;
+  outline: none;
+
+  rect {
+    stroke: currentcolor;
+    stroke-width: 1;
+  }
+
+  &:hover rect,
+  &:focus-visible rect {
+    stroke: $cp-text;
+    stroke-width: 2;
+  }
+
+  &--mais-caro {
+    color: $cp-pricier;
+  }
+
+  &--mais-barato {
+    color: $cp-cheaper;
+  }
+}
+
+.rotulo {
+  font-size: 11px;
+  fill: $cp-text-muted;
+}
+
+.barra--destaque .rotulo {
+  font-weight: 700;
+  fill: $cp-text;
+}
+
+.valor {
+  font-size: 11px;
+  font-weight: 700;
+  fill: currentcolor;
+}
+
+.legenda {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px 16px;
+  margin-top: 6px;
+  font-size: 12px;
+  color: $cp-text-muted;
+
+  .item--mais-caro {
+    color: $cp-pricier;
+  }
+
+  .item--mais-barato {
+    color: $cp-cheaper;
+  }
+}

@@ -24,6 +24,17 @@ export interface IndiceCompleto {
   indice: Map<string, CompraPessoal[]>;
 }
 
+export interface NotaComparada {
+  nota: Nota;
+  comparacao: Map<number, ComparacaoHistorico>;
+  resumo: ResumoHistorico;
+}
+
+export interface JanelaComparada {
+  indice: IndiceCompleto;
+  notas: NotaComparada[];
+}
+
 interface CacheNotas {
   uid: string;
   desde: string;
@@ -48,6 +59,8 @@ export class HistoricoPessoalStore {
 
   private cache: CacheNotas | null = null;
   private completo: { de: Promise<Nota[]>; indice: Promise<IndiceCompleto> } | null = null;
+  private comparadas: { indice: Promise<IndiceCompleto>; janela: Promise<JanelaComparada> } | null =
+    null;
   private readonly _versao = signal(0);
   /** Muda a cada `invalidar()`, para quem deriva do histórico recarregar. */
   readonly versao = this._versao.asReadonly();
@@ -102,9 +115,35 @@ export class HistoricoPessoalStore {
     return this.completo.indice;
   }
 
+  /**
+   * Todas as notas da janela comparadas com o melhor preço recente (painel). Os grupos do
+   * `indiceCompleto()` bastam: `ean:` é sempre raiz e todo `loc:` é resolvido.
+   */
+  comparacoesDaJanela(): Promise<JanelaComparada> {
+    const indice = this.indiceCompleto();
+    if (this.comparadas?.indice !== indice) {
+      this.comparadas = {
+        indice,
+        janela: indice.then((i) => ({
+          indice: i,
+          notas: i.notas.map((nota) => {
+            const comparacao = compararNota(nota, i.indice, i.grupos);
+            return {
+              nota,
+              comparacao,
+              resumo: resumirHistorico(consolidarItens(nota.itens), comparacao),
+            };
+          }),
+        })),
+      };
+    }
+    return this.comparadas.janela;
+  }
+
   invalidar(): void {
     this.cache = null;
     this.completo = null;
+    this.comparadas = null;
     this.produtosCache.clear();
     this.membrosCache.clear();
     this._versao.update((v) => v + 1);

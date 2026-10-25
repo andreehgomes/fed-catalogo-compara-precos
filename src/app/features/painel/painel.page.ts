@@ -1,63 +1,48 @@
-import { CurrencyPipe, DatePipe, DecimalPipe } from '@angular/common';
-import { ChangeDetectionStrategy, Component, computed, inject, resource } from '@angular/core';
+import { CurrencyPipe, DatePipe } from '@angular/common';
+import { ChangeDetectionStrategy, Component, computed, inject } from '@angular/core';
 import { MatIconModule } from '@angular/material/icon';
 import { RouterLink } from '@angular/router';
 import { AuthStore } from '../../core/auth/auth.store';
 import { EmptyState } from '../../shared/ui/empty-state/empty-state';
-import { NotasService } from '../notas/data-access/notas.service';
-import { intervaloDe } from '../notas/lista/periodo';
+import { SaldoNota } from '../../shared/ui/saldo-nota/saldo-nota';
 import { PendentesBloco } from '../notas/ui/pendentes-bloco';
-import { ProdutosService } from '../produtos/data-access/produtos.service';
 import { HoraDeRepor } from './hora-de-repor';
+import { PainelStore } from './painel.store';
+import { DestaquesPrecos } from './ui/destaques-precos';
+import { GastoPorMercado } from './ui/gasto-por-mercado';
+import { GraficoMeses } from './ui/grafico-meses';
 import { ListaEmAndamento } from './ui/lista-em-andamento';
-import { economiaPotencial, totalDe, variacao } from './painel.calculos';
+import { OndeMaisGasta } from './ui/onde-mais-gasta';
+import { PrecosQueSubiram } from './ui/precos-que-subiram';
+import { ResumoMes } from './ui/resumo-mes';
 
 @Component({
   selector: 'cp-painel',
   imports: [
     CurrencyPipe,
     DatePipe,
-    DecimalPipe,
+    DestaquesPrecos,
     EmptyState,
+    GastoPorMercado,
+    GraficoMeses,
     HoraDeRepor,
     ListaEmAndamento,
     MatIconModule,
+    OndeMaisGasta,
     PendentesBloco,
+    PrecosQueSubiram,
+    ResumoMes,
     RouterLink,
+    SaldoNota,
   ],
+  providers: [PainelStore],
   templateUrl: './painel.page.html',
   styleUrl: './painel.page.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export default class PainelPage {
-  private readonly notas = inject(NotasService);
-  private readonly produtos = inject(ProdutosService);
   private readonly auth = inject(AuthStore);
+  protected readonly store = inject(PainelStore);
 
   protected readonly nome = computed(() => this.auth.usuario()?.displayName?.split(' ')[0] ?? null);
-
-  protected readonly dados = resource({
-    loader: async () => {
-      const [mes, anterior, ultimas] = await Promise.all([
-        this.notas.todas(intervaloDe('mes', null, null)),
-        this.notas.todas(intervaloDe('mes-passado', null, null)),
-        this.notas.listar({}),
-      ]);
-      const ids = mes.flatMap((n) => n.itens.map((i) => i.produtoId));
-      const produtos = await this.produtos.produtosPorIds(ids).catch(() => new Map());
-      const total = totalDe(mes);
-      const totalAnterior = totalDe(anterior);
-      return {
-        total,
-        totalAnterior,
-        variacao: variacao(total, totalAnterior),
-        economia: economiaPotencial(mes, produtos),
-        qtdNotasMes: mes.length,
-        ultimas: ultimas.notas.slice(0, 5),
-      };
-    },
-  });
-
-  protected readonly valor = computed(() => (this.dados.hasValue() ? this.dados.value() : null));
-  protected readonly semNotas = computed(() => this.valor()?.ultimas.length === 0);
 }

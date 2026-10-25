@@ -24,6 +24,42 @@ import { RenomearProdutoDialog } from '../produtos/renomear/renomear-produto-dia
 import { VincularDialog } from '../produtos/vincular/vincular-dialog';
 import { LocalizacaoStore } from '../regiao/localizacao/localizacao.store';
 import PainelPage from './painel.page';
+import {
+  AGOSTO,
+  GRUPOS_PAINEL,
+  HOJE_PAINEL,
+  NOTAS_PAINEL,
+} from '../../../testing/fixtures/painel/notas';
+import { RELOGIO } from '../../core/relogio';
+import type { JanelaComparada, NotaComparada } from '../notas/data-access/historico-pessoal.store';
+import {
+  compararNota,
+  consolidarItens,
+  indexarCompras,
+  resumirHistorico,
+} from '../notas/detalhe/historico-pessoal';
+import {
+  barrasPorCompra,
+  destaquesDoPeriodo,
+  gastoPorMercado,
+  mediaDosFechados,
+  ondeMaisGasta,
+  precosQueSubiram,
+  seriesPorMes,
+} from './painel.calculos';
+import { DestaquesPrecos } from './ui/destaques-precos';
+import { GastoPorMercado } from './ui/gasto-por-mercado';
+import { GraficoMeses } from './ui/grafico-meses';
+import { OndeMaisGasta } from './ui/onde-mais-gasta';
+import { PrecosQueSubiram } from './ui/precos-que-subiram';
+
+function comparadas(notas: Nota[]): NotaComparada[] {
+  const indice = indexarCompras(notas, GRUPOS_PAINEL);
+  return notas.map((nota) => {
+    const comparacao = compararNota(nota, indice, GRUPOS_PAINEL);
+    return { nota, comparacao, resumo: resumirHistorico(consolidarItens(nota.itens), comparacao) };
+  });
+}
 
 const hoje = new Date().toISOString();
 
@@ -39,21 +75,6 @@ function produto(id: string, extra: Partial<Produto> = {}): Produto {
     menorPreco: null,
     ultimaObservacao: null,
     ...extra,
-  };
-}
-
-function nota(chave: string, total: number): Nota {
-  return {
-    chave,
-    cnpj: 'A',
-    estabelecimentoNome: 'Mercado A',
-    estabelecimentoCidade: 'CURITIBA',
-    emissao: hoje,
-    total,
-    desconto: 0,
-    qtdItens: 1,
-    itens: [],
-    importadaEm: hoje,
   };
 }
 
@@ -105,46 +126,180 @@ async function renderizar<T>(tipo: new () => T, inputs: Record<string, unknown> 
 }
 
 describe('PainelPage', () => {
-  it('total do mês, variação, economia, últimas notas e atalhos', async () => {
-    const todas = vi.fn(async (f: { de?: string | null }) =>
-      f.de && new Date(f.de).getMonth() === new Date().getMonth()
-        ? [nota('s1', 100), nota('s2', 50)]
-        : [nota('a1', 120)],
-    );
+  function janela(notas: Nota[]): JanelaComparada {
+    const indice = indexarCompras(notas, GRUPOS_PAINEL);
+    return {
+      indice: { notas, grupos: GRUPOS_PAINEL, indice },
+      notas: comparadas(notas),
+    };
+  }
+
+  function painel(opcoes: { notas?: Nota[]; hoje?: Date; erroJanela?: boolean } = {}) {
+    const notas = opcoes.notas ?? NOTAS_PAINEL;
+    const j = janela(notas);
     base([
+      { provide: RELOGIO, useValue: () => opcoes.hoje ?? HOJE_PAINEL },
       {
         provide: NotasService,
+        useValue: { listar: vi.fn(async () => ({ notas, cursor: null, temMais: false })) },
+      },
+      {
+        provide: HistoricoPessoalStore,
         useValue: {
-          todas,
-          listar: vi.fn(async () => ({ notas: [nota('s1', 100)], cursor: null, temMais: false })),
+          versao: signal(0),
+          comparacoesDaJanela: vi.fn(async () => {
+            if (opcoes.erroJanela) throw new Error('offline');
+            return j;
+          }),
+          resumir: vi.fn(
+            async (alvo: Nota[]) =>
+              new Map(
+                j.notas.filter((c) => alvo.includes(c.nota)).map((c) => [c.nota.chave, c.resumo]),
+              ),
+          ),
         },
       },
-      { provide: ProdutosService, useValue: { produtosPorIds: vi.fn(async () => new Map()) } },
     ]);
-    const { el } = await renderizar(PainelPage);
+    return renderizar(PainelPage);
+  }
+
+  it('resumo do mês com saldo pessoal, últimas notas com saldo e atalhos', async () => {
+    const { el } = await painel();
     expect(texto(el.querySelector('h1'))).toBe('Olá, Ana');
-    expect(texto(el)).toContain('R$ 150,00');
-    expect(texto(el)).toContain('+25% em relação ao mês passado');
-    expect(texto(el)).toContain('você pagou o menor preço conhecido');
-    expect(el.querySelector('a[href="/notas/s1"]')).not.toBeNull();
+    const resumo = texto(el.querySelector('cp-resumo-mes'));
+    expect(resumo).toContain('Resumo do mês');
+    expect(resumo).toContain('R$ 35,47');
+    expect(resumo).toContain('R$ 3,00 a mais em 2 itens · R$ 0,00 de economia em 0 itens');
+    expect(resumo).toContain('ticket médio R$ 35,47');
+    expect(resumo).not.toContain('menor preço conhecido');
+    const linhas = [...el.querySelectorAll('ul[aria-label="Últimas notas"] li')].map(texto);
+    expect(linhas[0]).toContain('R$ 3,00 a mais');
+    expect(linhas[1]).toContain('R$ 3,40 de economia');
+    expect(linhas[2]).not.toMatch(/a mais|economia|zerado/);
+    expect(el.querySelector('a[href="/notas/outubro"]')).not.toBeNull();
     expect(botao(el, /Importar nota/).getAttribute('href')).toBe('/importar');
     expect(botao(el, /Preços perto de mim/).getAttribute('href')).toBe('/regiao');
   });
 
+  it('"Mês passado" troca o resumo', async () => {
+    const { el, fixture } = await painel();
+    botao(el, 'Mês passado').click();
+    fixture.detectChanges();
+    const resumo = texto(el.querySelector('cp-resumo-mes'));
+    expect(resumo).toContain('Resumo de setembro');
+    expect(resumo).toContain('R$ 3,40 de economia');
+  });
+
+  it('mês atual sem nota mostra o último mês com compra, sem seletor', async () => {
+    const { el } = await painel({ hoje: new Date(2026, 10, 2, 12) });
+    const resumo = texto(el.querySelector('cp-resumo-mes'));
+    expect(resumo).toContain('Resumo de outubro');
+    expect(resumo).toContain('mostrando o último mês com compra');
+    expect(el.querySelector('cp-resumo-mes .cp-segmented')).toBeNull();
+  });
+
+  it('erro no histórico não derruba as últimas notas', async () => {
+    const { el } = await painel({ erroJanela: true });
+    expect(texto(el.querySelector('[role="alert"]'))).toContain(
+      'Não foi possível carregar o resumo',
+    );
+    expect(el.querySelector('cp-resumo-mes')).toBeNull();
+    expect(el.querySelectorAll('ul[aria-label="Últimas notas"] li')).toHaveLength(3);
+  });
+
   it('sem notas explica o app em 3 passos', async () => {
-    base([
-      {
-        provide: NotasService,
-        useValue: {
-          todas: vi.fn(async () => []),
-          listar: vi.fn(async () => ({ notas: [], cursor: null, temMais: false })),
-        },
-      },
-      { provide: ProdutosService, useValue: { produtosPorIds: vi.fn(async () => new Map()) } },
-    ]);
-    const { el } = await renderizar(PainelPage);
+    const { el } = await painel({ notas: [] });
     expect(el.querySelectorAll('.painel-passos li')).toHaveLength(3);
     expect(botao(el, 'Importar primeira nota')).toBeTruthy();
+  });
+});
+
+describe('Painel: blocos', () => {
+  const rotulo = (a: Element | null | undefined) =>
+    a?.getAttribute('aria-label')?.replace(/\s/g, ' ');
+
+  async function bloco<T>(tipo: new () => T, inputs: Record<string, unknown>) {
+    TestBed.resetTestingModule();
+    TestBed.configureTestingModule({ providers: [provideRouter([])] });
+    return renderizar(tipo, inputs);
+  }
+
+  it('gráfico por mês: barras com link para as notas do mês, tabela e modo saldo', async () => {
+    const barras = seriesPorMes(comparadas(NOTAS_PAINEL), HOJE_PAINEL, 6);
+    const { el, fixture } = await bloco(GraficoMeses, {
+      barras,
+      media: mediaDosFechados(barras),
+      mesReferencia: '2026-10',
+    });
+    const links = [...el.querySelectorAll('svg a')];
+    expect(links).toHaveLength(6);
+    expect(links.at(-1)!.getAttribute('href')).toBe(
+      '/notas?periodo=personalizado&de=2026-10-01&ate=2026-10-31',
+    );
+    expect(rotulo(links.at(-1))).toBe('outubro (até hoje): R$ 35,47, ver notas');
+    expect(texto(el.querySelector('figcaption'))).toContain('Média dos meses fechados: R$ 62,03');
+    expect(el.querySelectorAll('table tbody tr')).toHaveLength(6);
+    expect(el.querySelector('line.media')).not.toBeNull();
+
+    botao(el, 'Saldo').click();
+    fixture.detectChanges();
+    expect(el.querySelectorAll('.barra--mais-caro')).toHaveLength(1);
+    expect(el.querySelectorAll('.barra--mais-barato')).toHaveLength(1);
+    expect(texto(el.querySelector('figcaption'))).toContain('economizou');
+    expect(rotulo(el.querySelector('svg a[aria-label^="setembro"]'))).toBe(
+      'setembro: R$ 3,40 de economia, ver notas',
+    );
+    expect(el.querySelector('line.media')).toBeNull();
+  });
+
+  it('gráfico por compra leva à nota; saldo vazio explica', async () => {
+    const { el, fixture } = await bloco(GraficoMeses, {
+      barras: [],
+      compras: barrasPorCompra(comparadas([AGOSTO])),
+      porCompra: true,
+    });
+    expect(texto(el.querySelector('h2'))).toBe('Gastos por compra');
+    expect(el.querySelector('svg a')!.getAttribute('href')).toBe('/notas/agosto');
+    botao(el, 'Saldo').click();
+    fixture.detectChanges();
+    expect(texto(el)).toContain('O saldo aparece quando você compra de novo');
+  });
+
+  it('destaques, gasto por mercado, preços que subiram e onde mais gasta', async () => {
+    const d = await bloco(DestaquesPrecos, {
+      destaques: destaquesDoPeriodo(comparadas(NOTAS_PAINEL)),
+    });
+    expect(texto(d.el)).toContain('Onde você pagou mais');
+    expect(texto(d.el)).toContain('R$ 2,40 a mais');
+    expect(texto(d.el)).toContain('Onde você economizou');
+    expect(d.el.querySelector('a')!.getAttribute('href')).toBe('/produtos/ean:7890000000028');
+
+    const m = await bloco(GastoPorMercado, {
+      mercados: gastoPorMercado(NOTAS_PAINEL),
+      mes: '2026-10',
+    });
+    expect(texto(m.el)).toContain('Mercado Alfa');
+    expect(m.el.querySelector('a')!.getAttribute('href')).toContain('cnpj=11111111000191');
+
+    const s = await bloco(PrecosQueSubiram, {
+      altas: precosQueSubiram(indexarCompras(NOTAS_PAINEL, GRUPOS_PAINEL)),
+    });
+    expect(texto(s.el)).toContain('de R$ 4,99 para R$ 5,29/un');
+    expect(texto(s.el)).toContain('+6%');
+
+    const vazio = await bloco(PrecosQueSubiram, { altas: [] });
+    expect(texto(vazio.el)).toContain('aparecem quando você compra o mesmo produto');
+
+    const g = await bloco(OndeMaisGasta, { gastos: ondeMaisGasta(NOTAS_PAINEL, GRUPOS_PAINEL) });
+    expect(texto(g.el.querySelector('li'))).toContain('CAFE TORRADO 500G');
+    expect(texto(g.el.querySelector('li'))).toContain('3 compras · 3 un');
+  });
+
+  it('blocos vazios somem', async () => {
+    const d = await bloco(DestaquesPrecos, { destaques: { pagouMais: [], economizou: [] } });
+    expect(d.el.querySelector('section')).toBeNull();
+    const m = await bloco(GastoPorMercado, { mercados: [], mes: '2026-10' });
+    expect(m.el.querySelector('section')).toBeNull();
   });
 });
 

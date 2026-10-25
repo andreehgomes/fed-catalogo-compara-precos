@@ -14,6 +14,7 @@ import { Router, RouterLink } from '@angular/router';
 import type { Nota } from '@shared/model';
 import type { DocumentSnapshot } from 'firebase/firestore';
 import { EmptyState } from '../../../shared/ui/empty-state/empty-state';
+import { SaldoNota } from '../../../shared/ui/saldo-nota/saldo-nota';
 import { HistoricoPessoalStore } from '../data-access/historico-pessoal.store';
 import { NotasAbertasService } from '../data-access/notas-abertas.service';
 import { FiltroNotas, NotasService, PaginaNotas } from '../data-access/notas.service';
@@ -22,7 +23,15 @@ import { PERIODOS, Periodo, intervaloDe } from './periodo';
 
 @Component({
   selector: 'cp-notas-lista',
-  imports: [CurrencyPipe, DatePipe, EmptyState, MatIconModule, PendentesBloco, RouterLink],
+  imports: [
+    CurrencyPipe,
+    DatePipe,
+    EmptyState,
+    MatIconModule,
+    PendentesBloco,
+    RouterLink,
+    SaldoNota,
+  ],
   templateUrl: './notas-lista.page.html',
   styleUrl: './notas-lista.page.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,

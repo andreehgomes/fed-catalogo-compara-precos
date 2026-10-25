@@ -544,9 +544,22 @@ cnpj`). O detalhe tem "Renomear" (`renomear/renomear-dialog.ts`, carregado por `
   telas que leem `nota.estabelecimentoNome` já recebem o apelido gravado. Na prévia da importação,
   loja sem nome fantasia e sem apelido mostra `<cp-campo-apelido>` (`shared/ui/campo-apelido/`,
   Signal Forms) com `sugerirApelido`.
-- Painel (`/`): total do mês e variação, notas do mês, economia potencial pela base
-  comunitária (`menorPreco` dos produtos; **não** chama o Menor Preço), últimas 5 notas,
-  pendentes, atalhos e estado inicial em 3 passos.
+- Painel (`/`, plano `docs/plano/painel-inicial-plano.md`): **só preços das notas do usuário**
+  (nada de `menorPreco`, `precos` comunitário nem Menor Preço). `PainelStore` (provido na página):
+  últimas 5 notas por `listar({})` (não esperam o histórico) com `<cp-saldo-nota>`
+  (`shared/ui/saldo-nota`, o mesmo da lista de notas), e o resto sobre
+  `HistoricoPessoalStore.comparacoesDaJanela()` (todas as notas dos 12 meses comparadas com o melhor
+  preço, em cache até `invalidar()`). Regra pura em `painel.calculos.ts` (100 % de cobertura,
+  fixture curta `src/testing/fixtures/painel/`): **mês de referência** = mês atual com nota, senão
+  o último mês com nota (seletor "Este mês / Mês passado" só quando o atual tem nota); variação do
+  mês em curso contra o anterior **até o mesmo dia**; resumo com gasto, saldo contra o melhor preço
+  (a mais − economia) e ticket médio. Blocos em `ui/` (`@defer on viewport`): `<cp-grafico-meses>`
+  (SVG próprio, Gasto | Saldo, 6 meses com o shell estreito e 12 no largo, uma barra por compra com
+  menos de 2 meses com nota, barra = link para `/notas` filtrada, tabela `cp-sr-only`),
+  `<cp-destaques-precos>` (pagou mais / economizou no mês), `<cp-precos-que-subiram>` (primeira ×
+  última compra da janela, ≥ 5 % e ≥ R$ 0,10, funciona com 2 compras), `<cp-gasto-por-mercado>` e
+  `<cp-onde-mais-gasta>` (3 meses). Erro no histórico só troca esses blocos por um aviso; pendentes,
+  atalhos e estado inicial em 3 passos seguem.
 
 ## Preços da região (Menor Preço)
 

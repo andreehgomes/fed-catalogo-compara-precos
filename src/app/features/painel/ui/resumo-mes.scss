@@ -1,0 +1,23 @@
+@use '../../../shared/style/tokens' as *;
+
+.resumo-aviso {
+  color: $cp-text-muted;
+  margin: 0;
+  font-size: 13px;
+}
+
+.resumo-detalhe {
+  color: $cp-text-muted;
+  display: inline-flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px;
+  font-size: 12px;
+  line-height: 1.4;
+
+  mat-icon {
+    font-size: 14px;
+    width: 14px;
+    height: 14px;
+  }
+}

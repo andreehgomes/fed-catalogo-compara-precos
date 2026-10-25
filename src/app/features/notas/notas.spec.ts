@@ -1011,6 +1011,21 @@ describe('HistoricoPessoalStore', () => {
     expect(todas).toHaveBeenCalledTimes(2);
   });
 
+  it('comparacoesDaJanela: mesmo resumo do resumir(), em cache até invalidar()', async () => {
+    const { store, todas } = montarStore();
+    const janela = await store.comparacoesDaJanela();
+    expect(await store.comparacoesDaJanela()).toBe(janela);
+    expect(janela.notas.map((c) => c.nota.chave)).toEqual(NOTAS_H.map((n) => n.chave));
+    for (const c of janela.notas) {
+      expect(c.resumo).toEqual((await store.resumir([c.nota])).get(c.nota.chave));
+    }
+    expect(todas).toHaveBeenCalledOnce();
+
+    store.invalidar();
+    expect(await store.comparacoesDaJanela()).not.toBe(janela);
+    expect(todas).toHaveBeenCalledTimes(2);
+  });
+
   it('indiceCompleto: falha não fica em cache', async () => {
     const { store, todas } = montarStore();
     todas.mockRejectedValueOnce(new Error('offline'));
