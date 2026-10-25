@@ -1,4 +1,8 @@
-import Anthropic from '@anthropic-ai/sdk';
+import Anthropic, {
+  APIConnectionError,
+  APIConnectionTimeoutError,
+  APIError,
+} from '@anthropic-ai/sdk';
 import { betaZodOutputFormat } from '@anthropic-ai/sdk/helpers/beta/zod';
 import { z } from 'zod';
 import { IA_MODELO, IA_TIMEOUT_MS, IA_USD_POR_MTOK } from './config-ia';
@@ -28,6 +32,25 @@ export class IaSemDecisaoError extends Error {
   }
 }
 
+export interface ErroIa {
+  erro: string;
+  /** `error.type` da API (`authentication_error`, `invalid_request_error`…), quando houver. */
+  tipo?: string;
+}
+
+/**
+ * Motivo da falha para o log, sem a mensagem livre da API (pode citar o pedido) nem a chave:
+ * só o status HTTP, o tipo do erro ou a classe de falha de rede.
+ */
+export function erroIa(e: unknown): ErroIa {
+  if (e instanceof IaSemDecisaoError) return { erro: `ia-${e.message}` };
+  if (e instanceof APIConnectionTimeoutError) return { erro: 'ia-timeout' };
+  if (e instanceof APIConnectionError) return { erro: 'ia-conexao' };
+  if (e instanceof APIError)
+    return { erro: `ia-${e.status ?? 'erro'}`, ...(e.type ? { tipo: e.type } : {}) };
+  return { erro: 'ia-erro' };
+}
+
 export const SISTEMA_IA = `Você compara produtos de supermercado brasileiros pelas descrições das notas fiscais (abreviadas e às vezes cortadas: DET=detergente, REFR=refrigerante, TRAD=tradicional, S/G=sem gás). Para cada item, escolha o candidato que é EXATAMENTE o mesmo produto: mesma marca, variante (sabor, zero/diet, tradicional/extraforte, integral/desnatado), tamanho e embalagem quando muda o produto.
 Responda r = id do candidato (c1, c2…); "N" se nenhum é o mesmo; "A" se a descrição do item não diz a variante e o produto costuma ter variantes (ex.: "CAFE ITAMARATY 500G" diante de tradicional e extraforte). Na dúvida, "A": ligar errado é pior que não ligar.
 Devolva uma decisão por item, com i = número do item.`;
@@ -46,7 +69,9 @@ export function montarMensagem(itens: readonly ItemIa[]): string {
 }
 
 export function custoUsd(uso: { input_tokens: number; output_tokens: number }): number {
-  return (uso.input_tokens * IA_USD_POR_MTOK.entrada + uso.output_tokens * IA_USD_POR_MTOK.saida) / 1e6;
+  return (
+    (uso.input_tokens * IA_USD_POR_MTOK.entrada + uso.output_tokens * IA_USD_POR_MTOK.saida) / 1e6
+  );
 }
 
 /** Traduz `c{k}` para o id real; item ou candidato desconhecido é descartado. */

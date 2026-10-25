@@ -3,7 +3,7 @@ import { etiquetar } from '@shared/etiquetas';
 import type { NfceParsed, Nota, Produto, ProdutoId } from '@shared/model';
 import { normalizarDescricao, tokens } from '@shared/normalizar';
 import { gravarNota } from '../src/importar/gravar-nota';
-import { IA_TETO_MENSAL_USD } from '../src/vinculo/config-ia';
+import { APIError } from '@anthropic-ai/sdk';
 import type { ItemIa } from '../src/vinculo/ia';
 import { caminhoGastoIa, vincularNota } from '../src/vinculo/vincular-nota';
 import { CHAVE, criarContexto, notaExemplo } from './apoio';
@@ -127,12 +127,18 @@ describe('vínculo na gravação da nota (etiquetas + IA)', () => {
     expect(leite?.candidatosVinculo?.sort()).toEqual([desnatado.id, integral.id].sort());
     expect(await produto(ctx, novo(3))).toMatchObject({ vinculadoA: null });
     expect((await produto(ctx, novo(3)))?.candidatosVinculo).toBeUndefined();
-    expect(await ctx.repo.obter(GASTO)).toEqual({ custoUsd: 0.02, chamadas: 1 });
+    expect(await ctx.repo.obter(GASTO)).toEqual({
+      custoUsd: 0.02,
+      chamadas: 1,
+      porEtapa: { vinculo: { custoUsd: 0.02, chamadas: 1 } },
+    });
   });
 
   it('mais de 40 dúvidas viram 2 chamadas em paralelo', async () => {
     const tamanhos = Array.from({ length: 41 }, (_, k) => 201 + k);
-    const ctx = await preparar(tamanhos.map((ml) => produtoBase(`C${ml}`, `REFR COCA COLA ${ml}ML`)));
+    const ctx = await preparar(
+      tamanhos.map((ml) => produtoBase(`C${ml}`, `REFR COCA COLA ${ml}ML`)),
+    );
     await gravarNota(ctx, 'u', nota(tamanhos.map((ml) => `REFR COCA COLA ${ml}ML`)), {
       veioDaFila: false,
     });
@@ -142,13 +148,49 @@ describe('vínculo na gravação da nota (etiquetas + IA)', () => {
     expect(await ctx.repo.obter(GASTO)).toMatchObject({ chamadas: 2 });
   });
 
-  it('teto do mês estourado: não chama a IA', async () => {
+  it('sem teto: gasto alto no mês não impede a IA e o gasto soma por etapa', async () => {
     const ctx = await preparar([produtoBase('C1', 'REFR COCA COLA 2L')]);
-    await ctx.repo.gravar(GASTO, { custoUsd: IA_TETO_MENSAL_USD, chamadas: 100 });
+    await ctx.repo.gravar(GASTO, {
+      custoUsd: 1000,
+      chamadas: 100,
+      porEtapa: { nome: { custoUsd: 1000, chamadas: 100 } },
+    });
+    ctx.classificarVinculos.mockResolvedValue({ decisoes: [], custoUsd: 0.5 });
     await gravarNota(ctx, 'u', nota(['REFR COCA COLA 2L']), { veioDaFila: false });
 
-    expect(ctx.classificarVinculos).not.toHaveBeenCalled();
-    expect(ctx.logs.find((l) => l.etapa === 'vinculo')).toMatchObject({ erro: 'teto-ia' });
+    expect(ctx.classificarVinculos).toHaveBeenCalledOnce();
+    expect(await ctx.repo.obter(GASTO)).toEqual({
+      custoUsd: 1000.5,
+      chamadas: 101,
+      porEtapa: {
+        nome: { custoUsd: 1000, chamadas: 100 },
+        vinculo: { custoUsd: 0.5, chamadas: 1 },
+      },
+    });
+  });
+
+  it('erro da API vai para o log com status e tipo, sem a mensagem', async () => {
+    const ctx = await preparar([produtoBase('C1', 'REFR COCA COLA 2L')]);
+    ctx.classificarVinculos.mockRejectedValue(
+      APIError.generate(
+        400,
+        {
+          type: 'error',
+          error: { type: 'invalid_request_error', message: 'credit balance is too low' },
+        },
+        undefined,
+        new Headers(),
+      ),
+    );
+    await gravarNota(ctx, 'u', nota(['REFR COCA COLA 2L']), { veioDaFila: false });
+
+    const log = ctx.logs.find((l) => l.etapa === 'vinculo');
+    expect(log).toMatchObject({
+      resultado: 'falha',
+      erro: 'ia-400',
+      tipoErro: 'invalid_request_error',
+    });
+    expect(JSON.stringify(log)).not.toMatch(/credit/);
   });
 
   it('IA com erro: nota gravada, preços publicados, nenhum vínculo e log de falha', async () => {
@@ -167,11 +209,17 @@ describe('vínculo na gravação da nota (etiquetas + IA)', () => {
 
   it('produto com vinculoBloqueado fica intocado', async () => {
     const coca = produtoBase('C1', 'REFR COCA COLA ZERO 2L');
-    const bloqueado = { ...produtoBase('N1', 'REFR COCA COLA ZERO 2L', [LOJA]), vinculoBloqueado: true };
+    const bloqueado = {
+      ...produtoBase('N1', 'REFR COCA COLA ZERO 2L', [LOJA]),
+      vinculoBloqueado: true,
+    };
     const ctx = await preparar([coca, bloqueado]);
     await vincularNota(ctx, { chave: CHAVE, cnpj: LOJA } as Nota, [bloqueado.id]);
 
-    expect(await produto(ctx, bloqueado.id)).toMatchObject({ vinculadoA: null, vinculoBloqueado: true });
+    expect(await produto(ctx, bloqueado.id)).toMatchObject({
+      vinculadoA: null,
+      vinculoBloqueado: true,
+    });
     expect(ctx.classificarVinculos).not.toHaveBeenCalled();
   });
 
@@ -192,7 +240,10 @@ describe('vínculo na gravação da nota (etiquetas + IA)', () => {
       { vinculoBloqueado: true, candidatosVinculo: ['ean:7894900027013'] },
       { merge: true },
     );
-    const outra = { ...nota(['REFR COCA COLA 2L']), emitente: { ...notaExemplo().emitente, cnpj: OUTRA_LOJA } };
+    const outra = {
+      ...nota(['REFR COCA COLA 2L']),
+      emitente: { ...notaExemplo().emitente, cnpj: OUTRA_LOJA },
+    };
     outra.itens[0].codigo = 'C1';
     await gravarNota(ctx, 'u', outra, { veioDaFila: false });
 

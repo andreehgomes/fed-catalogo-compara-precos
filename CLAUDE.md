@@ -474,11 +474,18 @@ null`) e decide com `decidirPorEtiquetas`: tipos diferentes dos dois lados → c
   estruturada, fallback do servidor em recusa, ids curtos `c1..c5`, até 5 candidatos por
   item, 2 chamadas acima de 40 dúvidas). Resposta: id → vínculo `ia`; `A` →
   `candidatosVinculo` (até 3, oferecidos primeiro no diálogo como "Possíveis
-  equivalentes"); `N` → nada. Custo somado em `controle/iaVinculo_AAAA-MM`; acima de
-  `IA_TETO_MENSAL_USD` (`vinculo/config-ia.ts`) a IA é pulada. Qualquer falha só deixa os
-  itens sem vínculo e loga `etapa: 'vinculo'` com contagens. `vinculoBloqueado` é
+  equivalentes"); `N` → nada. **Sem teto de gasto** (decisão do usuário): custo e chamadas
+  só são somados em `controle/ia_AAAA-MM` (total e `porEtapa`, `registrarGasto`). Qualquer falha
+  só deixa os itens sem vínculo e loga `etapa: 'vinculo'` com contagens e o motivo por `erroIa`
+  (`vinculo/ia.ts`): `ia-<status>` + `tipoErro` da API, `ia-timeout`, `ia-conexao` ou
+  `ia-<motivo>` sem decisão; nunca a mensagem livre da API. `vinculoBloqueado` é
   respeitado. Medição no gabarito real: `functions/test/etiquetas-gabarito.spec.ts`;
   avaliação da IA real (manual, custa centavos): `functions/scripts/avaliar-ia-vinculo.ts`.
+  Retroativo manual: `functions/scripts/reprocessar-vinculos.ts` (`reprocessarVinculos` em
+  `vinculo/reprocessar-vinculos.ts`: preenche `etiquetas`/`bloco` dos produtos antigos e passa os
+  `loc:` sem vínculo pelo `vincularNota`, loja por loja, em rodadas de até 80; roda em memória e
+  grava só o que mudou). `--simular` padrão sem IA, `--com-ia` na simulação, `--gravar` (com IA)
+  ou `--gravar --sem-ia`. A chave da IA usa créditos do Console da Anthropic, não o Claude Pro.
 - `produtos/{id}.cnpjs` (até 50) é mantido pela publicação de preços, para contar
   estabelecimentos sem consulta extra.
 - Estabelecimentos: lista por `atualizadoEm desc` (30 por página, busca por nome no

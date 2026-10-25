@@ -1,0 +1,118 @@
+/**
+ * Retroativo do vínculo automático (etiquetas + IA) sobre os produtos já importados. Manual,
+ * fora do `npm test`, rodado pelo usuário contra um projeto com ADC
+ * (`gcloud auth application-default login`). Lê todos os `produtos`, roda
+ * `reprocessarVinculos` num repositório em memória e, com `--gravar`, grava só os documentos
+ * que mudaram (produtos e o gasto do mês em `controle/ia_AAAA-MM`). Não rode durante
+ * importações: um produto alterado no meio é sobrescrito pela versão lida no início.
+ *
+ *   functions/node_modules/.bin/esbuild functions/scripts/reprocessar-vinculos.ts --bundle \
+ *     --platform=node --format=cjs --alias:@shared=./shared --external:firebase-admin \
+ *     --external:firebase-functions --external:@anthropic-ai/sdk --external:zod \
+ *     --outfile=functions/lib/reprocessar-vinculos.cjs
+ *   GOOGLE_CLOUD_PROJECT=fed-catalogo-compara-precos-dv node functions/lib/reprocessar-vinculos.cjs
+ *
+ * Padrão: `--simular` (nada é gravado e a IA não é chamada). `--com-ia` chama a IA também na
+ * simulação (custa centavos e soma no teto do mês só se gravar). `--gravar` aplica, com IA;
+ * `--gravar --sem-ia` aplica só a regra das etiquetas.
+ * Chave da IA: `ANTHROPIC_API_KEY` ou o arquivo `~/.anthropic_api_key` (créditos do Console da
+ * Anthropic; a assinatura Claude Pro não vale para a API).
+ */
+import { existsSync, readFileSync } from 'node:fs';
+import { homedir } from 'node:os';
+import { resolve } from 'node:path';
+import { applicationDefault, initializeApp } from 'firebase-admin/app';
+import { getFirestore } from 'firebase-admin/firestore';
+import type { Produto } from '@shared/model';
+import { LIMITE_LOTE, type Dados } from '../src/dados/repositorio';
+import { contextoPadrao } from '../src/importar/contexto';
+import { criarClassificador, type ClassificarVinculos } from '../src/vinculo/ia';
+import { reprocessarVinculos } from '../src/vinculo/reprocessar-vinculos';
+import { caminhoGastoIa } from '../src/vinculo/vincular-nota';
+import { RepositorioMemoria } from '../test/fakes/repositorio-memoria';
+
+function chave(): string {
+  const env = process.env['ANTHROPIC_API_KEY'];
+  if (env) return env;
+  const arquivo = resolve(homedir(), '.anthropic_api_key');
+  if (existsSync(arquivo)) return readFileSync(arquivo, 'utf8').trim();
+  throw new Error('Defina ANTHROPIC_API_KEY ou crie ~/.anthropic_api_key');
+}
+
+const semIa: ClassificarVinculos = async () => ({ decisoes: [], custoUsd: 0 });
+
+async function main() {
+  const args = process.argv.slice(2);
+  const gravar = args.includes('--gravar');
+  const usarIa = gravar ? !args.includes('--sem-ia') : args.includes('--com-ia');
+  const projectId = process.env['GOOGLE_CLOUD_PROJECT'];
+  if (!projectId)
+    throw new Error('Defina GOOGLE_CLOUD_PROJECT (ex.: fed-catalogo-compara-precos-dv)');
+  initializeApp({ credential: applicationDefault(), projectId });
+  const db = getFirestore();
+  const agora = new Date();
+  const gasto = caminhoGastoIa(agora);
+
+  const memoria = new RepositorioMemoria();
+  const produtos = (await db.collection('produtos').get()).docs.map((d) => d.data() as Produto);
+  for (const p of produtos) await memoria.gravar(`produtos/${p.id}`, { ...p });
+  const gastoAtual = (await db.doc(gasto).get()).data();
+  if (gastoAtual) await memoria.gravar(gasto, gastoAtual);
+  const antes = new Map([...memoria.docs].map(([c, d]) => [c, JSON.stringify(d)]));
+  console.info(
+    `${projectId}: ${produtos.length} produto(s); IA ${usarIa ? 'ligada' : 'desligada'}; ` +
+      `gasto do mês US$ ${Number(gastoAtual?.['custoUsd'] ?? 0).toFixed(4)} (sem teto)`,
+  );
+
+  const ctx = {
+    ...contextoPadrao(memoria, usarIa ? criarClassificador(chave()) : semIa),
+    agora: () => agora,
+    log: () => undefined,
+  };
+  const r = await reprocessarVinculos(ctx, produtos);
+
+  const mudaram = [...memoria.docs].filter(
+    ([c, d]) => antes.get(c) !== JSON.stringify(d) && (usarIa || c !== gasto),
+  );
+  const desc = (id: unknown) =>
+    (memoria.docs.get(`produtos/${String(id)}`)?.['descricao'] as string) ?? String(id);
+  for (const [c, d] of mudaram) {
+    const anterior = JSON.parse(antes.get(c) ?? '{}') as Dados;
+    if (d['vinculadoA'] && d['vinculadoA'] !== anterior['vinculadoA'])
+      console.info(
+        `liga  ${String(d['descricao'])} → ${desc(d['vinculadoA'])} [${String(d['vinculoMotivo'])}]`,
+      );
+    else if (d['candidatosVinculo'] && !anterior['candidatosVinculo'])
+      console.info(
+        `talvez ${String(d['descricao'])} → ${(d['candidatosVinculo'] as string[]).map(desc).join(' | ')}`,
+      );
+  }
+
+  console.info(
+    [
+      `etiquetas preenchidas: ${r.etiquetasPreenchidas}`,
+      `loc: sem vínculo com bloco: ${r.semVinculo} (em ${r.lojas} loja(s))`,
+      `ligados pela regra: ${r.etiquetas}`,
+      `dúvidas: ${r.duvidas}${usarIa ? '' : ' (iriam para a IA)'}`,
+      `ligados pela IA: ${r.ia}`,
+      `possíveis equivalentes (A): ${r.ambiguos}`,
+      `chamadas à IA: ${usarIa ? r.chamadasIa : 0}, custo US$ ${r.custoUsd.toFixed(4)}`,
+      `documentos alterados: ${mudaram.length}`,
+    ].join('\n'),
+  );
+  if (!gravar) {
+    console.info('Simulação: nada foi gravado. Rode com --gravar para aplicar.');
+    return;
+  }
+  for (let i = 0; i < mudaram.length; i += LIMITE_LOTE) {
+    const lote = db.batch();
+    for (const [c, d] of mudaram.slice(i, i + LIMITE_LOTE)) lote.set(db.doc(c), d);
+    await lote.commit();
+  }
+  console.info(`Gravado: ${mudaram.length} documento(s).`);
+}
+
+main().catch((e) => {
+  console.error(e);
+  process.exitCode = 1;
+});

@@ -2,15 +2,20 @@ import { decidirPorEtiquetas, etiquetar, type Candidato } from '@shared/etiqueta
 import type { Nota, Produto, ProdutoId } from '@shared/model';
 import type { Contexto } from '../importar/contexto';
 import { vincular } from '../produtos/vincular-produto';
-import { IA_TETO_MENSAL_USD } from './config-ia';
-import { IaSemDecisaoError, type ItemIa, type RespostaIa } from './ia';
+import { IaSemDecisaoError, erroIa, type ErroIa, type ItemIa, type RespostaIa } from './ia';
 
 export const MAX_ITENS_POR_CHAMADA = 40;
 export const MAX_CANDIDATOS_VINCULO = 3;
 
-interface DocGastoIa {
+export type EtapaIa = 'vinculo' | 'nome';
+
+interface GastoIa {
   custoUsd: number;
   chamadas: number;
+}
+
+export interface DocGastoIa extends GastoIa {
+  porEtapa?: Partial<Record<EtapaIa, GastoIa>>;
 }
 
 export interface ResumoVinculoNota {
@@ -22,7 +27,8 @@ export interface ResumoVinculoNota {
   custoUsd: number;
 }
 
-export const caminhoGastoIa = (agora: Date) => `controle/iaVinculo_${agora.toISOString().slice(0, 7)}`;
+/** Sem teto: só acompanha o gasto do mês, no total e por etapa. */
+export const caminhoGastoIa = (agora: Date) => `controle/ia_${agora.toISOString().slice(0, 7)}`;
 
 /** Raízes do mesmo bloco já vistas em outro mercado (produto só desta loja não conta). */
 async function candidatosDe(ctx: Contexto, novo: Produto, cnpj: string): Promise<Produto[]> {
@@ -47,25 +53,39 @@ function lotes(itens: ItemIa[]): ItemIa[][] {
   return [itens.slice(0, meio), itens.slice(meio)];
 }
 
-async function registrarGasto(ctx: Contexto, custoUsd: number, chamadas: number): Promise<void> {
+const somar = (a: GastoIa | undefined, custoUsd: number, chamadas: number): GastoIa => ({
+  custoUsd: (a?.custoUsd ?? 0) + custoUsd,
+  chamadas: (a?.chamadas ?? 0) + chamadas,
+});
+
+export async function registrarGasto(
+  ctx: Contexto,
+  etapa: EtapaIa,
+  custoUsd: number,
+  chamadas: number,
+): Promise<void> {
   const caminho = caminhoGastoIa(ctx.agora());
   await ctx.repo.transacao(async (tx) => {
     const atual = await tx.obter<DocGastoIa>(caminho);
-    tx.gravar(caminho, {
-      custoUsd: (atual?.custoUsd ?? 0) + custoUsd,
-      chamadas: (atual?.chamadas ?? 0) + chamadas,
-    });
+    const doc: DocGastoIa = {
+      ...somar(atual ?? undefined, custoUsd, chamadas),
+      porEtapa: {
+        ...atual?.porEtapa,
+        [etapa]: somar(atual?.porEtapa?.[etapa], custoUsd, chamadas),
+      },
+    };
+    tx.gravar(caminho, { ...doc });
   });
 }
 
 /**
  * Liga os produtos `loc:` criados por esta nota a produtos de outros mercados: primeiro a
- * regra das etiquetas (grátis), depois uma chamada à IA com as dúvidas, se o teto do mês
- * permitir. Nunca lança: qualquer falha só deixa itens sem vínculo.
+ * regra das etiquetas (grátis), depois uma chamada à IA com as dúvidas. Nunca lança:
+ * qualquer falha só deixa itens sem vínculo e vai para o log com o motivo (`erroIa`).
  */
 export async function vincularNota(
   ctx: Contexto,
-  nota: Nota,
+  nota: Pick<Nota, 'chave' | 'cnpj'>,
   idsNovos: readonly ProdutoId[],
 ): Promise<ResumoVinculoNota> {
   const inicio = Date.now();
@@ -77,21 +97,23 @@ export async function vincularNota(
     chamadasIa: 0,
     custoUsd: 0,
   };
-  const log = (resultado: 'sucesso' | 'falha', erro?: string) =>
+  const log = (resultado: 'sucesso' | 'falha', falha?: ErroIa) =>
     ctx.log({
       etapa: 'vinculo',
       uf: 'PR',
       duracaoMs: Date.now() - inicio,
       resultado,
       chave: nota.chave,
-      ...(erro ? { erro } : {}),
+      ...(falha ? { erro: falha.erro } : {}),
+      ...(falha?.tipo ? { tipoErro: falha.tipo } : {}),
       contagens: { ...resumo },
     });
 
   try {
     const locais = idsNovos.filter((id) => id.startsWith('loc:'));
-    const produtos = (await ctx.repo.obterVarios<Produto>(locais.map((id) => `produtos/${id}`)))
-      .filter((p): p is Produto => !!p && !!p.bloco && !p.vinculoBloqueado && !p.vinculadoA);
+    const produtos = (
+      await ctx.repo.obterVarios<Produto>(locais.map((id) => `produtos/${id}`))
+    ).filter((p): p is Produto => !!p && !!p.bloco && !p.vinculoBloqueado && !p.vinculadoA);
     const decisoes = await Promise.all(
       produtos.map(async (p) => {
         const candidatos = (await candidatosDe(ctx, p, nota.cnpj)).map(comoCandidato);
@@ -107,7 +129,11 @@ export async function vincularNota(
         if (r.ok) resumo.etiquetas++;
       } else if (d.tipo === 'ia') {
         const i = itensIa.length + 1;
-        itensIa.push({ i, d: p.descricao, c: d.candidatos.map((c) => ({ id: c.id, d: c.descricao })) });
+        itensIa.push({
+          i,
+          d: p.descricao,
+          c: d.candidatos.map((c) => ({ id: c.id, d: c.descricao })),
+        });
         produtoDoItem.set(i, p);
       }
     }
@@ -117,27 +143,21 @@ export async function vincularNota(
       return resumo;
     }
 
-    const gasto = await ctx.repo.obter<DocGastoIa>(caminhoGastoIa(ctx.agora()));
-    if ((gasto?.custoUsd ?? 0) >= IA_TETO_MENSAL_USD) {
-      log('sucesso', 'teto-ia');
-      return resumo;
-    }
-
     const chamadas = lotes(itensIa);
     const respostas = await Promise.allSettled(chamadas.map((l) => ctx.classificarVinculos(l)));
     resumo.chamadasIa = chamadas.length;
-    let falha: string | undefined;
+    let falha: ErroIa | undefined;
     const aceitas: RespostaIa[] = [];
     for (const r of respostas) {
       if (r.status === 'fulfilled') {
         aceitas.push(r.value);
         resumo.custoUsd += r.value.custoUsd;
       } else {
-        falha = r.reason instanceof IaSemDecisaoError ? `ia-${r.reason.message}` : 'ia-erro';
+        falha = erroIa(r.reason);
         if (r.reason instanceof IaSemDecisaoError) resumo.custoUsd += r.reason.custoUsd;
       }
     }
-    await registrarGasto(ctx, resumo.custoUsd, chamadas.length);
+    await registrarGasto(ctx, 'vinculo', resumo.custoUsd, chamadas.length);
 
     for (const { i, r } of aceitas.flatMap((a) => a.decisoes)) {
       const p = produtoDoItem.get(i);
@@ -154,7 +174,7 @@ export async function vincularNota(
     }
     log(falha ? 'falha' : 'sucesso', falha);
   } catch {
-    log('falha', 'vinculo-erro');
+    log('falha', { erro: 'vinculo-erro' });
   }
   return resumo;
 }

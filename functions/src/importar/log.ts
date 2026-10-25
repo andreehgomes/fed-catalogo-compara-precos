@@ -1,13 +1,7 @@
 import { logger } from 'firebase-functions';
 
 export type EtapaImportacao =
-  | 'preview'
-  | 'confirmacao'
-  | 'enfileiramento'
-  | 'reprocessamento'
-  | 'vinculo'
-  | 'cnpj'
-  | 'apelido';
+  'preview' | 'confirmacao' | 'enfileiramento' | 'reprocessamento' | 'vinculo' | 'cnpj' | 'apelido';
 
 export interface RegistroImportacao {
   etapa: EtapaImportacao;
@@ -16,6 +10,8 @@ export interface RegistroImportacao {
   resultado: 'sucesso' | 'falha';
   qtdItens?: number;
   erro?: string;
+  /** `error.type` da Claude API quando a falha veio dela. */
+  tipoErro?: string;
   chave?: string;
   /** Só contagens (vínculo automático), nunca descrição ou CNPJ. */
   contagens?: Record<string, number>;

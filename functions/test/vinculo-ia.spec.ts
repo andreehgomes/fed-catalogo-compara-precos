@@ -1,8 +1,10 @@
+import { APIConnectionError, APIConnectionTimeoutError, APIError } from '@anthropic-ai/sdk';
 import { describe, expect, it } from 'vitest';
 import {
   IaSemDecisaoError,
   SISTEMA_IA,
   custoUsd,
+  erroIa,
   interpretarMensagem,
   montarMensagem,
   traduzirDecisoes,
@@ -64,9 +66,14 @@ describe('cliente da IA do vínculo', () => {
       { i: 1, r: COCA },
       { i: 2, r: 'A' },
     ]);
-    expect(traduzirDecisoes(ITENS, { decisoes: [{ i: 1, r: 'c9' }, { i: 2, r: 'n' }] })).toEqual([
-      { i: 2, r: 'N' },
-    ]);
+    expect(
+      traduzirDecisoes(ITENS, {
+        decisoes: [
+          { i: 1, r: 'c9' },
+          { i: 2, r: 'n' },
+        ],
+      }),
+    ).toEqual([{ i: 2, r: 'N' }]);
   });
 
   it('custo pelo preço do Opus 5.5 ($4 entrada, $20 saída por milhão)', () => {
@@ -76,7 +83,12 @@ describe('cliente da IA do vínculo', () => {
   it('resposta completa vira decisões com o custo', () => {
     const r = interpretarMensagem(ITENS, {
       stop_reason: 'end_turn',
-      parsed_output: { decisoes: [{ i: 1, r: 'c2' }, { i: 2, r: 'A' }] },
+      parsed_output: {
+        decisoes: [
+          { i: 1, r: 'c2' },
+          { i: 2, r: 'A' },
+        ],
+      },
       usage: { input_tokens: 500, output_tokens: 100 },
     });
     expect(r).toEqual({
@@ -104,5 +116,33 @@ describe('cliente da IA do vínculo', () => {
       expect(erro).toBeInstanceOf(IaSemDecisaoError);
       expect((erro as IaSemDecisaoError).custoUsd).toBeCloseTo(0.004, 10);
     }
+  });
+});
+
+describe('erroIa', () => {
+  const corpo = (type: string) => ({
+    type: 'error',
+    error: { type, message: 'texto livre da API' },
+  });
+
+  it('status e tipo da API; rede e timeout; sem decisão; resto genérico', () => {
+    expect(
+      erroIa(APIError.generate(401, corpo('authentication_error'), undefined, new Headers())),
+    ).toEqual({
+      erro: 'ia-401',
+      tipo: 'authentication_error',
+    });
+    expect(
+      erroIa(APIError.generate(529, corpo('overloaded_error'), undefined, new Headers())),
+    ).toEqual({
+      erro: 'ia-529',
+      tipo: 'overloaded_error',
+    });
+    expect(erroIa(new APIConnectionTimeoutError())).toEqual({ erro: 'ia-timeout' });
+    expect(erroIa(new APIConnectionError({ message: 'x' }))).toEqual({ erro: 'ia-conexao' });
+    expect(erroIa(new IaSemDecisaoError('stop:refusal', 0.01))).toEqual({
+      erro: 'ia-stop:refusal',
+    });
+    expect(erroIa(new Error('qualquer'))).toEqual({ erro: 'ia-erro' });
   });
 });
