@@ -200,11 +200,12 @@ export function barrasPorCompra(notas: readonly NotaComparada[]): BarraCompra[] 
     }));
 }
 
-/** Média dos meses fechados a partir do primeiro mês com nota; null sem mês fechado. */
+/**
+ * Média dos meses fechados que têm nota; null sem nenhum. Mês sem nota fica fora: costuma ser
+ * compra que não foi importada, não um mês sem gasto.
+ */
 export function mediaDosFechados(barras: readonly BarraMes[]): number | null {
-  const primeiro = barras.findIndex((b) => b.qtdNotas > 0);
-  if (primeiro < 0) return null;
-  const fechados = barras.slice(primeiro).filter((b) => !b.parcial);
+  const fechados = barras.filter((b) => !b.parcial && b.qtdNotas > 0);
   if (!fechados.length) return null;
   return arredondar(fechados.reduce((s, b) => s + b.total, 0) / fechados.length);
 }

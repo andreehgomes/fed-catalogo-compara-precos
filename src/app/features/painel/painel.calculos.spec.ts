@@ -191,6 +191,12 @@ describe('painel: séries mensais (D-04)', () => {
     expect(mediaDosFechados(seriesPorMes(comparar([OUTUBRO]), HOJE_PAINEL, 3))).toBeNull();
   });
 
+  it('mês fechado sem nota não puxa a média para baixo', () => {
+    const barras = seriesPorMes(comparar([OUTUBRO, AGOSTO]), HOJE_PAINEL, 6);
+    expect(barras.find((b) => b.mes === '2026-09')!.qtdNotas).toBe(0);
+    expect(mediaDosFechados(barras)).toBe(73.68);
+  });
+
   it('uma barra por compra em ordem cronológica', () => {
     expect(barrasPorCompra(comparar(NOTAS_PAINEL))).toEqual([
       { chave: 'agosto', emissao: AGOSTO.emissao, mercado: 'Mercado Alfa', total: 73.68, saldo: 0 },
