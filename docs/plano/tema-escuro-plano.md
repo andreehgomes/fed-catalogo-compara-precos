@@ -153,7 +153,11 @@ valor escuro para um que reprova faz o script falhar.
 
 ---
 
-### Fase 2 — Material e ajustes de superfície
+### Fase 2 — Material e ajustes de superfície ✅ (executada em 2026-10-25)
+
+> Registro em [docs/execucao/2026-10-25-tema-escuro-plano.md](../execucao/2026-10-25-tema-escuro-plano.md).
+> A revisão visual (2.2) cobriu as telas sem login; as logadas tiveram auditoria estática do SCSS e
+> **precisam de conferência manual** (não havia `.env.e2e`).
 
 **Objetivo:** com o `color-scheme: dark` forçado no `<html>` (DevTools), o app inteiro fica
 coerente no escuro, inclusive o Material.
@@ -197,7 +201,13 @@ novo.
 
 ---
 
-### Fase 3 — Preferência, aplicação e controle
+### Fase 3 — Preferência, aplicação e controle ✅ (executada em 2026-10-25)
+
+> As cores da barra ficaram só nas duas `<meta theme-color data-tema>` do `index.html` (sem
+> `TEMA_COR_BARRA` em TS; o `contraste.mjs` confere contra `$cp-surface`). O `TemaService` não entra
+> no `provideAppInitializer`: o script inline cobre a primeira pintura e o serviço nasce com o shell
+> ou o `<cp-logo>`. A nota de budget da 3.2 não se confirmou: o shell é lazy, e o `mat-menu` ficou
+> fora do bundle inicial.
 
 **Objetivo:** o usuário escolhe o tema, a escolha persiste e a abertura não pisca.
 
@@ -280,7 +290,7 @@ DevTools) não mostra quadro branco; barra do navegador no Android acompanha o t
 
 ---
 
-### Fase 4 — Marca no escuro
+### Fase 4 — Marca no escuro ✅ (4.1 e 4.2 em 2026-10-25)
 
 **Objetivo:** logo e símbolo legíveis nos dois temas, com um download por posição.
 
@@ -322,7 +332,9 @@ no Network, só a versão do tema atual é baixada no carregamento.
 
 ---
 
-### Fase 5 — Testes
+### Fase 5 — Testes ✅ (executada em 2026-10-25)
+
+> O teste logado do `e2e/tema.spec.ts` e as rotas logadas do axe ficam pulados sem `.env.e2e`.
 
 **Objetivo:** cobrir o serviço, o shell e o comportamento real no navegador.
 
@@ -364,7 +376,9 @@ com `aria-checked="true"`, e o clique chama `definir`. Logo — `src` muda com o
 
 ---
 
-### Fase 6 — Fechamento
+### Fase 6 — Fechamento ✅ (executada em 2026-10-25)
+
+> Initial total: 494,09 kB → 498,75 kB (`main` inalterado em 252,03 kB), sem aviso de budget.
 
 **Objetivo:** budget conferido e documentação atualizada.
 

@@ -39,7 +39,7 @@ npx lighthouse http://localhost:8090/login --form-factor=mobile --chrome-flags="
 
 Scripts auxiliares (rodar uma vez, resultado versionado): `scripts/gerar-municipios-pr.mjs`
 (IBGE), `scripts/gerar-imagens-codigo.mjs` (QR/EAN de teste), `scripts/gerar-icones.mjs`
-(ícones da PWA, favicon e `public/logo/logo.png`/`simbolo.png`, recortados da arte
+(ícones da PWA, favicon e `public/logo/logo.png`/`simbolo.png` e as versões `-escuro`, recortados da arte
 `public/logo/logos.png`), `scripts/anonimizar-fixture.mjs` (HTML de NFC-e antes de virar fixture).
 
 **Node:** o Angular 22.2 exige Node ≥ 22.22.3. O pacote `node` está em
@@ -79,7 +79,9 @@ com `authGuard`: `/` (painel), `/importar`, `/importar/preview`, `/notas`,
 - `@angular/pwa`: `ngsw-config.json` faz prefetch só do app shell; ícones, JSON e o
   `.wasm` do scanner são `lazy`; fontes do Google em cache lazy. **Menor Preço e
   Functions nunca são cacheados** (não há `dataGroups`). Manifest pt-BR com
-  `theme_color` branco (`$cp-surface`, como o header) e `background_color` = `$cp-bg`. O Hosting manda
+  `theme_color` branco (`$cp-surface`, como o header) e `background_color` = `$cp-bg` (o manifest só
+  aceita uma cor; com o app aberto valem as duas `<meta name="theme-color" data-tema>` do
+  `index.html`, ver Theming). O Hosting manda
   `no-cache` para `index.html`, `ngsw-worker.js` e `ngsw.json`.
 - **Atualização** (`core/atualizacao/atualizacao.service.ts`, iniciado por `provideAppInitializer`):
   a PWA no iOS volta da memória sem navegação, então o `SwUpdate.checkForUpdate` roda ao abrir e
@@ -217,8 +219,8 @@ Detalhes: [docs/analise/compara-precos-nfce-analise.md](docs/analise/compara-pre
 carregada por `loadComponent`). Login, cadastro, redefinição de senha e a página de
 erro (`**`) ficam fora dele.
 
-- Casca **clara** (tokens `$cp-nav-*`), porque o texto da logo é verde escuro: menu com a
-  logo completa (`logo/logo.png`) e, no rail, só o símbolo (`logo/simbolo.png`); o header
+- Casca na cor da superfície (tokens `$cp-nav-*`; clara ou escura conforme o tema): menu com a
+  logo completa e, no rail, só o símbolo (`<cp-logo>`, que troca a imagem pelo tema); o header
   mostra a logo quando o menu não a mostra (tela estreita ou rail).
 - `<aside>` irmão do conteúdo: **rail de 76px** ↔ **264px** no desktop (`expandido`)
   e **drawer de 272px sobreposto abaixo de 900px** (`drawerAberto`), com scrim. O
@@ -230,7 +232,8 @@ erro (`**`) ficam fora dele.
 - No celular, **FAB "Importar nota"** fixo (some em `/importar`, `/sugestoes`, `/listas/:id` e
   na conferência, que têm ação fixa no rodapé; fica em `/listas`).
 - Itens: Painel, Importar nota, Minhas notas, Sugestão de compra, Lista de compras, Preços perto
-  de mim, Produtos, Estabelecimentos (`ITENS_NAV`), Verificar atualizações e Sair.
+  de mim, Produtos, Estabelecimentos (`ITENS_NAV`), Verificar atualizações, Aparência (`mat-menu`
+  com Sistema/Claro/Escuro em `menuitemradio`, `OPCOES_TEMA`) e Sair.
 - Telas ainda não implementadas usam `features/em-breve` (título pela `data.secao`
   da rota).
 
@@ -612,7 +615,19 @@ com prefixo `cp` e paleta verde.
 
 - **Logo** (arte em `public/logo/logos.png`, recortes gerados por `scripts/gerar-icones.mjs`):
   `logo.png` (símbolo + "Cupom Esperto", fundo transparente) e `simbolo.png` só vão sobre
-  fundo claro; os ícones da PWA usam o símbolo sobre floresta `#0d3320`.
+  fundo claro; `logo-escuro.png`/`simbolo-escuro.png` (papel do cupom opaco, texto nas cores
+  `accent-ink`/`text` do escuro — se elas mudarem, ajustar `LOGO_ESCURO` e rodar o script) vão
+  sobre fundo escuro. Nas telas, sempre `<cp-logo [variante] [prioritaria]>`
+  (`shared/ui/logo/`), nunca `<img>` direto. Os ícones da PWA usam o símbolo sobre floresta `#0d3320`.
+- **Tema escuro** (plano `docs/plano/tema-escuro-plano.md`): Sistema (padrão), Claro ou Escuro,
+  por aparelho em `localStorage` `cp-tema` (o `sair()` não apaga). Um script inline no `<head>`
+  do `index.html` aplica `data-tema` no `<html>` e a `media` das duas `<meta theme-color>` antes
+  da primeira pintura; depois, o `TemaService` (`core/tema/`, `providedIn: 'root'`, injetado
+  pelo shell e pelo `<cp-logo>`, fora do bundle inicial) faz o mesmo em `aplicarTema` e expõe
+  `preferencia` e `escuro`. `localStorage` e `matchMedia` chegam pelos tokens `ARMAZENAMENTO_TEMA`
+  e `PREFERE_ESCURO` (`tema-ambiente.ts`; fakes em `src/testing/tema.ts`). O `:root` é
+  `color-scheme: light dark` e `data-tema` força um lado; o Material segue junto
+  (`theme-type: color-scheme`, tipografia por `var(--cp-font)` para não repetir a família).
 - **Tokens** em `src/app/shared/style/_tokens.scss` — acento (`$cp-accent` `#1f7a4d`,
   `$cp-accent-ink` `#16603b`), casca clara (`$cp-nav-*`, `$cp-gradient-auth` nas telas de
   conta), floresta só para fundos escuros pontuais (`$cp-shell-900/700`: câmera do
@@ -632,7 +647,8 @@ com prefixo `cp` e paleta verde.
   `provideCssVarNamespacing` (não usar).
 - **Contraste:** `npm run contraste` lê o mapa `$cp-cores` e confere a lista de pares
   texto × superfície **nos dois temas** (WCAG AA, 4.5:1; 3:1 para texto grande/ícone). Ao criar
-  um token de texto ou um par novo, acrescente o par em `scripts/contraste.mjs`.
+  um token de texto ou um par novo, acrescente o par em `scripts/contraste.mjs`. O script também
+  confere se as `<meta theme-color>` do `index.html` são o `$cp-surface` de cada tema.
 - **Classes globais** em `src/styles.scss` — `.cp-page` (`--detalhe`, `--form`),
   `.cp-page-header`, `.cp-detail-header`, `.cp-card`, `.cp-block`, `.cp-panel`,
   `.cp-section-top/-title`, `.cp-label`, `.cp-field` (`-compact`, `-prefix`, `-hint`,
@@ -641,7 +657,7 @@ com prefixo `cp` e paleta verde.
   `.cp-info-block` (`--warn`, `--erro`), `.cp-form-grid/-actions`, `.cp-loading`,
   `.cp-skeleton`, `.cp-sr-only`, e as do domínio: `.cp-price`, `.cp-price-unit`,
   `.cp-price-old`, `.cp-source`, `.cp-badge--mais-barato/--mais-caro/--igual`,
-  `.cp-status--aguardando/--falhou/--novo`, `.cp-chip`, `.cp-segmented`.
+  `.cp-status--aguardando/--falhou/--novo`, `.cp-chip`, `.cp-segmented`, `.cp-menu-opcao` (rótulo + check de um menu de escolha única).
 - **Mixins** (`_mixins.scss`) só para o parametrizado: `cp-grid($min)`,
   `cp-chip($ink, $bg)`, `cp-btn-icon-ghost(…)`, `cp-segmented`, `cp-card-clickable`.
 - **Breakpoints** (`_breakpoints.scss`): `mobile` (≤599), `tablet-up`, `desktop`
@@ -653,11 +669,12 @@ No SCSS do componente fica só o que é daquela tela.
 
 Tema Material **M3** (`mat.theme` em `src/styles.scss`) com a paleta gerada de
 `#1f7a4d` (`_m3-palette.scss`, via `ng generate @angular/material:theme-color`). Usado
-só em dialog, menu, autocomplete, datepicker e snackbar. Os campos são `<label>` +
+só em dialog, menu, autocomplete, datepicker e snackbar, com `theme-type: color-scheme` (claro e
+escuro pelo `color-scheme` do `<html>`). Os campos são `<label>` +
 `<input class>` do DS (mantém `getByLabel()`).
 
 Tipografia **Instrument Sans**; ícones **Material Symbols Rounded** (a classe
 `.material-icons` é remapeada, então `mat-icon` funciona). Componentes base em
 `src/app/shared/ui/`: `<cp-preco>`, `<cp-badge-preco>` (ícone + texto + cor, nunca só
-cor), `<cp-fonte-preco>` e `<cp-empty-state>`. O `currency` padrão (pt-BR/BRL) basta;
+cor), `<cp-fonte-preco>`, `<cp-empty-state>` e `<cp-logo>`. O `currency` padrão (pt-BR/BRL) basta;
 não há pipe `brl`.
