@@ -14,14 +14,19 @@ async function violacoesGraves(page: Page) {
     .map((v) => `${v.id}: ${v.nodes.map((n) => n.target.join(' ')).join(', ')}`);
 }
 
+const ESQUEMAS = ['light', 'dark'] as const;
+
 test.describe('acessibilidade sem login', () => {
-  for (const rota of ['/login', '/cadastro', '/redefinir-senha', '/nao-existe']) {
-    test(`axe sem violações graves em ${rota}`, async ({ page }) => {
-      await page.goto(rota);
-      await expect(page.getByRole('main')).toBeVisible();
-      await expect(page.locator('main h1, main h2').first()).toBeVisible();
-      expect(await violacoesGraves(page)).toEqual([]);
-    });
+  for (const esquema of ESQUEMAS) {
+    for (const rota of ['/login', '/cadastro', '/redefinir-senha', '/nao-existe']) {
+      test(`axe sem violações graves em ${rota} (${esquema})`, async ({ page }) => {
+        await page.emulateMedia({ colorScheme: esquema });
+        await page.goto(rota);
+        await expect(page.getByRole('main')).toBeVisible();
+        await expect(page.locator('main h1, main h2').first()).toBeVisible();
+        expect(await violacoesGraves(page)).toEqual([]);
+      });
+    }
   }
 
   test('login só com teclado: Tab pelos campos e Enter envia', async ({ page, isMobile }) => {
@@ -47,22 +52,25 @@ test.describe('acessibilidade com login (usuário de teste no dv)', () => {
     await entrar(page);
   });
 
-  for (const rota of [
-    '/',
-    '/importar',
-    '/notas',
-    '/sugestoes',
-    '/listas',
-    '/regiao',
-    '/produtos',
-    '/estabelecimentos',
-  ]) {
-    test(`axe sem violações graves em ${rota}`, async ({ page }) => {
-      await page.goto(rota);
-      await expect(page.getByRole('main')).toBeVisible();
-      await expect(page.locator('main h1, main h2').first()).toBeVisible();
-      expect(await violacoesGraves(page)).toEqual([]);
-    });
+  for (const esquema of ESQUEMAS) {
+    for (const rota of [
+      '/',
+      '/importar',
+      '/notas',
+      '/sugestoes',
+      '/listas',
+      '/regiao',
+      '/produtos',
+      '/estabelecimentos',
+    ]) {
+      test(`axe sem violações graves em ${rota} (${esquema})`, async ({ page }) => {
+        await page.emulateMedia({ colorScheme: esquema });
+        await page.goto(rota);
+        await expect(page.getByRole('main')).toBeVisible();
+        await expect(page.locator('main h1, main h2').first()).toBeVisible();
+        expect(await violacoesGraves(page)).toEqual([]);
+      });
+    }
   }
 
   test('axe sem violações graves na prévia com o campo do apelido', async ({ page }) => {
