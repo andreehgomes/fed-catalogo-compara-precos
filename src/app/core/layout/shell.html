@@ -16,7 +16,7 @@
     </div>
 
     <nav class="cp-nav-list">
-      @for (item of itens; track item.rota) {
+      @for (item of itens(); track item.rota) {
         <a
           class="cp-nav-item"
           [routerLink]="item.rota"

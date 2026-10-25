@@ -16,6 +16,8 @@
  * Padrão: `--simular` (nada é gravado e a IA não é chamada). `--com-ia` chama a IA (nome e
  * vínculo) também na simulação, para ver os nomes antes de gravar (custa centavos). `--gravar`
  * aplica, com IA; `--gravar --sem-ia` aplica só a regra das etiquetas.
+ * Modelos: os de `controle/configIa` (tela Configurações de IA; padrão Opus 5.5).
+ * `--modelo-nome=<id>` e `--modelo-vinculo=<id>` sobrepõem só nesta execução (não gravam a config).
  * Chave da IA: `ANTHROPIC_API_KEY` ou o arquivo `~/.anthropic_api_key`; consome o saldo da
  * organização do Console da chave (os créditos mensais do plano Max valem na organização vinculada).
  */
@@ -25,7 +27,9 @@ import { resolve } from 'node:path';
 import { applicationDefault, initializeApp } from 'firebase-admin/app';
 import { getFirestore } from 'firebase-admin/firestore';
 import type { Nota, Produto } from '@shared/model';
+import { configIaDe, idModeloValido, type ConfigIa } from '@shared/modelos-ia';
 import { LIMITE_LOTE, type Dados } from '../src/dados/repositorio';
+import { CAMINHO_CONFIG_IA } from '../src/ia/config-ia-firestore';
 import { contextoPadrao } from '../src/importar/contexto';
 import { criarNormalizador, type NormalizarNomes } from '../src/nome/ia-nome';
 import { criarClassificador, type ClassificarVinculos } from '../src/vinculo/ia';
@@ -39,6 +43,13 @@ function chave(): string {
   const arquivo = resolve(homedir(), '.anthropic_api_key');
   if (existsSync(arquivo)) return readFileSync(arquivo, 'utf8').trim();
   throw new Error('Defina ANTHROPIC_API_KEY ou crie ~/.anthropic_api_key');
+}
+
+function modeloDoArgumento(args: readonly string[], nome: string): string | undefined {
+  const valor = args.find((a) => a.startsWith(`--${nome}=`))?.split('=')[1];
+  if (valor !== undefined && !idModeloValido(valor))
+    throw new Error(`--${nome}: modelo desconhecido "${valor}"`);
+  return valor;
 }
 
 const semIa: ClassificarVinculos = async () => ({ decisoes: [], custoUsd: 0 });
@@ -61,10 +72,18 @@ async function main() {
   for (const p of produtos) await memoria.gravar(`produtos/${p.id}`, { ...p });
   const gastoAtual = (await db.doc(gasto).get()).data();
   if (gastoAtual) await memoria.gravar(gasto, gastoAtual);
+  const salva = configIaDe((await db.doc(CAMINHO_CONFIG_IA).get()).data());
+  const modelos: ConfigIa = configIaDe({
+    modeloNome: modeloDoArgumento(args, 'modelo-nome') ?? salva.modeloNome,
+    modeloVinculo: modeloDoArgumento(args, 'modelo-vinculo') ?? salva.modeloVinculo,
+  });
+  await memoria.gravar(CAMINHO_CONFIG_IA, { ...modelos });
   const antes = new Map([...memoria.docs].map(([c, d]) => [c, JSON.stringify(d)]));
   console.info(
     `${projectId}: ${produtos.length} produto(s); IA ${usarIa ? 'ligada' : 'desligada'}; ` +
-      `gasto do mês US$ ${Number(gastoAtual?.['custoUsd'] ?? 0).toFixed(4)} (sem teto)`,
+      `gasto do mês US$ ${Number(gastoAtual?.['custoUsd'] ?? 0).toFixed(4)} (sem teto)
+` +
+      `modelos: nome ${modelos.modeloNome}, vínculo ${modelos.modeloVinculo}`,
   );
 
   const ctx = {
@@ -78,7 +97,8 @@ async function main() {
   const r = await reprocessarVinculos(ctx, produtos);
 
   const mudaram = [...memoria.docs].filter(
-    ([c, d]) => antes.get(c) !== JSON.stringify(d) && (usarIa || c !== gasto),
+    ([c, d]) =>
+      c !== CAMINHO_CONFIG_IA && antes.get(c) !== JSON.stringify(d) && (usarIa || c !== gasto),
   );
   const desc = (id: unknown) =>
     (memoria.docs.get(`produtos/${String(id)}`)?.['descricao'] as string) ?? String(id);

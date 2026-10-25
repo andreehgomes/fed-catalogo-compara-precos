@@ -34,9 +34,23 @@ export const ITENS_NAV: readonly ItemNav[] = [
   { rota: '/estabelecimentos', icone: 'storefront', rotulo: 'Estabelecimentos' },
 ];
 
+/** Só para o administrador (`AuthStore.admin`). */
+export const ITEM_CONFIG_IA: ItemNav = {
+  rota: '/configuracoes/ia',
+  icone: 'tune',
+  rotulo: 'Configurações de IA',
+};
+
 @Component({
   selector: 'cp-shell',
-  imports: [MatIconModule, MatTooltipModule, NgOptimizedImage, RouterLink, RouterLinkActive, RouterOutlet],
+  imports: [
+    MatIconModule,
+    MatTooltipModule,
+    NgOptimizedImage,
+    RouterLink,
+    RouterLinkActive,
+    RouterOutlet,
+  ],
   templateUrl: './shell.html',
   styleUrl: './shell.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -49,7 +63,9 @@ export class Shell {
 
   private readonly botaoMenu = viewChild.required<ElementRef<HTMLButtonElement>>('botaoMenu');
 
-  protected readonly itens = ITENS_NAV;
+  protected readonly itens = computed(() =>
+    this.auth.admin() ? [...ITENS_NAV, ITEM_CONFIG_IA] : ITENS_NAV,
+  );
   protected readonly estreito = this.breakpoints.estreito;
   protected readonly expandido = signal(true);
   protected readonly drawerAberto = signal(false);
@@ -70,8 +86,7 @@ export class Shell {
   private readonly url = signal(this.router.url);
   /** Some onde há ação fixa no rodapé: importação, sugestão de compra, a lista e a conferência. */
   protected readonly mostrarFab = computed(
-    () =>
-      this.estreito() && !/^\/(importar|sugestoes|listas\/[^/?]+)(\/|\?|$)/.test(this.url()),
+    () => this.estreito() && !/^\/(importar|sugestoes|listas\/[^/?]+)(\/|\?|$)/.test(this.url()),
   );
 
   constructor() {

@@ -5,16 +5,17 @@ import { vi } from 'vitest';
 import { botao, texto } from '../../../testing/dom';
 import { AuthStore } from '../auth/auth.store';
 import { BreakpointService } from './breakpoint.service';
-import { ITENS_NAV, Shell } from './shell';
+import { ITEM_CONFIG_IA, ITENS_NAV, Shell } from './shell';
 
 @Component({ template: 'pagina' })
 class Pagina {}
 
-async function montar(estreito: boolean) {
+async function montar(estreito: boolean, admin = false) {
   const bp = { estreito: signal(estreito) };
   const auth = {
     usuario: signal({ displayName: 'Ana Souza', email: 'ana@exemplo.com' }),
     sair: vi.fn(async () => undefined),
+    admin: signal(admin),
   };
   TestBed.configureTestingModule({
     providers: [
@@ -37,6 +38,12 @@ describe('Shell', () => {
     const rotulos = [...el.querySelectorAll('.cp-nav-label')].map((x) => texto(x));
     expect(rotulos).toEqual([...ITENS_NAV.map((i) => i.rotulo), 'Sair']);
     expect(texto(el.querySelector('.cp-header-avatar'))).toBe('A');
+  });
+
+  it('administrador vê "Configurações de IA" no fim do menu', async () => {
+    const { el } = await montar(false, true);
+    const rotulos = [...el.querySelectorAll('.cp-nav-label')].map((x) => texto(x));
+    expect(rotulos).toEqual([...ITENS_NAV.map((i) => i.rotulo), ITEM_CONFIG_IA.rotulo, 'Sair']);
   });
 
   it('desktop: alterna entre expandido e rail, sem FAB', async () => {

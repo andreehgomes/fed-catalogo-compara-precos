@@ -1,5 +1,6 @@
 import { DestroyRef, Injectable, computed, inject, signal } from '@angular/core';
 import type { AuthProvider, User } from 'firebase/auth';
+import { environment } from '../../../environments/environment';
 import { FIREBASE_AUTH } from '../firebase/firebase.providers';
 import { AUTH_API } from './auth-api';
 
@@ -13,6 +14,11 @@ export class AuthStore {
   readonly pronto = computed(() => this._usuario() !== undefined);
   readonly logado = computed(() => !!this._usuario());
   readonly uid = computed(() => this._usuario()?.uid ?? null);
+  /** Administrador (Configurações de IA). Só para a interface: as callables conferem de novo. */
+  readonly admin = computed(() => {
+    const uid = this.uid();
+    return !!uid && environment.adminUids.includes(uid);
+  });
 
   constructor() {
     const cancelar = this.api.onAuthStateChanged(this.auth, (u) => this._usuario.set(u));

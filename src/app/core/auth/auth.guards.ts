@@ -21,5 +21,8 @@ export const authGuard: CanActivateFn = (_route, state) =>
       : router.createUrlTree(['/login'], { queryParams: { voltar: state.url } }),
   );
 
+export const adminGuard: CanActivateFn = () =>
+  quandoPronto((store, router) => (store.admin() ? true : router.createUrlTree(['/'])));
+
 export const guestGuard: CanActivateFn = () =>
   quandoPronto((store, router) => (store.logado() ? router.createUrlTree(['/']) : true));

@@ -304,7 +304,7 @@ Instale as dependências **de dentro da pasta** (`cd functions && npm install`):
 - **Nome legível do produto** (plano `docs/plano/nome-produto-ia-plano.md`): `nomearItens`
   (`functions/src/nome/`), no fim de `obterNotaDaSefaz` em paralelo ao `completarEmitente` (prévia
   e fila; a reimportação passa `nomear: false`). Produto que já tem `nome` empresta o nome; os outros
-  vão numa chamada (`nome/ia-nome.ts`: `IA_MODELO_NOME` = o do vínculo, effort `low`, fallback,
+  vão numa chamada (`nome/ia-nome.ts`: modelo `modeloNome` da configuração, effort `low`, fallback se o modelo tiver,
   partes de 40, 3 em paralelo; parte que falha só fica sem nome) que devolve `NomeIa` (nome, tipo,
   marca, variantes, tamanho, granel). `etiquetasDaIa` (`shared/nome-produto.ts`) converte para o
   formato da regra (o tamanho da regex vence; bloco `MARCA|tamanho`, `MARCA|GRANEL` ou
@@ -316,6 +316,18 @@ Instale as dependências **de dentro da pasta** (`cd functions && npm install`):
   `nomeOrigem: 'manual'` e o `nome` dos itens nas notas **do uid** (busca por `cnpjs` do produto);
   log `etapa: 'nome-manual'`. É correção da base compartilhada (só o usuário usa o app hoje; revisitar
   com outros usuários).
+- **Modelo de IA configurável** (plano `docs/plano/config-modelo-ia-plano.md`): o modelo de cada
+  chamada (`modeloNome`, `modeloVinculo`) vem de `controle/configIa`, lido por `obterModelos`
+  (`functions/src/ia/config-ia-firestore.ts`, cache de 60 s por instância; ausente, inválido ou
+  falha → Opus 5.5). Lista fechada em `shared/modelos-ia.ts` (`MODELOS_IA`: Opus 5.5, Sonnet 5.5,
+  Haiku 5.5, com preço e `fallback`); `parametrosDoModelo` (`ia/modelos.ts`) manda o fallback
+  server-side só para Opus e Sonnet (o Haiku não tem). `ClassificarVinculos`/`NormalizarNomes`
+  recebem o modelo; o custo usa o preço dele (`custoDoModelo`); os logs `nome` e `vinculo` levam
+  `modelo`. Callables `obterConfigIa` e `definirConfigIa` (`ia/configurar-ia.ts`) só para
+  `ADMIN_UIDS` (`defineList`, em `functions/.env.<projeto>`, versionado); gravar zera o cache da
+  instância. Medição manual: `functions/scripts/avaliar-ia-nome.ts` (25/10, 120 descrições do
+  gabarito: Opus 24,5 s / US$ 0,23 / 71 de 128 pares com o mesmo bloco; Sonnet 17,3 s / US$ 0,11 /
+  71; Haiku 19,4 s / US$ 0,008 / 68, com erros como "S ABAS" → "Com Abas"; regra sozinha: 46).
 - Log (`importar/log.ts`): só `chavePrefixo` (UF + AAMM).
 - **App Check no front:** ativado pela factory do token `FUNCTIONS`
   (`core/firebase/app-check.ts`), com debug token no `localhost`. Checklist do dv em
@@ -478,6 +490,11 @@ Até 5 listas (`MAX_LISTAS`), 150 itens (`MAX_ITENS`) e 3 notas por lista, limit
   autocompletar da lista casa pelos dois. "Corrigir nome" (lápis no cabeçalho do produto,
   `renomear/renomear-produto-dialog.ts` por `import()`, Signal Forms) chama
   `ProdutosService.renomear`, invalida o `HistoricoPessoalStore` e relê o produto.
+- **Configurações de IA** (`/configuracoes/ia`, `features/configuracoes/`): só para o
+  administrador — `AuthStore.admin` compara o uid com `environment.adminUids` (só a interface; as
+  callables conferem `ADMIN_UIDS`), `adminGuard` na rota e `ITEM_CONFIG_IA` no fim do menu do shell.
+  Dois `<select>` (Signal Forms) com preço, resumo e aviso de fallback de cada modelo, "Salvar" só
+  quando muda, e o gasto do mês por etapa (`ConfigIaService` → `obterConfigIa`/`definirConfigIa`).
 - Vínculo (RF-18): callable `vincularProduto` (`functions/src/produtos/`) — o EAN vira o
   canônico, `ean:` × `ean:` diferente é recusado, cadeia seguida até a raiz sem ciclo,
   quem apontava para a origem é reapontado, rate limit da importação. Diálogo
@@ -495,7 +512,7 @@ null`) e decide com `decidirPorEtiquetas`: tipos diferentes dos dois lados → c
   mesma variante com um só candidato → liga
   (`vinculoMotivo: 'etiquetas'`); conflito claro → nada; o resto (inclusive sem variante
   nenhuma: a mesma loja vende produtos diferentes com a mesma descrição) vai para **uma**
-  chamada à IA por nota (`vinculo/ia.ts`: `claude-opus-5-5`, effort `low`, saída
+  chamada à IA por nota (`vinculo/ia.ts`: `modeloVinculo` da configuração, padrão Opus 5.5, effort `low`, saída
   estruturada, fallback do servidor em recusa, ids curtos `c1..c5`, até 5 candidatos por
   item, 2 chamadas acima de 40 dúvidas). Resposta: id → vínculo `ia`; `A` →
   `candidatosVinculo` (até 3, oferecidos primeiro no diálogo como "Possíveis
@@ -510,7 +527,7 @@ null`) e decide com `decidirPorEtiquetas`: tipos diferentes dos dois lados → c
   `vinculo/reprocessar-vinculos.ts`: produtos sem nome (nunca os manuais) vão para a IA de nome,
   que troca as etiquetas pelas dela; os outros sem etiquetas ganham as da regra; e os `loc:` sem
   vínculo passam pelo `vincularNota`, loja por loja, em rodadas de até 80; roda em memória e grava
-  só o que mudou, mais o `nome` dos itens nas notas de todos os usuários). `--simular` padrão sem IA, `--com-ia` na simulação, `--gravar` (com IA)
+  só o que mudou, mais o `nome` dos itens nas notas de todos os usuários; modelos de `controle/configIa`, ou `--modelo-nome=`/`--modelo-vinculo=` só naquela execução). `--simular` padrão sem IA, `--com-ia` na simulação, `--gravar` (com IA)
   ou `--gravar --sem-ia`. A chave da IA consome o saldo da organização do Console
   onde foi criada (créditos mensais do plano Max só na organização vinculada em claude.ai → Faturamento).
 - `produtos/{id}.cnpjs` (até 50) é mantido pela publicação de preços, para contar

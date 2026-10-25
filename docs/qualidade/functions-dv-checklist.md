@@ -102,3 +102,17 @@ Faturamento → "Créditos de API"; créditos em platform.claude.com/settings/bi
 | 37 | Lista de compras: "Adicionar à lista" num item com nome | o item entra com o nome legível; o autocompletar acha pelo nome | [ ] |
 | 38 | Retroativo: `node functions/lib/reprocessar-vinculos.cjs --com-ia` e depois `--gravar` (ver o cabeçalho do script) | linhas `nome … → …` na simulação; com `--gravar`, produtos e `itens[].nome` das notas antigas atualizados | [ ] |
 
+## Modelo de IA configurável (Configurações de IA)
+
+Plano: `docs/plano/config-modelo-ia-plano.md`. Pré-requisito: `npm run deploy:functions:dev` (leva
+`ADMIN_UIDS` de `functions/.env.fed-catalogo-compara-precos-dv` e as callables `obterConfigIa` e
+`definirConfigIa`).
+
+| # | Cenário | Esperado | OK |
+|---|---|---|---|
+| 39 | Entrar com o uid administrador | menu com "Configurações de IA" no fim; a página mostra Opus 5.5 nas duas chamadas e o gasto do mês | [ ] |
+| 40 | Trocar "Nome legível" para Sonnet 5.5, salvar e importar uma nota com produtos novos (depois de 1 min) | snackbar "Configuração salva. Vale em até 1 minuto."; log `nome` com `modelo: 'claude-sonnet-5-5'`; tempo da prévia | [ ] |
+| 41 | Trocar para Haiku 5.5 | a página avisa "Sem nova tentativa automática se o modelo recusar"; log `nome` com `modelo: 'claude-haiku-5-5'` | [ ] |
+| 42 | Voltar para Opus 5.5 | `controle/configIa` com os dois ids de volta | [ ] |
+| 43 | Entrar com outro usuário | sem o item no menu; `/configuracoes/ia` volta para o painel | [ ] |
+

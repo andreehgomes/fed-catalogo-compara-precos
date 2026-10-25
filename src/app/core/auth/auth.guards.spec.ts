@@ -8,7 +8,7 @@ import {
   provideRouter,
 } from '@angular/router';
 import { Observable, firstValueFrom } from 'rxjs';
-import { authGuard, guestGuard } from './auth.guards';
+import { adminGuard, authGuard, guestGuard } from './auth.guards';
 import { AuthStore } from './auth.store';
 
 function montar() {
@@ -17,6 +17,7 @@ function montar() {
     usuario,
     pronto: computed(() => usuario() !== undefined),
     logado: computed(() => !!usuario()),
+    admin: computed(() => usuario()?.uid === 'admin'),
   };
   TestBed.configureTestingModule({
     providers: [provideRouter([]), { provide: AuthStore, useValue: fake }],
@@ -47,6 +48,15 @@ describe('guards', () => {
     usuario.set(null);
     const r = (await firstValueFrom(rodar(authGuard, '/notas/123'))) as UrlTree;
     expect(TestBed.inject(Router).serializeUrl(r)).toBe('/login?voltar=%2Fnotas%2F123');
+  });
+
+  it('adminGuard só libera o administrador; os outros vão para o painel', async () => {
+    const usuario = montar();
+    usuario.set({ uid: 'admin' });
+    expect(await firstValueFrom(rodar(adminGuard, '/configuracoes/ia'))).toBe(true);
+    usuario.set({ uid: 'u1' });
+    const r = (await firstValueFrom(rodar(adminGuard, '/configuracoes/ia'))) as UrlTree;
+    expect(TestBed.inject(Router).serializeUrl(r)).toBe('/');
   });
 
   it('guestGuard libera deslogado e manda logado para o painel', async () => {

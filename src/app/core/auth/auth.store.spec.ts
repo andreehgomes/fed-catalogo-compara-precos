@@ -1,5 +1,6 @@
 import { TestBed } from '@angular/core/testing';
 import { vi } from 'vitest';
+import { environment } from '../../../environments/environment';
 import { FIREBASE_AUTH } from '../firebase/firebase.providers';
 import { AUTH_API, AuthApi } from './auth-api';
 import { AuthStore, mensagemErroAuth } from './auth.store';
@@ -56,6 +57,15 @@ describe('AuthStore', () => {
     expect(store.pronto()).toBe(true);
     expect(store.logado()).toBe(true);
     expect(store.uid()).toBe('u1');
+  });
+
+  it('admin só para o uid de environment.adminUids', () => {
+    fake.emitir({ uid: 'u1' });
+    expect(store.admin()).toBe(false);
+    fake.emitir({ uid: environment.adminUids[0] });
+    expect(store.admin()).toBe(true);
+    fake.emitir(null);
+    expect(store.admin()).toBe(false);
   });
 
   it('fica deslogado quando o SDK emite null', () => {

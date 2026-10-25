@@ -1,5 +1,5 @@
 import { Routes } from '@angular/router';
-import { authGuard } from './core/auth/auth.guards';
+import { adminGuard, authGuard } from './core/auth/auth.guards';
 import { AUTH_ROUTES } from './features/auth/auth.routes';
 
 export const routes: Routes = [
@@ -49,6 +49,12 @@ export const routes: Routes = [
           import('./features/estabelecimentos/estabelecimentos.routes').then(
             (m) => m.ESTABELECIMENTOS_ROUTES,
           ),
+      },
+      {
+        path: 'configuracoes/ia',
+        title: 'Configurações de IA · Cupom Esperto',
+        canActivate: [adminGuard],
+        loadComponent: () => import('./features/configuracoes/configuracoes-ia.page'),
       },
     ],
   },

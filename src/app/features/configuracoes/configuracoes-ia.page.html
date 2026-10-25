@@ -1,0 +1,104 @@
+<main class="cp-page cp-page--form">
+  <header class="cp-page-header">
+    <h1>Configurações de IA</h1>
+    <p>Modelo da Claude API em cada chamada. A troca vale em até 1 minuto, sem publicar de novo.</p>
+  </header>
+
+  @if (dados.isLoading() && !dados.hasValue()) {
+    <div role="status">
+      <span class="cp-sr-only">Carregando configuração…</span>
+      <div class="cp-skeleton config-skeleton" aria-hidden="true"></div>
+    </div>
+  } @else if (dados.error()) {
+    <div class="cp-info-block cp-info-block--erro" role="alert">
+      <mat-icon aria-hidden="true">cloud_off</mat-icon>
+      <span>Não foi possível carregar a configuração.</span>
+      <button type="button" class="cp-btn-secondary-compact" (click)="dados.reload()">
+        Tentar de novo
+      </button>
+    </div>
+  } @else if (naoAutorizado()) {
+    <div class="cp-info-block cp-info-block--warn" role="alert">
+      <mat-icon aria-hidden="true">lock</mat-icon>
+      Só o administrador pode ver esta página.
+    </div>
+  } @else {
+    <form class="config-form" (submit)="$event.preventDefault(); salvar()">
+      <section class="cp-block">
+        <label class="cp-field">
+          <span>Nome legível dos produtos</span>
+          <select [formField]="form.modeloNome">
+            @for (m of modelos; track m.id) {
+              <option [value]="m.id">{{ m.rotulo }}</option>
+            }
+          </select>
+        </label>
+        @let nome = modeloIa(form.modeloNome().value());
+        <p class="cp-field-hint">
+          Roda na prévia de cada nota com produtos novos: um modelo rápido deixa a prévia mais ágil.
+          {{ nome.resumo }} · {{ nome.entradaUsdMTok | currency: 'USD' }} /
+          {{ nome.saidaUsdMTok | currency: 'USD' }} por milhão de tokens.
+          @if (!nome.fallback) {
+            Sem nova tentativa automática se o modelo recusar.
+          }
+        </p>
+      </section>
+
+      <section class="cp-block">
+        <label class="cp-field">
+          <span>Vínculo entre produtos</span>
+          <select [formField]="form.modeloVinculo">
+            @for (m of modelos; track m.id) {
+              <option [value]="m.id">{{ m.rotulo }}</option>
+            }
+          </select>
+        </label>
+        @let vinculo = modeloIa(form.modeloVinculo().value());
+        <p class="cp-field-hint">
+          Decide se dois produtos de mercados diferentes são o mesmo: ligar errado é pior que não
+          ligar. {{ vinculo.resumo }} · {{ vinculo.entradaUsdMTok | currency: 'USD' }} /
+          {{ vinculo.saidaUsdMTok | currency: 'USD' }} por milhão de tokens.
+          @if (!vinculo.fallback) {
+            Sem nova tentativa automática se o modelo recusar.
+          }
+        </p>
+      </section>
+
+      <div class="cp-form-actions">
+        <button type="submit" class="cp-btn-primary" [disabled]="salvando() || !mudou()">
+          {{ salvando() ? 'Salvando…' : 'Salvar' }}
+        </button>
+      </div>
+    </form>
+
+    <section class="cp-block" aria-labelledby="gasto-titulo">
+      <h2 id="gasto-titulo" class="cp-section-title">Gasto deste mês</h2>
+      @if (gasto(); as g) {
+        <div class="cp-summary">
+          <div>
+            <span class="cp-summary-label">Total</span>
+            <span class="cp-summary-value">{{ g.custoUsd | currency: 'USD' }}</span>
+          </div>
+          <div>
+            <span class="cp-summary-label">Nome legível</span>
+            <span class="cp-summary-value">{{
+              g.porEtapa?.nome?.custoUsd ?? 0 | currency: 'USD'
+            }}</span>
+          </div>
+          <div>
+            <span class="cp-summary-label">Vínculo</span>
+            <span class="cp-summary-value">{{
+              g.porEtapa?.vinculo?.custoUsd ?? 0 | currency: 'USD'
+            }}</span>
+          </div>
+          <div>
+            <span class="cp-summary-label">Chamadas</span>
+            <span class="cp-summary-value">{{ g.chamadas }}</span>
+          </div>
+        </div>
+      } @else {
+        <p class="cp-empty-inline">Nenhuma chamada à IA neste mês.</p>
+      }
+    </section>
+  }
+</main>

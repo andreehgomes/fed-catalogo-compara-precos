@@ -9,5 +9,7 @@ export const environment = {
     appId: '1:36149188144:web:8b44e0133696e9b5eb3ff5',
   },
   functionsRegion: 'southamerica-east1',
+  /** Só mostra o menu de administrador; quem decide é `ADMIN_UIDS` nas Functions. */
+  adminUids: ['PtP0kibXDQdq8x5OEnvfyv0htPm1'],
   appCheckSiteKey: '6Ldp-NEtAAAAANNm0_eoxIcpKcN9Yb3HZraY6fxh',
 };
