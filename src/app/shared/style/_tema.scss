@@ -3,6 +3,8 @@
 
 :root {
   color-scheme: light;
+  // Uma vez só: a tipografia do Material repete a família em cada escala.
+  --cp-font: #{$cp-font};
 
   @each $nome, $par in $cp-cores {
     --cp-#{$nome}: light-dark(#{list.nth($par, 1)}, #{list.nth($par, 2)});

@@ -31,11 +31,11 @@ html {
       color: (
         primary: m3.$primary-palette,
         tertiary: m3.$tertiary-palette,
-        theme-type: light,
+        theme-type: color-scheme,
       ),
       typography: (
-        plain-family: $cp-font,
-        brand-family: $cp-font,
+        plain-family: var(--cp-font),
+        brand-family: var(--cp-font),
       ),
       density: 0,
     )
