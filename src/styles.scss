@@ -1024,6 +1024,20 @@ button.cp-list-row {
   background: $cp-surface;
 }
 
+// Opção marcada de um menu de escolha única (ex.: Aparência): rótulo + check à direita.
+.cp-menu-opcao {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 24px;
+  min-width: 120px;
+
+  mat-icon {
+    margin: 0;
+    color: $cp-accent-ink;
+  }
+}
+
 .mat-mdc-autocomplete-panel,
 .mat-mdc-select-panel {
   .mat-mdc-option:hover:not(.mdc-list-item--disabled),

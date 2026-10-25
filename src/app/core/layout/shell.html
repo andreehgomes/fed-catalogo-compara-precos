@@ -8,21 +8,9 @@
     [attr.inert]="estreito() && !drawerAberto() ? '' : null"
   >
     <div class="cp-nav-header">
-      <img
-        class="cp-nav-simbolo"
-        ngSrc="logo/simbolo.png"
-        width="40"
-        height="40"
-        alt="Cupom Esperto"
-      />
+      <cp-logo class="cp-nav-simbolo" variante="simbolo" />
       <div class="cp-nav-brand">
-        <img
-          class="cp-nav-logo"
-          ngSrc="logo/logo.png"
-          width="720"
-          height="151"
-          alt="Cupom Esperto"
-        />
+        <cp-logo class="cp-nav-logo" />
         <span class="cp-nav-brand-tag">Notas do Paraná</span>
       </div>
     </div>
@@ -56,6 +44,36 @@
         <mat-icon aria-hidden="true">system_update</mat-icon>
         <span class="cp-nav-label">Verificar atualizações</span>
       </button>
+
+      <button
+        type="button"
+        class="cp-nav-item"
+        [matMenuTriggerFor]="menuTema"
+        [matTooltip]="rail() ? 'Aparência: ' + opcaoTema().rotulo : ''"
+        matTooltipPosition="right"
+        [attr.aria-label]="'Aparência: ' + opcaoTema().rotulo"
+      >
+        <mat-icon aria-hidden="true">{{ opcaoTema().icone }}</mat-icon>
+        <span class="cp-nav-label">Aparência</span>
+      </button>
+      <mat-menu #menuTema="matMenu" xPosition="after">
+        @for (opcao of opcoesTema; track opcao.valor) {
+          <button
+            mat-menu-item
+            role="menuitemradio"
+            [attr.aria-checked]="preferenciaTema() === opcao.valor"
+            (click)="definirTema(opcao.valor)"
+          >
+            <mat-icon aria-hidden="true">{{ opcao.icone }}</mat-icon>
+            <span class="cp-menu-opcao">
+              {{ opcao.rotulo }}
+              @if (preferenciaTema() === opcao.valor) {
+                <mat-icon aria-hidden="true">check</mat-icon>
+              }
+            </span>
+          </button>
+        }
+      </mat-menu>
 
       <button
         type="button"
@@ -103,13 +121,7 @@
         <mat-icon aria-hidden="true">menu</mat-icon>
       </button>
       @if (estreito() || rail()) {
-        <img
-          class="cp-header-logo"
-          ngSrc="logo/logo.png"
-          width="720"
-          height="151"
-          alt="Cupom Esperto"
-        />
+        <cp-logo class="cp-header-logo" />
       }
       <span class="cp-header-spacer"></span>
       @if (nomeUsuario()) {

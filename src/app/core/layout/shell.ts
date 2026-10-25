@@ -1,4 +1,3 @@
-import { NgOptimizedImage } from '@angular/common';
 import {
   ChangeDetectionStrategy,
   Component,
@@ -10,12 +9,16 @@ import {
 } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { MatIconModule } from '@angular/material/icon';
+import { MatMenuModule } from '@angular/material/menu';
 import { MatSnackBar } from '@angular/material/snack-bar';
 import { MatTooltipModule } from '@angular/material/tooltip';
 import { NavigationEnd, Router, RouterLink, RouterLinkActive, RouterOutlet } from '@angular/router';
 import { filter } from 'rxjs';
+import { Logo } from '../../shared/ui/logo/logo';
 import { AtualizacaoService } from '../atualizacao/atualizacao.service';
 import { AuthStore } from '../auth/auth.store';
+import { PreferenciaTema } from '../tema/tema-ambiente';
+import { TemaService } from '../tema/tema.service';
 import { BreakpointService } from './breakpoint.service';
 
 export interface ItemNav {
@@ -36,6 +39,12 @@ export const ITENS_NAV: readonly ItemNav[] = [
   { rota: '/estabelecimentos', icone: 'storefront', rotulo: 'Estabelecimentos' },
 ];
 
+export const OPCOES_TEMA: readonly { valor: PreferenciaTema; icone: string; rotulo: string }[] = [
+  { valor: 'sistema', icone: 'brightness_auto', rotulo: 'Sistema' },
+  { valor: 'claro', icone: 'light_mode', rotulo: 'Claro' },
+  { valor: 'escuro', icone: 'dark_mode', rotulo: 'Escuro' },
+];
+
 /** Só para o administrador (`AuthStore.admin`). */
 export const ITEM_CONFIG_IA: ItemNav = {
   rota: '/configuracoes/ia',
@@ -46,9 +55,10 @@ export const ITEM_CONFIG_IA: ItemNav = {
 @Component({
   selector: 'cp-shell',
   imports: [
+    Logo,
     MatIconModule,
+    MatMenuModule,
     MatTooltipModule,
-    NgOptimizedImage,
     RouterLink,
     RouterLinkActive,
     RouterOutlet,
@@ -64,6 +74,7 @@ export class Shell {
   private readonly breakpoints = inject(BreakpointService);
   private readonly atualizacao = inject(AtualizacaoService);
   private readonly snack = inject(MatSnackBar);
+  private readonly tema = inject(TemaService);
 
   private readonly botaoMenu = viewChild.required<ElementRef<HTMLButtonElement>>('botaoMenu');
 
@@ -74,6 +85,11 @@ export class Shell {
   protected readonly avisoAtualizacao = this.atualizacao.aviso;
   protected readonly verificando = this.atualizacao.verificando;
   protected readonly versao = this.atualizacao.versao;
+  protected readonly opcoesTema = OPCOES_TEMA;
+  protected readonly preferenciaTema = this.tema.preferencia;
+  protected readonly opcaoTema = computed(
+    () => OPCOES_TEMA.find((o) => o.valor === this.preferenciaTema()) ?? OPCOES_TEMA[0],
+  );
   protected readonly expandido = signal(true);
   protected readonly drawerAberto = signal(false);
 
@@ -141,6 +157,10 @@ export class Shell {
         duration: 5000,
       });
     }
+  }
+
+  protected definirTema(preferencia: PreferenciaTema): void {
+    this.tema.definir(preferencia);
   }
 
   protected atualizar(): Promise<void> {

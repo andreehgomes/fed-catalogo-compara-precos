@@ -101,6 +101,21 @@ const pares = [
   ['cp-grafico-grade', 'cp-surface', 1],
 ];
 
+// A barra do navegador (`<meta name="theme-color">` do index.html) tem a cor do header.
+const indexHtml = readFileSync(new URL('../src/index.html', import.meta.url), 'utf8');
+for (const tema of TEMAS) {
+  const meta = new RegExp(`<meta[^>]*data-tema="${tema}"[^>]*content="(#[0-9a-f]+)"`, 'i').exec(
+    indexHtml.replace(/\s+/g, ' '),
+  );
+  const esperado = hex('cp-surface', tema);
+  if (meta?.[1].toLowerCase() !== esperado) {
+    console.error(
+      `theme-color ${tema} do index.html (${meta?.[1]}) difere de $cp-surface (${esperado}).`,
+    );
+    process.exitCode = 1;
+  }
+}
+
 let falhas = 0;
 const linhas = TEMAS.flatMap((tema) =>
   pares.map(([frente, fundo, minimo]) => {

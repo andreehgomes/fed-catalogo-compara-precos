@@ -4,6 +4,7 @@ import { Router, provideRouter } from '@angular/router';
 import { vi } from 'vitest';
 import { botao, texto } from '../../../testing/dom';
 import { SwUpdateFalso, provideSwUpdateFalso } from '../../../testing/sw-update-falso';
+import { temaFalso } from '../../../testing/tema';
 import { AtualizacaoService } from '../atualizacao/atualizacao.service';
 import { AuthStore } from '../auth/auth.store';
 import { BreakpointService } from './breakpoint.service';
@@ -12,7 +13,12 @@ import { ITEM_CONFIG_IA, ITENS_NAV, Shell } from './shell';
 @Component({ template: 'pagina' })
 class Pagina {}
 
-async function montar(estreito: boolean, admin = false, sw = new SwUpdateFalso()) {
+async function montar(
+  estreito: boolean,
+  admin = false,
+  sw = new SwUpdateFalso(),
+  tema = temaFalso(),
+) {
   const recarregar = vi.fn();
   const bp = { estreito: signal(estreito) };
   const auth = {
@@ -26,6 +32,7 @@ async function montar(estreito: boolean, admin = false, sw = new SwUpdateFalso()
       { provide: BreakpointService, useValue: bp },
       { provide: AuthStore, useValue: auth },
       ...provideSwUpdateFalso(sw, recarregar),
+      ...tema.providers,
     ],
   });
   const router = TestBed.inject(Router);
@@ -33,14 +40,28 @@ async function montar(estreito: boolean, admin = false, sw = new SwUpdateFalso()
   await router.navigateByUrl('/notas');
   fixture.detectChanges();
   await fixture.whenStable();
-  return { fixture, el: fixture.nativeElement as HTMLElement, router, auth, bp, sw, recarregar };
+  return {
+    fixture,
+    el: fixture.nativeElement as HTMLElement,
+    router,
+    auth,
+    bp,
+    sw,
+    recarregar,
+    tema,
+  };
 }
 
 describe('Shell', () => {
   it('lista os itens de navegação da análise', async () => {
     const { el } = await montar(false);
     const rotulos = [...el.querySelectorAll('.cp-nav-label')].map((x) => texto(x));
-    expect(rotulos).toEqual([...ITENS_NAV.map((i) => i.rotulo), 'Verificar atualizações', 'Sair']);
+    expect(rotulos).toEqual([
+      ...ITENS_NAV.map((i) => i.rotulo),
+      'Verificar atualizações',
+      'Aparência',
+      'Sair',
+    ]);
     expect(texto(el.querySelector('.cp-header-avatar'))).toBe('A');
   });
 
@@ -51,6 +72,7 @@ describe('Shell', () => {
       ...ITENS_NAV.map((i) => i.rotulo),
       ITEM_CONFIG_IA.rotulo,
       'Verificar atualizações',
+      'Aparência',
       'Sair',
     ]);
   });
@@ -144,6 +166,49 @@ describe('Shell', () => {
     await Promise.resolve();
     expect(auth.sair).toHaveBeenCalled();
     expect(navegar).toHaveBeenCalledWith('/login');
+  });
+});
+
+describe('Shell: aparência', () => {
+  const opcoes = () => [...document.querySelectorAll<HTMLButtonElement>('[role="menuitemradio"]')];
+
+  afterEach(() => {
+    delete document.documentElement.dataset['tema'];
+  });
+
+  it('abre as três opções com a atual marcada', async () => {
+    const { fixture, el } = await montar(false);
+    botao(el, 'Aparência: Sistema').click();
+    fixture.detectChanges();
+    const rotulos = opcoes().map((o) => o.querySelector('.cp-menu-opcao')?.firstChild?.textContent);
+    expect(rotulos.map((r) => r?.trim())).toEqual(['Sistema', 'Claro', 'Escuro']);
+    expect(opcoes()[0].querySelector('.cp-menu-opcao mat-icon')).not.toBeNull();
+    expect(opcoes()[1].querySelector('.cp-menu-opcao mat-icon')).toBeNull();
+    expect(opcoes().map((o) => o.getAttribute('aria-checked'))).toEqual(['true', 'false', 'false']);
+  });
+
+  it('escolher "Escuro" aplica e guarda a preferência; o item mostra a escolha', async () => {
+    const { fixture, el, tema } = await montar(false);
+    botao(el, 'Aparência: Sistema').click();
+    fixture.detectChanges();
+    opcoes()[2].click();
+    TestBed.tick();
+    fixture.detectChanges();
+    expect(tema.armazenamento.getItem('cp-tema')).toBe('escuro');
+    expect(document.documentElement.dataset['tema']).toBe('escuro');
+    expect(botao(el, 'Aparência: Escuro')).toBeTruthy();
+  });
+
+  it('a preferência salva já aparece marcada', async () => {
+    const { fixture, el } = await montar(
+      true,
+      false,
+      new SwUpdateFalso(),
+      temaFalso({ salvo: 'claro' }),
+    );
+    botao(el, 'Aparência: Claro').click();
+    fixture.detectChanges();
+    expect(opcoes()[1].getAttribute('aria-checked')).toBe('true');
   });
 });
 

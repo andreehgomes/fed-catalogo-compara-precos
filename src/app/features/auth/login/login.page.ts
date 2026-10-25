@@ -1,15 +1,15 @@
-import { NgOptimizedImage } from '@angular/common';
 import { ChangeDetectionStrategy, Component, computed, inject, input, signal } from '@angular/core';
 import { FormField, FormRoot, email, form, minLength, required } from '@angular/forms/signals';
 import { MatIconModule } from '@angular/material/icon';
 import { Router, RouterLink } from '@angular/router';
 import { AuthStore, mensagemErroAuth } from '../../../core/auth/auth.store';
 import { erroDoCampo } from '../../../shared/forms/erro-campo';
+import { Logo } from '../../../shared/ui/logo/logo';
 import { BotaoGoogle } from '../google/botao-google';
 
 @Component({
   selector: 'cp-login',
-  imports: [BotaoGoogle, FormField, FormRoot, MatIconModule, NgOptimizedImage, RouterLink],
+  imports: [BotaoGoogle, FormField, FormRoot, Logo, MatIconModule, RouterLink],
   templateUrl: './login.page.html',
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
