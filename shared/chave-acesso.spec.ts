@@ -107,6 +107,14 @@ describe('lerUrlQr', () => {
     expect(lerUrlQr(url)).toMatchObject({ chave: CHAVE_AGO, versao: 2, hash: '20C20FABFA70252AD3A8910B6A2AC7513073F0A5' });
   });
 
+  it('lê a URL real v2 com barra no fim do caminho', () => {
+    const url =
+      'http://www.fazenda.pr.gov.br/nfce/qrcode/?p=41261181175424000199650050003231961251684939|2|1|1|131B5C8597996F04EE602CCA36F322FD24029DA3';
+    const qr = lerUrlQr(url);
+    expect(qr).toMatchObject({ chave: '41261181175424000199650050003231961251684939', versao: 2 });
+    expect(montarUrlQr(qr!)).toBe(url.replace('http:', 'https:').replace('qrcode/?', 'qrcode?'));
+  });
+
   it('lê o formato v3', () => {
     expect(lerUrlQr(montarUrlQrV3(CHAVE_SET))).toEqual({ chave: CHAVE_SET, versao: 3, tpAmb: '1', uf: 'PR' });
   });
@@ -116,6 +124,8 @@ describe('lerUrlQr', () => {
     ['host parecido', URL_SET.replace('www.fazenda.pr.gov.br', 'www.fazenda.pr.gov.br.evil.com')],
     ['IP interno', 'http://169.254.169.254/nfce/qrcode?p=' + CHAVE_SET + '|3|1'],
     ['caminho errado', URL_SET.replace('/nfce/qrcode', '/nfce/outra')],
+    ['caminho com segmento a mais', URL_SET.replace('/nfce/qrcode', '/nfce/qrcode/x')],
+    ['caminho com duas barras no fim', URL_SET.replace('/nfce/qrcode', '/nfce/qrcode//')],
     ['sem p', 'https://www.fazenda.pr.gov.br/nfce/qrcode'],
     ['DV errado', URL_SET.replace(CHAVE_SET, CHAVE_SET.slice(0, 43) + '0')],
     ['versão desconhecida', URL_SET.replace('|2|1|1|', '|4|1|1|')],

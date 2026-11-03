@@ -59,7 +59,7 @@ export function lerUrlQr(url: string): QrNfce | null {
   if (u.protocol !== 'https:' && u.protocol !== 'http:') return null;
   if (u.username || u.password || (u.port && u.port !== '80' && u.port !== '443')) return null;
   const uf = HOSTS_QR[u.hostname.toLowerCase()];
-  if (!uf || u.pathname.toLowerCase() !== CAMINHO_QR) return null;
+  if (!uf || u.pathname.toLowerCase().replace(/\/$/, '') !== CAMINHO_QR) return null;
 
   const p = u.searchParams.get('p');
   if (!p) return null;
