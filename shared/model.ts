@@ -24,6 +24,7 @@ export interface QrNfce {
   uf: Uf | string;
   cIdToken?: string;
   hash?: string;
+  offline?: { dia: string; valor: string; digVal: string };
 }
 
 export interface ItemNfce {

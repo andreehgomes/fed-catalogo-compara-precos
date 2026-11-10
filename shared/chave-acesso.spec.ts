@@ -115,6 +115,22 @@ describe('lerUrlQr', () => {
     expect(montarUrlQr(qr!)).toBe(url.replace('http:', 'https:').replace('qrcode/?', 'qrcode?'));
   });
 
+  it('lê a URL real v2 de nota em contingência offline (%7C)', () => {
+    const url =
+      'https://www.fazenda.pr.gov.br/nfce/qrcode?p=41261103644587000836652010000075099130192091%7C2%7C1%7C10%7C156.79%7C554a2b747138785068393449774345714150696a4b67497a446b633d%7C1%7CA546B56DE218F9E62D9875D889A45D1247A4174C';
+    const qr = lerUrlQr(url);
+    expect(qr).toEqual({
+      chave: '41261103644587000836652010000075099130192091',
+      versao: 2,
+      tpAmb: '1',
+      uf: 'PR',
+      cIdToken: '1',
+      hash: 'A546B56DE218F9E62D9875D889A45D1247A4174C',
+      offline: { dia: '10', valor: '156.79', digVal: '554a2b747138785068393449774345714150696a4b67497a446b633d' },
+    });
+    expect(montarUrlQr(qr!)).toBe(url.replace(/%7C/g, '|'));
+  });
+
   it('lê o formato v3', () => {
     expect(lerUrlQr(montarUrlQrV3(CHAVE_SET))).toEqual({ chave: CHAVE_SET, versao: 3, tpAmb: '1', uf: 'PR' });
   });
@@ -132,6 +148,11 @@ describe('lerUrlQr', () => {
     ['ambiente inválido', URL_SET.replace('|2|1|1|', '|2|3|1|')],
     ['hash curto', URL_SET.replace('E87B918B945714C101FE1D79B6BD32073BA8D651', 'ABC')],
     ['token não numérico', URL_SET.replace('|2|1|1|', '|2|1|X|')],
+    ['offline com dia inválido', URL_SET.replace('|2|1|1|', '|2|1|32|1.00|abcd|1|')],
+    ['offline com valor inválido', URL_SET.replace('|2|1|1|', '|2|1|10|1,00|abcd|1|')],
+    ['offline com digVal não hex', URL_SET.replace('|2|1|1|', '|2|1|10|1.00|xyz|1|')],
+    ['offline com token não numérico', URL_SET.replace('|2|1|1|', '|2|1|10|1.00|abcd|X|')],
+    ['offline com hash curto', URL_SET.replace('|2|1|1|', '|2|1|10|1.00|abcd|1|').replace('E87B918B945714C101FE1D79B6BD32073BA8D651', 'ABC')],
     ['v3 com partes demais', montarUrlQrV3(CHAVE_SET) + '|9'],
     ['chave de outra UF', URL_SET.replace(CHAVE_SET, (() => { const b = '35' + CHAVE_SET.slice(2, 43); return b + digitoChave(b); })())],
     ['protocolo ftp', URL_SET.replace('https:', 'ftp:')],

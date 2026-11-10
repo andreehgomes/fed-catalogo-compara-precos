@@ -74,6 +74,13 @@ export function lerUrlQr(url: string): QrNfce | null {
     if (!/^\d{1,6}$/.test(cIdToken) || !/^[0-9a-f]{40}$/i.test(hash)) return null;
     return { chave, versao: 2, tpAmb, uf, cIdToken, hash: hash.toUpperCase() };
   }
+  if (versao === '2' && partes.length === 8) {
+    const [, , , dia, valor, digVal, cIdToken, hash] = partes;
+    if (!/^(0[1-9]|[12]\d|3[01])$/.test(dia) || !/^\d{1,13}(\.\d{1,2})?$/.test(valor)) return null;
+    if (!/^[0-9a-f]{2,112}$/i.test(digVal)) return null;
+    if (!/^\d{1,6}$/.test(cIdToken) || !/^[0-9a-f]{40}$/i.test(hash)) return null;
+    return { chave, versao: 2, tpAmb, uf, cIdToken, hash: hash.toUpperCase(), offline: { dia, valor, digVal } };
+  }
   if (versao === '3' && partes.length === 3) {
     return { chave, versao: 3, tpAmb, uf };
   }
@@ -84,7 +91,9 @@ export function montarUrlQr(qr: QrNfce): string {
   const host = Object.keys(HOSTS_QR).find((h) => HOSTS_QR[h] === qr.uf);
   if (!host) throw new Error(`UF sem host de QR: ${qr.uf}`);
   const p =
-    qr.versao === 2
+    qr.versao === 2 && qr.offline
+      ? [qr.chave, '2', qr.tpAmb, qr.offline.dia, qr.offline.valor, qr.offline.digVal, qr.cIdToken, qr.hash].join('|')
+      : qr.versao === 2
       ? [qr.chave, '2', qr.tpAmb, qr.cIdToken, qr.hash].join('|')
       : [qr.chave, '3', qr.tpAmb].join('|');
   return `https://${host}${CAMINHO_QR}?p=${p}`;
